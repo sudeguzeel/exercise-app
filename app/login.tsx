@@ -1,17 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -26,36 +27,42 @@ export default function LoginScreen() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
-  const handleLogin = async () => {
-    let hasError = false;
+  const validateForm = () => {
+    let isValid = true;
 
     setEmailError("");
     setPasswordError("");
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
       setEmailError("E-posta alanı boş bırakılamaz.");
-      hasError = true;
-    } else if (!isValidEmail(email.trim())) {
+      isValid = false;
+    } else if (!isValidEmail(trimmedEmail)) {
       setEmailError("Geçerli bir e-posta adresi gir.");
-      hasError = true;
+      isValid = false;
     }
 
     if (!password) {
       setPasswordError("Şifre alanı boş bırakılamaz.");
-      hasError = true;
+      isValid = false;
     }
 
-    if (hasError || loading) {
+    return isValid;
+  };
+
+  const handleLogin = async () => {
+    if (loading || !validateForm()) {
       return;
     }
 
     try {
       setLoading(true);
 
-      // Supabase hazır olunca burası gerçek giriş servisiyle değiştirilecek.
+      // Login API hazır olduğunda bu bölüm değiştirilecek.
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      Alert.alert("Başarılı", "Giriş işlemi başlatıldı.");
+      Alert.alert("Başarılı", "Giriş ekranı doğrulaması başarıyla tamamlandı.");
     } catch {
       Alert.alert(
         "Giriş yapılamadı",
@@ -64,6 +71,24 @@ export default function LoginScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    Alert.alert(
+      "Google ile giriş",
+      "Google giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
+    );
+  };
+
+  const handleAppleLogin = () => {
+    Alert.alert(
+      "Apple ile giriş",
+      "Apple giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
+    );
+  };
+
+  const handleRegister = () => {
+    Alert.alert("Kayıt ol", "Kayıt ekranı hazır olduğunda buraya bağlanacak.");
   };
 
   return (
@@ -153,12 +178,7 @@ export default function LoginScreen() {
 
             <Pressable
               disabled={loading}
-              onPress={() => {
-                Alert.alert(
-                  "Şifremi unuttum",
-                  "Şifre sıfırlama ekranını sonraki adımda bağlayacağız.",
-                );
-              }}
+              onPress={() => router.push("/forgot-password")}
               style={styles.forgotPasswordButton}
             >
               <Text style={styles.forgotPasswordText}>Şifremi unuttum</Text>
@@ -189,12 +209,7 @@ export default function LoginScreen() {
             <View style={styles.socialRow}>
               <Pressable
                 disabled={loading}
-                onPress={() =>
-                  Alert.alert(
-                    "Google",
-                    "Google giriş bağlantısı daha sonra eklenecek.",
-                  )
-                }
+                onPress={handleGoogleLogin}
                 style={({ pressed }) => [
                   styles.socialButton,
                   pressed ? styles.socialButtonPressed : null,
@@ -206,12 +221,7 @@ export default function LoginScreen() {
 
               <Pressable
                 disabled={loading}
-                onPress={() =>
-                  Alert.alert(
-                    "Apple",
-                    "Apple giriş bağlantısı daha sonra eklenecek.",
-                  )
-                }
+                onPress={handleAppleLogin}
                 style={({ pressed }) => [
                   styles.socialButton,
                   pressed ? styles.socialButtonPressed : null,
@@ -225,15 +235,7 @@ export default function LoginScreen() {
             <View style={styles.registerRow}>
               <Text style={styles.registerQuestion}>Hesabın yok mu? </Text>
 
-              <Pressable
-                disabled={loading}
-                onPress={() => {
-                  Alert.alert(
-                    "Kayıt ol",
-                    "Arkadaşının kayıt ekranı bağlandığında buradan açılacak.",
-                  );
-                }}
-              >
+              <Pressable disabled={loading} onPress={handleRegister}>
                 <Text style={styles.registerLink}>Kayıt ol</Text>
               </Pressable>
             </View>
