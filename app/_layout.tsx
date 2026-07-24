@@ -19,6 +19,7 @@ export default function RootLayout() {
         <Stack.Screen name="login" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="email-sent" />
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="modal" />
       </Stack>
       <StatusBar style="auto" />

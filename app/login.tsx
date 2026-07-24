@@ -1,18 +1,19 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -59,15 +60,25 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      // Login API hazır olduğunda bu bölüm değiştirilecek.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("SUPABASE LOGIN ÇALIŞTI", email);
 
-      Alert.alert("Başarılı", "Giriş ekranı doğrulaması başarıyla tamamlandı.");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      console.log("EMAIL:", email);
+      console.log("DATA:", data);
+      console.log("ERROR:", error);
+
+      if (error || !data.session) {
+        Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
+        return;
+      }
+
+      router.replace("/(tabs)");
     } catch {
-      Alert.alert(
-        "Giriş yapılamadı",
-        "E-posta veya şifre bilgilerini kontrol et.",
-      );
+      Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
       setLoading(false);
     }
