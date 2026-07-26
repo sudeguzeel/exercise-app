@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -84,12 +86,42 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    Alert.alert(
-      "Google ile giriş",
-      "Google giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
-    );
-  };
+const handleGoogleLogin = async () => {
+  try {
+    setLoading(true);
+
+    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
+    const redirectTo = AuthSession.makeRedirectUri({
+  scheme: 'exercise-app', // app.json içindeki scheme adın
+  path: 'login',
+});
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) throw error;
+
+    if (data?.url) {
+      // Google oturum açma sayfasını mobil tarayıcıda açar
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+      if (result.type === 'success') {
+        // Oturumu doğrula ve Ana Sayfaya geçiş yap
+        await supabase.auth.getSession();
+        router.replace('/(tabs)');
+      }
+    }
+  } catch (error: any) {
+    Alert.alert('Google Giriş Hatası', error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAppleLogin = () => {
     Alert.alert(
