@@ -1,245 +1,71 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
-export default function LoginScreen() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function HomeScreen() {
+  const [email, setEmail] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
 
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setEmail(data.user?.email ?? null);
+    });
+  }, []);
 
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  };
-
-  const handleLogin = async () => {
-    let hasError = false;
-
-    setEmailError("");
-    setPasswordError("");
-
-    if (!email.trim()) {
-      setEmailError("E-posta alanı boş bırakılamaz.");
-      hasError = true;
-    } else if (!isValidEmail(email.trim())) {
-      setEmailError("Geçerli bir e-posta adresi gir.");
-      hasError = true;
-    }
-
-    if (!password) {
-      setPasswordError("Şifre alanı boş bırakılamaz.");
-      hasError = true;
-    }
-
-    if (hasError || loading) {
+  const handleSignOut = async () => {
+    if (signingOut) {
       return;
     }
 
     try {
-      setLoading(true);
-
-      // Supabase hazır olunca burası gerçek giriş servisiyle değiştirilecek.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      Alert.alert("Başarılı", "Giriş işlemi başlatıldı.");
-    } catch {
-      Alert.alert(
-        "Giriş yapılamadı",
-        "E-posta veya şifre bilgilerini kontrol et.",
-      );
+      setSigningOut(true);
+      await supabase.auth.signOut();
     } finally {
-      setLoading(false);
+      setSigningOut(false);
+      router.replace("/login");
     }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <View style={styles.container}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="checkmark-circle" size={40} color="#74A800" />
+        </View>
+
+        <Text style={styles.title}>Hoş geldin</Text>
+
+        <Text style={styles.subtitle}>
+          {email
+            ? `${email} hesabıyla giriş yaptın.`
+            : "Hesabına giriş yaptın."}
+        </Text>
+
+        <Pressable
+          disabled={signingOut}
+          onPress={handleSignOut}
+          style={({ pressed }) => [
+            styles.signOutButton,
+            pressed && !signingOut ? styles.buttonPressed : null,
+            signingOut ? styles.buttonDisabled : null,
+          ]}
         >
-          <View style={styles.container}>
-            <Text style={styles.title}>Hoş geldin</Text>
-
-            <Text style={styles.subtitle}>
-              Programına devam etmek için giriş yap.
-            </Text>
-
-            <Text style={styles.label}>E-POSTA</Text>
-
-            <View
-              style={[
-                styles.inputContainer,
-                emailError ? styles.inputContainerError : null,
-              ]}
-            >
-              <Ionicons name="mail-outline" size={19} color="#6C716C" />
-
-              <TextInput
-                value={email}
-                onChangeText={(value) => {
-                  setEmail(value);
-
-                  if (emailError) {
-                    setEmailError("");
-                  }
-                }}
-                placeholder="ornek@eposta.com"
-                placeholderTextColor="#9A9E99"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-                style={styles.input}
-                returnKeyType="next"
-              />
-            </View>
-
-            {emailError ? (
-              <Text style={styles.errorText}>{emailError}</Text>
-            ) : null}
-
-            <Text style={styles.label}>ŞİFRE</Text>
-
-            <View
-              style={[
-                styles.inputContainer,
-                passwordError ? styles.inputContainerError : null,
-              ]}
-            >
-              <Ionicons name="lock-closed-outline" size={19} color="#6C716C" />
-
-              <TextInput
-                value={password}
-                onChangeText={(value) => {
-                  setPassword(value);
-
-                  if (passwordError) {
-                    setPasswordError("");
-                  }
-                }}
-                placeholder="••••••••"
-                placeholderTextColor="#9A9E99"
-                secureTextEntry
-                editable={!loading}
-                style={styles.input}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
-              />
-            </View>
-
-            {passwordError ? (
-              <Text style={styles.errorText}>{passwordError}</Text>
-            ) : null}
-
-            <Pressable
-              disabled={loading}
-              onPress={() => {
-                Alert.alert(
-                  "Şifremi unuttum",
-                  "Şifre sıfırlama ekranını sonraki adımda bağlayacağız.",
-                );
-              }}
-              style={styles.forgotPasswordButton}
-            >
-              <Text style={styles.forgotPasswordText}>Şifremi unuttum</Text>
-            </Pressable>
-
-            <Pressable
-              disabled={loading}
-              onPress={handleLogin}
-              style={({ pressed }) => [
-                styles.loginButton,
-                pressed && !loading ? styles.buttonPressed : null,
-                loading ? styles.buttonDisabled : null,
-              ]}
-            >
-              {loading ? (
-                <ActivityIndicator color="#101214" />
-              ) : (
-                <Text style={styles.loginButtonText}>Giriş yap</Text>
-              )}
-            </Pressable>
-
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>VEYA</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <View style={styles.socialRow}>
-              <Pressable
-                disabled={loading}
-                onPress={() =>
-                  Alert.alert(
-                    "Google",
-                    "Google giriş bağlantısı daha sonra eklenecek.",
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.socialButton,
-                  pressed ? styles.socialButtonPressed : null,
-                ]}
-              >
-                <Text style={styles.googleLetter}>G</Text>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </Pressable>
-
-              <Pressable
-                disabled={loading}
-                onPress={() =>
-                  Alert.alert(
-                    "Apple",
-                    "Apple giriş bağlantısı daha sonra eklenecek.",
-                  )
-                }
-                style={({ pressed }) => [
-                  styles.socialButton,
-                  pressed ? styles.socialButtonPressed : null,
-                ]}
-              >
-                <Ionicons name="logo-apple" size={19} color="#14171A" />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.registerRow}>
-              <Text style={styles.registerQuestion}>Hesabın yok mu? </Text>
-
-              <Pressable
-                disabled={loading}
-                onPress={() => {
-                  Alert.alert(
-                    "Kayıt ol",
-                    "Arkadaşının kayıt ekranı bağlandığında buradan açılacak.",
-                  );
-                }}
-              >
-                <Text style={styles.registerLink}>Kayıt ol</Text>
-              </Pressable>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {signingOut ? (
+            <ActivityIndicator color="#101214" />
+          ) : (
+            <Text style={styles.signOutButtonText}>Çıkış yap</Text>
+          )}
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -249,17 +75,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F6F7F2",
   },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-  },
   container: {
-    width: "100%",
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 24,
-    paddingVertical: 32,
+  },
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    backgroundColor: "rgba(116, 168, 0, 0.12)",
   },
   title: {
     color: "#14171A",
@@ -269,61 +98,18 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     marginTop: 7,
-    marginBottom: 24,
+    marginBottom: 32,
     color: "#6C716C",
     fontSize: 14,
     lineHeight: 21,
+    textAlign: "center",
   },
-  label: {
-    marginTop: 15,
-    marginBottom: 7,
-    color: "#6C716C",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  inputContainer: {
-    minHeight: 54,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: "rgba(116, 168, 0, 0.35)",
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  inputContainerError: {
-    borderColor: "#FF5A5A",
-    backgroundColor: "rgba(255, 90, 90, 0.06)",
-  },
-  input: {
-    flex: 1,
-    marginLeft: 10,
-    paddingVertical: 14,
-    color: "#14171A",
-    fontSize: 15,
-  },
-  errorText: {
-    marginTop: 6,
-    marginHorizontal: 2,
-    color: "#FF5A5A",
-    fontSize: 12,
-  },
-  forgotPasswordButton: {
-    alignSelf: "flex-end",
-    marginTop: 11,
-    paddingVertical: 4,
-  },
-  forgotPasswordText: {
-    color: "#74A800",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  loginButton: {
+  signOutButton: {
     height: 50,
+    minWidth: 160,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 21,
+    paddingHorizontal: 24,
     borderRadius: 16,
     backgroundColor: "#95D600",
     shadowColor: "#95D600",
@@ -335,7 +121,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  loginButtonText: {
+  signOutButtonText: {
     color: "#101214",
     fontSize: 15,
     fontWeight: "800",
@@ -345,65 +131,5 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.65,
-  },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 21,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(116, 168, 0, 0.35)",
-  },
-  dividerText: {
-    marginHorizontal: 11,
-    color: "#6C716C",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  socialRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  socialButton: {
-    flex: 1,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(116, 168, 0, 0.35)",
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  socialButtonPressed: {
-    backgroundColor: "#EFF1EA",
-  },
-  socialButtonText: {
-    color: "#14171A",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  googleLetter: {
-    color: "#4285F4",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  registerRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 22,
-  },
-  registerQuestion: {
-    color: "#6C716C",
-    fontSize: 13,
-  },
-  registerLink: {
-    color: "#74A800",
-    fontSize: 13,
-    fontWeight: "800",
   },
 });
