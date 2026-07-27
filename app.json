@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "exerciseapp",
+    "scheme": "exercise-app",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -39,11 +39,17 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "812e085b-6cc6-4087-a59b-d7c08891e906"
+      }
     }
   }
 }

@@ -1,18 +1,21 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
+import * as WebBrowser from 'expo-web-browser';
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 export default function LoginScreen() {
@@ -59,26 +62,66 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      // Login API hazır olduğunda bu bölüm değiştirilecek.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("SUPABASE LOGIN ÇALIŞTI", email);
 
-      Alert.alert("Başarılı", "Giriş ekranı doğrulaması başarıyla tamamlandı.");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      console.log("EMAIL:", email);
+      console.log("DATA:", data);
+      console.log("ERROR:", error);
+
+      if (error || !data.session) {
+        Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
+        return;
+      }
+
+      router.replace("/(tabs)");
     } catch {
-      Alert.alert(
-        "Giriş yapılamadı",
-        "E-posta veya şifre bilgilerini kontrol et.",
-      );
+      Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    Alert.alert(
-      "Google ile giriş",
-      "Google giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
-    );
-  };
+const handleGoogleLogin = async () => {
+  try {
+    setLoading(true);
+
+    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
+    const redirectTo = AuthSession.makeRedirectUri({
+  scheme: 'exercise-app', // app.json içindeki scheme adın
+  path: 'login',
+});
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        skipBrowserRedirect: true,
+      },
+    });
+
+    if (error) throw error;
+
+    if (data?.url) {
+      // Google oturum açma sayfasını mobil tarayıcıda açar
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+      if (result.type === 'success') {
+        // Oturumu doğrula ve Ana Sayfaya geçiş yap
+        await supabase.auth.getSession();
+        router.replace('/(tabs)');
+      }
+    }
+  } catch (error: any) {
+    Alert.alert('Google Giriş Hatası', error.message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAppleLogin = () => {
     Alert.alert(
