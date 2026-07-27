@@ -1,9 +1,9 @@
 import React, {
-    createContext,
-    ReactNode,
-    useContext,
-    useMemo,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useMemo,
+  useState,
 } from "react";
 
 export type Gender = "female" | "male" | "other" | "";
@@ -16,6 +16,15 @@ export type Goal =
   | "";
 
 export type FitnessPreference = "cardio" | "strength" | "flexibility";
+
+export type TrainingDay =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
 
 export type PersonalInfo = {
   fullName: string;
@@ -35,6 +44,9 @@ type OnboardingContextType = {
   setFitnessPreferences: React.Dispatch<
     React.SetStateAction<FitnessPreference[]>
   >;
+
+  trainingDays: TrainingDay[];
+  setTrainingDays: React.Dispatch<React.SetStateAction<TrainingDay[]>>;
 
   resetOnboarding: () => void;
 };
@@ -65,9 +77,12 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     FitnessPreference[]
   >([]);
 
+  const [trainingDays, setTrainingDays] = useState<TrainingDay[]>([]);
+
   const resetOnboarding = () => {
     setPersonalInfo(initialPersonalInfo);
     setFitnessPreferences([]);
+    setTrainingDays([]);
   };
 
   const value = useMemo(
@@ -76,9 +91,11 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
       setPersonalInfo,
       fitnessPreferences,
       setFitnessPreferences,
+      trainingDays,
+      setTrainingDays,
       resetOnboarding,
     }),
-    [personalInfo, fitnessPreferences],
+    [personalInfo, fitnessPreferences, trainingDays],
   );
 
   return (

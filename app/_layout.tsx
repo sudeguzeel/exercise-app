@@ -23,6 +23,7 @@ export default function RootLayout() {
           <Stack.Screen name="email-sent" />
           <Stack.Screen name="onboarding/personal-info" />
           <Stack.Screen name="onboarding/fitness-experience" />
+          <Stack.Screen name="onboarding/weekly-training-days" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="modal" />
         </Stack>

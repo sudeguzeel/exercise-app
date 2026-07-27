@@ -82,7 +82,7 @@ export default function FitnessExperienceScreen() {
 
       // Dördüncü onboarding ekranının yolu belli olduğunda
       // aşağıdaki yönlendirme onunla değiştirilecek.
-      router.push("/(tabs)");
+      router.push("/onboarding/weekly-training-days");
     } finally {
       setIsSaving(false);
     }
