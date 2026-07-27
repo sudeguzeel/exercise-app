@@ -601,20 +601,22 @@ export default function PersonalInfoScreen() {
           <Text style={styles.errorText}>{targetWeightError}</Text>
         ) : null}
 
-        <Pressable
-          disabled={!isFormValid || isSaving}
-          onPress={handleContinue}
-          style={[
-            styles.continueButton,
-            (!isFormValid || isSaving) && styles.continueButtonDisabled,
-          ]}
-        >
-          {isSaving ? (
-            <ActivityIndicator color="#111111" />
-          ) : (
-            <Text style={styles.continueButtonText}>Devam et</Text>
-          )}
-        </Pressable>
+        <View style={styles.buttonArea}>
+          <Pressable
+            disabled={!isFormValid || isSaving}
+            onPress={handleContinue}
+            style={[
+              styles.continueButton,
+              (!isFormValid || isSaving) && styles.continueButtonDisabled,
+            ]}
+          >
+            {isSaving ? (
+              <ActivityIndicator color="#111111" />
+            ) : (
+              <Text style={styles.continueButtonText}>Devam et</Text>
+            )}
+          </Pressable>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -626,6 +628,7 @@ const styles = StyleSheet.create({
     backgroundColor: BACKGROUND,
   },
   content: {
+    flexGrow: 1,
     paddingTop: Platform.OS === "ios" ? 18 : 24,
     paddingHorizontal: 16,
     paddingBottom: 46,
@@ -852,13 +855,16 @@ const styles = StyleSheet.create({
     lineHeight: 13,
     marginTop: 5,
   },
+  buttonArea: {
+    marginTop: "auto",
+    paddingTop: 28,
+  },
   continueButton: {
     height: 49,
     borderRadius: 15,
     backgroundColor: GREEN,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 32,
     shadowColor: GREEN,
     shadowOffset: {
       width: 0,
