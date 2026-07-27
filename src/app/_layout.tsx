@@ -7,7 +7,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -15,13 +15,11 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
+        {/* Sayfaları tek tek yazmak yerine sadece Ana Grupları tanımlıyoruz */}
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(main)" />
         <Stack.Screen name="index" />
-        <Stack.Screen name="login" />
-        <Stack.Screen name="forgot-password" />
-        <Stack.Screen name="email-sent" />
-        <Stack.Screen name="reset-password" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="modal" />
+        <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
