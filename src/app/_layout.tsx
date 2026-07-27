@@ -8,7 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { OnboardingProvider } from "@/context/OnboardingContext";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -17,15 +17,10 @@ export default function RootLayout() {
     <OnboardingProvider>
       <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(main)" />
           <Stack.Screen name="index" />
-          <Stack.Screen name="login" />
-          <Stack.Screen name="forgot-password" />
-          <Stack.Screen name="email-sent" />
-          <Stack.Screen name="onboarding/personal-info" />
-          <Stack.Screen name="onboarding/fitness-experience" />
-          <Stack.Screen name="onboarding/weekly-training-days" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" />
+          <Stack.Screen name="modal" options={{ presentation: "modal" }} />
         </Stack>
 
         <StatusBar style="auto" />

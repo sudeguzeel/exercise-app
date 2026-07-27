@@ -5,11 +5,13 @@ import "react-native-url-polyfill/auto";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
 
+const isBrowserOrNative = typeof window !== "undefined";
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    storage: AsyncStorage,
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-  },
+    auth: {
+        storage: isBrowserOrNative ? AsyncStorage : undefined,
+        autoRefreshToken: isBrowserOrNative,
+        persistSession: isBrowserOrNative,
+        detectSessionInUrl: false,
+    },
 });
