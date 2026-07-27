@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
@@ -78,7 +78,7 @@ export default function LoginScreen() {
         return;
       }
 
-      router.replace("/(tabs)");
+      router.replace("/(main)");
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
@@ -113,7 +113,7 @@ const handleGoogleLogin = async () => {
       if (result.type === 'success') {
         // Oturumu doğrula ve Ana Sayfaya geçiş yap
         await supabase.auth.getSession();
-        router.replace('/(tabs)');
+        router.replace('/(main)');
       }
     }
   } catch (error: any) {
