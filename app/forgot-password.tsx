@@ -1,48 +1,87 @@
+import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import * as AuthSession from "expo-auth-session";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const isValidEmail = (value: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
-  const handleSendLink = () => {
+  const handleSendLink = async () => {
+    if (loading) return;
+
     setEmailError("");
 
     const trimmedEmail = email.trim();
 
+    // 1. Boş E-posta Kontrolü
     if (!trimmedEmail) {
       setEmailError("E-posta alanı boş bırakılamaz.");
       return;
     }
 
+    // 2. Format Doğrulaması
     if (!isValidEmail(trimmedEmail)) {
       setEmailError("Geçerli bir e-posta adresi gir.");
       return;
     }
 
-    // Şifre sıfırlama API'si hazır olduğunda burada çağrılacak.
-    router.push({
-      pathname: "/email-sent",
-      params: {
-        email: trimmedEmail,
-      },
-    });
+    try {
+      setLoading(true);
+
+      // Şifre yenileme ekranının mobil deep link adresi
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: "exercise-app",
+        path: "reset-password",
+      });
+
+      // 3. Supabase Şifre Sıfırlama İsteği
+      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
+        redirectTo,
+      });
+
+      // 4. Kayıtlı Olmayan Kullanıcı / Hata Durumu
+      if (error) {
+        Alert.alert(
+          "İşlem Başarısız",
+          error.message.includes("User not found")
+            ? "Bu e-posta adresine ait kayıtlı bir hesap bulunamadı."
+            : error.message
+        );
+        return;
+      }
+
+      // 5. Başarılı Durumda Yönlendirme
+      router.push({
+        pathname: "/email-sent",
+        params: {
+          email: trimmedEmail,
+        },
+      });
+    } catch {
+      Alert.alert("Hata", "Bağlantı sağlanamadı. Lütfen tekrar deneyiniz.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,6 +97,7 @@ export default function ForgotPasswordScreen() {
         >
           <View style={styles.container}>
             <Pressable
+              disabled={loading}
               onPress={() => router.back()}
               style={({ pressed }) => [
                 styles.backButton,
@@ -98,6 +138,7 @@ export default function ForgotPasswordScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!loading}
                 style={styles.input}
                 returnKeyType="send"
                 onSubmitEditing={handleSendLink}
@@ -109,16 +150,23 @@ export default function ForgotPasswordScreen() {
             ) : null}
 
             <Pressable
+              disabled={loading}
               onPress={handleSendLink}
               style={({ pressed }) => [
                 styles.sendButton,
-                pressed ? styles.buttonPressed : null,
+                pressed && !loading ? styles.buttonPressed : null,
+                loading ? styles.buttonDisabled : null,
               ]}
             >
-              <Text style={styles.sendButtonText}>Bağlantı gönder</Text>
+              {loading ? (
+                <ActivityIndicator color="#101214" />
+              ) : (
+                <Text style={styles.sendButtonText}>Bağlantı gönder</Text>
+              )}
             </Pressable>
 
             <Pressable
+              disabled={loading}
               onPress={() => router.replace("/login")}
               style={({ pressed }) => [
                 styles.loginLinkButton,
@@ -234,6 +282,9 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.82,
+  },
+  buttonDisabled: {
+    opacity: 0.65,
   },
   loginLinkButton: {
     alignSelf: "center",
