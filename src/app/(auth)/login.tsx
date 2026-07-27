@@ -131,7 +131,7 @@ const handleGoogleLogin = async () => {
   };
 
   const handleRegister = () => {
-    Alert.alert("Kayıt ol", "Kayıt ekranı hazır olduğunda buraya bağlanacak.");
+    router.push("/register");
   };
 
   return (
