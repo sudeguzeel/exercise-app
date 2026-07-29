@@ -63,7 +63,7 @@ export default function WeeklyTrainingDaysScreen() {
       await new Promise((resolve) => setTimeout(resolve, 900));
 
       // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
-      router.replace("/(tabs)");
+      router.replace("/(main)");
     } finally {
       setIsCreating(false);
     }

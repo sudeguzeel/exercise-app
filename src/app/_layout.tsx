@@ -20,19 +20,10 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(main)" />
           <Stack.Screen name="index" />
-<<<<<<< HEAD:app/_layout.tsx
-          <Stack.Screen name="login" />
-          <Stack.Screen name="register" />
-          <Stack.Screen name="forgot-password" />
-          <Stack.Screen name="email-sent" />
           <Stack.Screen name="onboarding/personal-info" />
           <Stack.Screen name="onboarding/fitness-experience" />
           <Stack.Screen name="onboarding/weekly-training-days" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="modal" />
-=======
           <Stack.Screen name="modal" options={{ presentation: "modal" }} />
->>>>>>> origin/onboarding-flow:src/app/_layout.tsx
         </Stack>
 
         <StatusBar style="auto" />
