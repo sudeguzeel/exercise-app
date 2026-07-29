@@ -1,8 +1,6 @@
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
-import * as WebBrowser from 'expo-web-browser';
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -18,12 +16,18 @@ import {
   View,
 } from "react-native";
 
-export default function LoginScreen() {
+import { useOnboarding } from "@/context/OnboardingContext";
+
+export default function RegisterScreen() {
+  const { resetOnboarding } = useOnboarding();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const isValidEmail = (value: string) => {
@@ -35,6 +39,7 @@ export default function LoginScreen() {
 
     setEmailError("");
     setPasswordError("");
+    setConfirmPasswordError("");
 
     const trimmedEmail = email.trim();
 
@@ -49,12 +54,23 @@ export default function LoginScreen() {
     if (!password) {
       setPasswordError("Şifre alanı boş bırakılamaz.");
       isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError("Şifre en az 6 karakter olmalı.");
+      isValid = false;
+    }
+
+    if (!confirmPassword) {
+      setConfirmPasswordError("Şifre tekrarı boş bırakılamaz.");
+      isValid = false;
+    } else if (password && confirmPassword !== password) {
+      setConfirmPasswordError("Şifreler eşleşmiyor.");
+      isValid = false;
     }
 
     return isValid;
   };
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     if (loading || !validateForm()) {
       return;
     }
@@ -62,76 +78,53 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      console.log("SUPABASE LOGIN ÇALIŞTI", email);
-
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       });
 
-      console.log("EMAIL:", email);
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
-
-      if (error || !data.session) {
-        Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
+      if (error) {
+        Alert.alert(
+          "Kayıt olunamadı",
+          error.message.includes("already registered")
+            ? "Bu e-posta adresiyle kayıtlı bir hesap zaten var."
+            : error.message,
+        );
         return;
       }
 
-      router.replace("/(main)");
+      // Supabase, "Confirm email" açıkken email enumeration'ı önlemek için
+      // zaten kayıtlı bir e-postayla signUp çağrıldığında hata DÖNMEZ; sanki
+      // yeni kayıt olmuş gibi bir yanıt verir ama aslında yeni kullanıcı
+      // oluşturmaz. Bunu ayırt etmenin tek yolu: dönen user için
+      // identities dizisinin boş gelmesi (bkz. Supabase auth docs).
+      const isExistingAccount = data.user?.identities?.length === 0;
+
+      if (isExistingAccount) {
+        Alert.alert(
+          "Kayıt olunamadı",
+          "Bu e-posta adresiyle kayıtlı bir hesap zaten var. Giriş yapmayı veya şifreni sıfırlamayı dene.",
+        );
+        return;
+      }
+
+      resetOnboarding();
+
+      if (!data.session) {
+        Alert.alert(
+          "E-postanı doğrula",
+          "Hesabını onaylamak için sana gönderdiğimiz bağlantıya tıkla, ardından giriş yap.",
+          [{ text: "Tamam", onPress: () => router.replace("/login") }],
+        );
+        return;
+      }
+
+      router.replace("/onboarding/personal-info");
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
       setLoading(false);
     }
-  };
-
-const handleGoogleLogin = async () => {
-  try {
-    setLoading(true);
-
-    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
-    const redirectTo = AuthSession.makeRedirectUri({
-  scheme: 'exercise-app', // app.json içindeki scheme adın
-  path: 'login',
-});
-
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        skipBrowserRedirect: true,
-      },
-    });
-
-    if (error) throw error;
-
-    if (data?.url) {
-      // Google oturum açma sayfasını mobil tarayıcıda açar
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-
-      if (result.type === 'success') {
-        // Oturumu doğrula ve Ana Sayfaya geçiş yap
-        await supabase.auth.getSession();
-        router.replace('/(main)');
-      }
-    }
-  } catch (error: any) {
-    Alert.alert('Google Giriş Hatası', error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleAppleLogin = () => {
-    Alert.alert(
-      "Apple ile giriş",
-      "Apple giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
-    );
-  };
-
-  const handleRegister = () => {
-    router.push("/register");
   };
 
   return (
@@ -146,10 +139,21 @@ const handleGoogleLogin = async () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.container}>
-            <Text style={styles.title}>Hoş geldin</Text>
+            <Pressable
+              disabled={loading}
+              onPress={() => router.back()}
+              style={({ pressed }) => [
+                styles.backButton,
+                pressed ? styles.buttonPressed : null,
+              ]}
+            >
+              <Ionicons name="chevron-back" size={20} color="#14171A" />
+            </Pressable>
+
+            <Text style={styles.title}>Hesap oluştur</Text>
 
             <Text style={styles.subtitle}>
-              Programına devam etmek için giriş yap.
+              Programını kişiselleştirmek için önce bir hesap oluşturalım.
             </Text>
 
             <Text style={styles.label}>E-POSTA</Text>
@@ -210,8 +214,7 @@ const handleGoogleLogin = async () => {
                 secureTextEntry
                 editable={!loading}
                 style={styles.input}
-                returnKeyType="done"
-                onSubmitEditing={handleLogin}
+                returnKeyType="next"
               />
             </View>
 
@@ -219,19 +222,44 @@ const handleGoogleLogin = async () => {
               <Text style={styles.errorText}>{passwordError}</Text>
             ) : null}
 
-            <Pressable
-              disabled={loading}
-              onPress={() => router.push("/forgot-password")}
-              style={styles.forgotPasswordButton}
+            <Text style={styles.label}>ŞİFRE TEKRAR</Text>
+
+            <View
+              style={[
+                styles.inputContainer,
+                confirmPasswordError ? styles.inputContainerError : null,
+              ]}
             >
-              <Text style={styles.forgotPasswordText}>Şifremi unuttum</Text>
-            </Pressable>
+              <Ionicons name="lock-closed-outline" size={19} color="#6C716C" />
+
+              <TextInput
+                value={confirmPassword}
+                onChangeText={(value) => {
+                  setConfirmPassword(value);
+
+                  if (confirmPasswordError) {
+                    setConfirmPasswordError("");
+                  }
+                }}
+                placeholder="••••••••"
+                placeholderTextColor="#9A9E99"
+                secureTextEntry
+                editable={!loading}
+                style={styles.input}
+                returnKeyType="done"
+                onSubmitEditing={handleRegister}
+              />
+            </View>
+
+            {confirmPasswordError ? (
+              <Text style={styles.errorText}>{confirmPasswordError}</Text>
+            ) : null}
 
             <Pressable
               disabled={loading}
-              onPress={handleLogin}
+              onPress={handleRegister}
               style={({ pressed }) => [
-                styles.loginButton,
+                styles.registerButton,
                 pressed && !loading ? styles.buttonPressed : null,
                 loading ? styles.buttonDisabled : null,
               ]}
@@ -239,47 +267,15 @@ const handleGoogleLogin = async () => {
               {loading ? (
                 <ActivityIndicator color="#101214" />
               ) : (
-                <Text style={styles.loginButtonText}>Giriş yap</Text>
+                <Text style={styles.registerButtonText}>Hesap oluştur</Text>
               )}
             </Pressable>
 
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>VEYA</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            <View style={styles.loginRow}>
+              <Text style={styles.loginQuestion}>Zaten hesabın var mı? </Text>
 
-            <View style={styles.socialRow}>
-              <Pressable
-                disabled={loading}
-                onPress={handleGoogleLogin}
-                style={({ pressed }) => [
-                  styles.socialButton,
-                  pressed ? styles.socialButtonPressed : null,
-                ]}
-              >
-                <Text style={styles.googleLetter}>G</Text>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </Pressable>
-
-              <Pressable
-                disabled={loading}
-                onPress={handleAppleLogin}
-                style={({ pressed }) => [
-                  styles.socialButton,
-                  pressed ? styles.socialButtonPressed : null,
-                ]}
-              >
-                <Ionicons name="logo-apple" size={19} color="#14171A" />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.registerRow}>
-              <Text style={styles.registerQuestion}>Hesabın yok mu? </Text>
-
-              <Pressable disabled={loading} onPress={handleRegister}>
-                <Text style={styles.registerLink}>Kayıt ol</Text>
+              <Pressable disabled={loading} onPress={() => router.replace("/login")}>
+                <Text style={styles.loginLink}>Giriş yap</Text>
               </Pressable>
             </View>
           </View>
@@ -305,6 +301,17 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingHorizontal: 24,
     paddingVertical: 32,
+  },
+  backButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(116, 168, 0, 0.35)",
   },
   title: {
     color: "#14171A",
@@ -354,17 +361,7 @@ const styles = StyleSheet.create({
     color: "#FF5A5A",
     fontSize: 12,
   },
-  forgotPasswordButton: {
-    alignSelf: "flex-end",
-    marginTop: 11,
-    paddingVertical: 4,
-  },
-  forgotPasswordText: {
-    color: "#74A800",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  loginButton: {
+  registerButton: {
     height: 50,
     alignItems: "center",
     justifyContent: "center",
@@ -380,7 +377,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  loginButtonText: {
+  registerButtonText: {
     color: "#101214",
     fontSize: 15,
     fontWeight: "800",
@@ -391,62 +388,16 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.65,
   },
-  dividerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 21,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(116, 168, 0, 0.35)",
-  },
-  dividerText: {
-    marginHorizontal: 11,
-    color: "#6C716C",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  socialRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  socialButton: {
-    flex: 1,
-    height: 48,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "rgba(116, 168, 0, 0.35)",
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-  },
-  socialButtonPressed: {
-    backgroundColor: "#EFF1EA",
-  },
-  socialButtonText: {
-    color: "#14171A",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  googleLetter: {
-    color: "#4285F4",
-    fontSize: 17,
-    fontWeight: "900",
-  },
-  registerRow: {
+  loginRow: {
     flexDirection: "row",
     justifyContent: "center",
     marginTop: 22,
   },
-  registerQuestion: {
+  loginQuestion: {
     color: "#6C716C",
     fontSize: 13,
   },
-  registerLink: {
+  loginLink: {
     color: "#74A800",
     fontSize: 13,
     fontWeight: "800",
