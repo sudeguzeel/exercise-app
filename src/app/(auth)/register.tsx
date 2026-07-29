@@ -15,7 +15,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 import { useOnboarding } from "@/context/OnboardingContext";
 
 export default function RegisterScreen() {
@@ -93,11 +92,6 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Supabase, "Confirm email" açıkken email enumeration'ı önlemek için
-      // zaten kayıtlı bir e-postayla signUp çağrıldığında hata DÖNMEZ; sanki
-      // yeni kayıt olmuş gibi bir yanıt verir ama aslında yeni kullanıcı
-      // oluşturmaz. Bunu ayırt etmenin tek yolu: dönen user için
-      // identities dizisinin boş gelmesi (bkz. Supabase auth docs).
       const isExistingAccount = data.user?.identities?.length === 0;
 
       if (isExistingAccount) {
@@ -111,11 +105,11 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
-        Alert.alert(
-          "E-postanı doğrula",
-          "Hesabını onaylamak için sana gönderdiğimiz bağlantıya tıkla, ardından giriş yap.",
-          [{ text: "Tamam", onPress: () => router.replace("/login") }],
-        );
+        // ENTEGRASYON BURADA: Artık sadece Alert vermek yerine arkadaşının yaptığı ekrana gidiyor.
+        router.replace({
+          pathname: "/verify-email",
+          params: { email: email.trim() },
+        });
         return;
       }
 
@@ -170,7 +164,6 @@ export default function RegisterScreen() {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
-
                   if (emailError) {
                     setEmailError("");
                   }
@@ -204,7 +197,6 @@ export default function RegisterScreen() {
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
-
                   if (passwordError) {
                     setPasswordError("");
                   }
@@ -236,7 +228,6 @@ export default function RegisterScreen() {
                 value={confirmPassword}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
-
                   if (confirmPasswordError) {
                     setConfirmPasswordError("");
                   }
@@ -295,7 +286,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
   },
   container: {
     width: "100%",

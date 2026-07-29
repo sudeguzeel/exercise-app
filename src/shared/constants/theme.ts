@@ -27,6 +27,40 @@ export const Colors = {
   },
 };
 
+export const AuthColors = {
+  background: "#F6F7F2",
+  surface: "#FFFFFF",
+  text: "#14171A",
+  mutedText: "#6C716C",
+  placeholder: "#7A7F78",
+  primary: "#95D600",
+  primaryPressed: "#84C900",
+  primaryDark: "#65A900",
+  paleGreen: "#EDF6DC",
+  border: "rgba(116, 168, 0, 0.38)",
+  error: "#D14343",
+  errorBackground: "rgba(209, 67, 67, 0.06)",
+} as const;
+
+export const AuthLayout = {
+  maxContentWidth: 480,
+  horizontalPadding: 24,
+  controlHeight: 56,
+  controlRadius: 18,
+} as const;
+
+export const AuthTypography = {
+  title: 34,
+  titleLineHeight: 40,
+  body: 15,
+  bodyLineHeight: 23,
+  label: 13,
+  input: 16,
+  button: 16,
+  link: 15,
+  maxFontSizeMultiplier: 1.3,
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
