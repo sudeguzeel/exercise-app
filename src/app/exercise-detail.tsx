@@ -127,7 +127,7 @@ export default function ExerciseDetailScreen() {
     }
 
     router.push({
-      pathname: "/program",
+      pathname: "/program-selection",
       params: serializeProgramSelectionPayload(payload),
     });
   }, [customValues, exercise, useCustomValues]);
