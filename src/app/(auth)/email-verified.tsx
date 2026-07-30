@@ -16,7 +16,10 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
-import { getEmailVerificationState } from "@/shared/lib/services/mockAuthService";
+import {
+  clearPendingVerificationEmail,
+  getEmailVerificationState,
+} from "@/shared/lib/services/emailVerificationService";
 import {
   isValidEmail,
   normalizeEmail,
@@ -56,6 +59,12 @@ export default function EmailVerifiedScreen() {
               }
             : "/register",
         );
+        return;
+      }
+
+      await clearPendingVerificationEmail();
+
+      if (!mounted) {
         return;
       }
 
@@ -112,7 +121,7 @@ export default function EmailVerifiedScreen() {
           <Pressable
             accessibilityLabel="Devam et"
             accessibilityRole="button"
-            onPress={() => router.replace("/(main)")}
+            onPress={() => router.replace("/onboarding/personal-info")}
             style={({ pressed }) => [
               styles.continueButton,
               pressed ? styles.buttonPressed : null,
