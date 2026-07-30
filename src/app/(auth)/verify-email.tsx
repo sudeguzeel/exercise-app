@@ -10,6 +10,7 @@ import {
   Alert,
   AppState,
   Linking,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -25,8 +26,9 @@ import {
 } from "@/shared/constants/theme";
 import {
   getEmailVerificationState,
+  rememberPendingVerificationEmail,
   resendSignupConfirmation,
-} from "@/shared/lib/services/mockAuthService";
+} from "@/shared/lib/services/emailVerificationService";
 import {
   isValidEmail,
   normalizeEmail,
@@ -35,9 +37,16 @@ import {
 const MAIL_APP_URL = "mailto:";
 
 export default function VerifyEmailScreen() {
-  const { email: emailParameter } = useLocalSearchParams<{
+  const {
+    callbackError: callbackErrorParameter,
+    email: emailParameter,
+  } = useLocalSearchParams<{
+    callbackError?: string | string[];
     email?: string | string[];
   }>();
+  const callbackError = Array.isArray(callbackErrorParameter)
+    ? callbackErrorParameter[0]
+    : callbackErrorParameter;
   const routeEmail = Array.isArray(emailParameter)
     ? emailParameter[0]
     : emailParameter;
@@ -52,7 +61,7 @@ export default function VerifyEmailScreen() {
   const [openingMail, setOpeningMail] = useState(false);
   const [resending, setResending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState(callbackError ?? "");
 
   const navigateToVerified = useCallback((verifiedEmail?: string | null) => {
     if (navigationInProgressRef.current) {
@@ -71,6 +80,10 @@ export default function VerifyEmailScreen() {
 
     if (state.isVerified) {
       navigateToVerified(state.email ?? displayedEmail);
+    } else if (state.requestFailed) {
+      setErrorMessage(
+        "Doğrulama durumu kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.",
+      );
     }
 
     return state;
@@ -80,6 +93,10 @@ export default function VerifyEmailScreen() {
     let mounted = true;
 
     const initializeVerification = async () => {
+      if (displayedEmail) {
+        await rememberPendingVerificationEmail(displayedEmail);
+      }
+
       const state = await checkVerification();
 
       if (
@@ -131,13 +148,28 @@ export default function VerifyEmailScreen() {
     setOpeningMail(true);
 
     try {
-      const canOpenMailApp = await Linking.canOpenURL(MAIL_APP_URL);
+      const mailFallbackUrl = displayedEmail
+        ? `mailto:${encodeURIComponent(displayedEmail)}`
+        : MAIL_APP_URL;
+      const mailAppUrls =
+        Platform.OS === "ios"
+          ? ["message://", mailFallbackUrl]
+          : [mailFallbackUrl];
 
-      if (!canOpenMailApp) {
-        throw new Error("Mail application is unavailable");
+      for (const mailAppUrl of mailAppUrls) {
+        try {
+          const canOpenMailApp = await Linking.canOpenURL(mailAppUrl);
+
+          if (canOpenMailApp) {
+            await Linking.openURL(mailAppUrl);
+            return;
+          }
+        } catch {
+          // Bir sonraki platform uyumlu yöntemi dene.
+        }
       }
 
-      await Linking.openURL(MAIL_APP_URL);
+      await Linking.openURL(mailFallbackUrl);
     } catch {
       Alert.alert(
         "E-posta uygulaması açılamadı",

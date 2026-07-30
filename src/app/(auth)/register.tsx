@@ -1,4 +1,8 @@
 import { supabase } from "@/shared/lib/supabase";
+import {
+  getEmailVerificationRedirectUrl,
+  rememberPendingVerificationEmail,
+} from "@/shared/lib/services/emailVerificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -80,6 +84,9 @@ export default function RegisterScreen() {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          emailRedirectTo: getEmailVerificationRedirectUrl(),
+        },
       });
 
       if (error) {
@@ -105,7 +112,8 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
-        // ENTEGRASYON BURADA: Artık sadece Alert vermek yerine arkadaşının yaptığı ekrana gidiyor.
+        await rememberPendingVerificationEmail(email.trim());
+
         router.replace({
           pathname: "/verify-email",
           params: { email: email.trim() },
@@ -113,7 +121,10 @@ export default function RegisterScreen() {
         return;
       }
 
-      router.replace("/onboarding/personal-info");
+      router.replace({
+        pathname: "/email-verified",
+        params: { email: email.trim() },
+      });
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
