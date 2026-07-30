@@ -3,6 +3,7 @@ import type { Ionicons } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
 
 export type ExerciseStatus = "completed" | "partial" | "not_started";
+export type ExerciseLevel = "Başlangıç" | "Orta seviye" | "İleri seviye";
 export type TargetDayStatus =
   | "completed"
   | "missed"
@@ -20,6 +21,8 @@ export type Exercise = {
   name: string;
   categoryId: string;
   description: string;
+  level: ExerciseLevel;
+  image: ComponentProps<typeof Ionicons>["name"];
 };
 export type PlannedExercise = {
   exerciseId: string;
@@ -73,7 +76,7 @@ export type HomeDashboard = {
   isRestDay: boolean;
 };
 
-const DAY_META: Array<{ id: TrainingDay; label: string }> = [
+const DAY_META: { id: TrainingDay; label: string }[] = [
   { id: "monday", label: "Pzt" },
   { id: "tuesday", label: "Sal" },
   { id: "wednesday", label: "Çar" },
