@@ -90,11 +90,18 @@ const handleGoogleLogin = async () => {
   try {
     setLoading(true);
 
-    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
-    const redirectTo = AuthSession.makeRedirectUri({
-      scheme: 'exercise-app', // app.json içindeki scheme adın
-      path: 'login',
-    });
+    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres.
+    // `scheme` bilerek verilmiyor: Expo Go'da app.json'daki özel scheme
+    // ("exercise-app") hiçbir zaman çalışmaz (Expo Go sadece kendi "exp://"
+    // şemasını tanır) — scheme'i sabitlersek Expo Go bunu sessizce görmezden
+    // gelip ne döndüreceği belirsizleşiyordu. Scheme'i boş bırakınca Expo
+    // Go'da otomatik "exp://<ip>:<port>/--/login", dev-client/production
+    // build'de ise app.json'daki "exercise-app://login" üretilir.
+    const redirectTo = AuthSession.makeRedirectUri({ path: 'login' });
+
+    // Bu adresi Supabase'in "Redirect URLs" listesine eklemen gerekiyor.
+    // Metro terminalinde bu satırı arayıp tam adresi görebilirsin.
+    console.log('[Google OAuth] redirectTo:', redirectTo);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
