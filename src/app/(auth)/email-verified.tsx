@@ -16,96 +16,73 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
-import { supabase } from "@/shared/lib/supabase";
+import {
+  clearPendingVerificationEmail,
+  getEmailVerificationState,
+} from "@/shared/lib/services/emailVerificationService";
+import {
+  isValidEmail,
+  normalizeEmail,
+} from "@/shared/lib/validation/authValidation";
 
 export default function EmailVerifiedScreen() {
-  const { code } = useLocalSearchParams<{ code?: string | string[] }>();
-
-  const [verifying, setVerifying] = useState(true);
-  const [verificationError, setVerificationError] = useState("");
+  const { email: emailParameter } = useLocalSearchParams<{
+    email?: string | string[];
+  }>();
+  const routeEmail = Array.isArray(emailParameter)
+    ? emailParameter[0]
+    : emailParameter;
+  const expectedEmail =
+    routeEmail && isValidEmail(routeEmail)
+      ? normalizeEmail(routeEmail)
+      : null;
+  const [checkingVerification, setCheckingVerification] = useState(true);
 
   useEffect(() => {
-    const verifyCode = async () => {
-      const authCode = Array.isArray(code) ? code[0] : code;
+    let mounted = true;
 
-      if (!authCode) {
-        setVerificationError(
-          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir doğrulama bağlantısı iste.",
-        );
-        setVerifying(false);
+    const protectVerifiedScreen = async () => {
+      const state = await getEmailVerificationState(
+        expectedEmail ?? undefined,
+      );
+
+      if (!mounted) {
         return;
       }
 
-      const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-
-      if (error) {
-        setVerificationError(
-          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir doğrulama bağlantısı iste.",
+      if (!state.isVerified) {
+        router.replace(
+          expectedEmail
+            ? {
+                pathname: "/verify-email",
+                params: { email: expectedEmail },
+              }
+            : "/register",
         );
+        return;
       }
 
-      setVerifying(false);
+      await clearPendingVerificationEmail();
+
+      if (!mounted) {
+        return;
+      }
+
+      setCheckingVerification(false);
     };
 
-    void verifyCode();
-  }, [code]);
+    void protectVerifiedScreen();
 
-  const handleContinue = () => {
-    router.replace("/onboarding/personal-info");
-  };
+    return () => {
+      mounted = false;
+    };
+  }, [expectedEmail]);
 
-  if (verifying) {
+  if (checkingVerification) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerContainer}>
+        <View style={styles.loadingContainer}>
           <ActivityIndicator color={AuthColors.primaryDark} size="large" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (verificationError) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centerContainer}>
-          <View style={styles.iconCircle}>
-            <Ionicons
-              color={AuthColors.error}
-              name="alert-circle-outline"
-              size={40}
-            />
-          </View>
-
-          <Text
-            maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
-            style={styles.title}
-          >
-            Bağlantı geçersiz
-          </Text>
-
-          <Text
-            maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
-            style={styles.description}
-          >
-            {verificationError}
-          </Text>
-
-          <Pressable
-            accessibilityLabel="Kayıt ekranına dön"
-            accessibilityRole="button"
-            onPress={() => router.replace("/register")}
-            style={({ pressed }) => [
-              styles.continueButton,
-              pressed ? styles.buttonPressed : null,
-            ]}
-          >
-            <Text
-              maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
-              style={styles.continueButtonText}
-            >
-              Kayıt ekranına dön
-            </Text>
-          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -144,7 +121,7 @@ export default function EmailVerifiedScreen() {
           <Pressable
             accessibilityLabel="Devam et"
             accessibilityRole="button"
-            onPress={handleContinue}
+            onPress={() => router.replace("/onboarding/personal-info")}
             style={({ pressed }) => [
               styles.continueButton,
               pressed ? styles.buttonPressed : null,
@@ -168,23 +145,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AuthColors.background,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  centerContainer: {
+  loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: AuthLayout.horizontalPadding,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    backgroundColor: AuthColors.errorBackground,
+  scrollContent: {
+    flexGrow: 1,
   },
   container: {
     width: "100%",

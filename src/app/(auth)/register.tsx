@@ -1,7 +1,10 @@
 import { useOnboarding } from "@/providers/OnboardingContext";
+import {
+  getEmailVerificationRedirectUrl,
+  rememberPendingVerificationEmail,
+} from "@/shared/lib/services/emailVerificationService";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import * as AuthSession from "expo-auth-session";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -78,15 +81,12 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
 
-      const redirectTo = AuthSession.makeRedirectUri({
-        scheme: "exercise-app",
-        path: "email-verified",
-      });
-
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { emailRedirectTo: redirectTo },
+        options: {
+          emailRedirectTo: getEmailVerificationRedirectUrl(),
+        },
       });
 
       if (error) {
@@ -112,6 +112,11 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
+        // Supabase projesinde "Confirm email" kapalıysa buraya hiç
+        // düşülmez (signUp anında session döner). Açık olduğu ihtimale
+        // karşı doğrulama bekleme ekranına yönlendiriyoruz.
+        await rememberPendingVerificationEmail(email.trim());
+
         router.replace({
           pathname: "/verify-email",
           params: { email: email.trim() },
@@ -119,6 +124,8 @@ export default function RegisterScreen() {
         return;
       }
 
+      // "Confirm email" kapalı olduğu için normal durum bu: hesap anında
+      // hazır, doğrulama beklemeden direkt onboarding'e geçiyoruz.
       router.replace("/onboarding/personal-info");
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");

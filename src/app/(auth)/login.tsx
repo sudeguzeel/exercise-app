@@ -1,3 +1,4 @@
+import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from 'expo-auth-session';
@@ -112,18 +113,25 @@ const handleGoogleLogin = async () => {
       if (result.type === 'success' && result.url) {
         // supabase.ts içinde detectSessionInUrl kapalı (web SSR'ı çökertmemek
         // için) ve React Native'de zaten otomatik URL algılama çalışmıyor;
-        // bu yüzden tarayıcıdan dönen code'u burada elle exchange etmemiz
-        // gerekiyor. Önceden bu adım hiç yapılmıyordu ve Google ile girişte
-        // session hiç kurulmuyordu.
-        const code = new URL(result.url).searchParams.get('code');
+        // bu yüzden tarayıcıdan dönen token'ları burada elle okuyup session
+        // kurmamız gerekiyor. Proje flowType:"implicit" kullandığı için
+        // token'lar `?code=` değil `#access_token=&refresh_token=` şeklinde
+        // geliyor — önceden burada code exchange deneniyordu, hiç eşleşmediği
+        // için Google ile girişte session hiç kurulmuyordu.
+        const parameters = getAuthCallbackParameters(result.url);
+        const accessToken = parameters.get('access_token');
+        const refreshToken = parameters.get('refresh_token');
 
-        if (!code) {
-          throw new Error('Google girişinden geçerli bir kod alınamadı.');
+        if (!accessToken || !refreshToken) {
+          throw new Error('Google girişinden geçerli bir oturum bilgisi alınamadı.');
         }
 
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
 
-        if (exchangeError) throw exchangeError;
+        if (sessionError) throw sessionError;
 
         const { data: sessionData } = await supabase.auth.getSession();
 

@@ -61,6 +61,18 @@ export const AuthTypography = {
   maxFontSizeMultiplier: 1.3,
 } as const;
 
+export const MainColors = {
+  background: "#F8F8F5",
+  surface: "#FFFFFF",
+  text: "#171A18",
+  mutedText: "#747774",
+  primary: "#62B900",
+  primaryBright: "#87D900",
+  paleGreen: "#F1F6EB",
+  border: "#CCE1AE",
+  subtleBorder: "#E1E3DF",
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
