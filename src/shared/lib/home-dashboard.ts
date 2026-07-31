@@ -4,6 +4,7 @@ import type { ComponentProps } from "react";
 
 export type ExerciseStatus = "completed" | "partial" | "not_started";
 export type ExerciseLevel = "Başlangıç" | "Orta seviye" | "İleri seviye";
+export type ExerciseType = "Bileşik" | "İzolasyon" | "Mobilite" | "Kardiyo";
 export type TargetDayStatus =
   | "completed"
   | "missed"
@@ -23,6 +24,13 @@ export type Exercise = {
   description: string;
   level: ExerciseLevel;
   image: ComponentProps<typeof Ionicons>["name"];
+  animationUri?: string;
+  exerciseType: ExerciseType;
+  primaryMuscle: string;
+  secondaryMuscles: string[];
+  recommendedSets: number;
+  recommendedReps: string;
+  recommendedRestSeconds: number;
 };
 export type PlannedExercise = {
   exerciseId: string;
