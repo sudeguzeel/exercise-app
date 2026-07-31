@@ -2,14 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
+
+import { supabase } from "@/shared/lib/supabase";
 
 import { TrainingDay, useOnboarding } from "@/context/OnboardingContext";
 
@@ -34,6 +37,16 @@ const dayOptions: DayOption[] = [
   { id: "sunday", label: "Paz" },
 ];
 
+const dayToApiCode: Record<TrainingDay, string> = {
+  monday: "mon",
+  tuesday: "tue",
+  wednesday: "wed",
+  thursday: "thu",
+  friday: "fri",
+  saturday: "sat",
+  sunday: "sun",
+};
+
 export default function WeeklyTrainingDaysScreen() {
   const { trainingDays, setTrainingDays } = useOnboarding();
 
@@ -51,6 +64,7 @@ export default function WeeklyTrainingDaysScreen() {
     });
   };
 
+  
   const handleCreateProgram = async () => {
     if (!isButtonEnabled) {
       return;
@@ -59,15 +73,33 @@ export default function WeeklyTrainingDaysScreen() {
     setIsCreating(true);
 
     try {
-      // Backend bağlantısı eklenene kadar geçici işlem.
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const apiDays = trainingDays.map((day) => dayToApiCode[day]);
 
-      // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
+      const { data, error } = await supabase.functions.invoke(
+        "save-onboarding-weekly-goal",
+        { body: { days: apiDays } }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.error) {
+        Alert.alert(
+          "Kaydedilemedi",
+          data.fieldErrors?.days ?? data.message ?? "Bir hata oluştu, tekrar deneyin."
+        );
+        return;
+      }
+
       router.replace("/(main)");
+    } catch (err) {
+      Alert.alert("Kaydedilemedi", "Bağlantı hatası, tekrar deneyin.");
     } finally {
       setIsCreating(false);
     }
   };
+
 
   return (
     <View style={styles.container}>

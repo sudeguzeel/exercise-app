@@ -112,7 +112,7 @@ export default function EmailVerifiedScreen() {
           <Pressable
             accessibilityLabel="Devam et"
             accessibilityRole="button"
-            onPress={() => router.replace("/(main)")}
+            onPress={() => router.replace("/onboarding/personal-info")}
             style={({ pressed }) => [
               styles.continueButton,
               pressed ? styles.buttonPressed : null,
