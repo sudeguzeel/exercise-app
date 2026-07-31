@@ -7,8 +7,21 @@ import {
 import {
   dateForDayOfWeek,
   type Exercise,
+  type ExerciseCategory,
   type HomeSourceData,
 } from "@/shared/lib/home-dashboard";
+
+export type ExerciseCatalogData = {
+  categories: ExerciseCategory[];
+  exercises: Exercise[];
+};
+
+export function getExerciseCatalog(): ExerciseCatalogData {
+  return {
+    categories: MOCK_EXERCISE_CATEGORIES,
+    exercises: MOCK_EXERCISES,
+  };
+}
 
 export function getHomeSourceData(referenceDate = new Date()): HomeSourceData {
   return {
