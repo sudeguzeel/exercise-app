@@ -1,4 +1,8 @@
 import { supabase } from "@/shared/lib/supabase";
+import {
+  getEmailVerificationRedirectUrl,
+  rememberPendingVerificationEmail,
+} from "@/shared/lib/services/emailVerificationService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -15,7 +19,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-
 import { useOnboarding } from "@/context/OnboardingContext";
 
 export default function RegisterScreen() {
@@ -81,6 +84,9 @@ export default function RegisterScreen() {
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          emailRedirectTo: getEmailVerificationRedirectUrl(),
+        },
       });
 
       if (error) {
@@ -93,11 +99,6 @@ export default function RegisterScreen() {
         return;
       }
 
-      // Supabase, "Confirm email" açıkken email enumeration'ı önlemek için
-      // zaten kayıtlı bir e-postayla signUp çağrıldığında hata DÖNMEZ; sanki
-      // yeni kayıt olmuş gibi bir yanıt verir ama aslında yeni kullanıcı
-      // oluşturmaz. Bunu ayırt etmenin tek yolu: dönen user için
-      // identities dizisinin boş gelmesi (bkz. Supabase auth docs).
       const isExistingAccount = data.user?.identities?.length === 0;
 
       if (isExistingAccount) {
@@ -111,15 +112,19 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
-        Alert.alert(
-          "E-postanı doğrula",
-          "Hesabını onaylamak için sana gönderdiğimiz bağlantıya tıkla, ardından giriş yap.",
-          [{ text: "Tamam", onPress: () => router.replace("/login") }],
-        );
+        await rememberPendingVerificationEmail(email.trim());
+
+        router.replace({
+          pathname: "/verify-email",
+          params: { email: email.trim() },
+        });
         return;
       }
 
-      router.replace("/onboarding/personal-info");
+      router.replace({
+        pathname: "/email-verified",
+        params: { email: email.trim() },
+      });
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
@@ -170,7 +175,6 @@ export default function RegisterScreen() {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
-
                   if (emailError) {
                     setEmailError("");
                   }
@@ -204,7 +208,6 @@ export default function RegisterScreen() {
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
-
                   if (passwordError) {
                     setPasswordError("");
                   }
@@ -236,7 +239,6 @@ export default function RegisterScreen() {
                 value={confirmPassword}
                 onChangeText={(value) => {
                   setConfirmPassword(value);
-
                   if (confirmPasswordError) {
                     setConfirmPasswordError("");
                   }
@@ -295,7 +297,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
   },
   container: {
     width: "100%",
