@@ -6,6 +6,9 @@
       "@/shared/*": [
         "./src/shared/*"
       ],
+      "@/providers/*": [
+        "./src/providers/*"
+      ],
       "@/*": [
         "./*"
       ]

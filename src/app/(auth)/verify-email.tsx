@@ -1,14 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import {
-  router,
-  useFocusEffect,
-  useLocalSearchParams,
-} from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import * as AuthSession from "expo-auth-session";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  AppState,
   Linking,
   Pressable,
   SafeAreaView,
@@ -23,10 +19,7 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
-import {
-  getEmailVerificationState,
-  resendSignupConfirmation,
-} from "@/shared/lib/services/mockAuthService";
+import { supabase } from "@/shared/lib/supabase";
 import {
   isValidEmail,
   normalizeEmail,
@@ -41,86 +34,27 @@ export default function VerifyEmailScreen() {
   const routeEmail = Array.isArray(emailParameter)
     ? emailParameter[0]
     : emailParameter;
-  const displayedEmail =
+  const email =
     routeEmail && isValidEmail(routeEmail)
       ? normalizeEmail(routeEmail)
       : null;
-  const navigationInProgressRef = useRef(false);
-  const openingMailRef = useRef(false);
+
   const resendingRef = useRef(false);
-  const [checkingVerification, setCheckingVerification] = useState(true);
+  const openingMailRef = useRef(false);
   const [openingMail, setOpeningMail] = useState(false);
   const [resending, setResending] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const navigateToVerified = useCallback((verifiedEmail?: string | null) => {
-    if (navigationInProgressRef.current) {
-      return;
-    }
-
-    navigationInProgressRef.current = true;
-    router.replace({
-      pathname: "/email-verified",
-      params: verifiedEmail ? { email: verifiedEmail } : {},
-    });
-  }, []);
-
-  const checkVerification = useCallback(async () => {
-    const state = await getEmailVerificationState(displayedEmail ?? undefined);
-
-    if (state.isVerified) {
-      navigateToVerified(state.email ?? displayedEmail);
-    }
-
-    return state;
-  }, [displayedEmail, navigateToVerified]);
-
   useEffect(() => {
-    let mounted = true;
+    if (!email) {
+      router.replace("/register");
+    }
+  }, [email]);
 
-    const initializeVerification = async () => {
-      const state = await checkVerification();
-
-      if (
-        mounted &&
-        !state.isVerified &&
-        !displayedEmail &&
-        !navigationInProgressRef.current
-      ) {
-        router.replace("/register");
-        return;
-      }
-
-      if (mounted) {
-        setCheckingVerification(false);
-      }
-    };
-
-    void initializeVerification();
-
-    const appStateSubscription = AppState.addEventListener(
-      "change",
-      (nextState) => {
-        if (nextState === "active") {
-          void checkVerification();
-        }
-      },
-    );
-
-    return () => {
-      mounted = false;
-      appStateSubscription.remove();
-    };
-  }, [checkVerification, displayedEmail]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!checkingVerification && displayedEmail) {
-        void checkVerification();
-      }
-    }, [checkVerification, checkingVerification, displayedEmail]),
-  );
+  if (!email) {
+    return null;
+  }
 
   const handleOpenEmail = async () => {
     if (openingMailRef.current) {
@@ -154,20 +88,24 @@ export default function VerifyEmailScreen() {
       return;
     }
 
-    if (!displayedEmail) {
-      router.replace("/register");
-      return;
-    }
-
     resendingRef.current = true;
     setResending(true);
     setStatusMessage("");
     setErrorMessage("");
 
     try {
-      const result = await resendSignupConfirmation(displayedEmail);
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: "exercise-app",
+        path: "email-verified",
+      });
 
-      if (!result.success) {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: redirectTo },
+      });
+
+      if (error) {
         setErrorMessage(
           "Doğrulama e-postası gönderilemedi. Lütfen tekrar dene.",
         );
@@ -186,21 +124,21 @@ export default function VerifyEmailScreen() {
   };
 
   const handleChangeEmail = () => {
-    router.replace({
-      pathname: "/register",
-      params: displayedEmail ? { email: displayedEmail } : {},
-    });
+    router.replace("/register");
   };
 
-  if (checkingVerification) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator color={AuthColors.primaryDark} size="large" />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  // Doğrulama bağlantısı e-posta uygulamasında açılıyor; deep link her zaman
+  // uygulamaya otomatik geri dönmeyi garanti etmediğinden (özellikle Expo Go
+  // ile geliştirirken), kullanıcının linke tıkladıktan sonra kendi isteğiyle
+  // giriş ekranına geçmesi için elle tetiklenen bir buton sunuyoruz. (Daha
+  // önce burada uygulama her ön plana geldiğinde otomatik olarak /login'e
+  // yönlendiren bir AppState dinleyicisi vardı; bu, kullanıcı linke hiç
+  // dokunmadan sadece başka bir uygulamaya bakıp geri dönse bile onu
+  // doğrulama ekranından atıyordu ve deep link'in kendisiyle de yarış
+  // durumu oluşturuyordu — kaldırıldı.)
+  const handleContinueToLogin = () => {
+    router.replace("/login");
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -234,7 +172,7 @@ export default function VerifyEmailScreen() {
             maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
             style={styles.description}
           >
-            <Text style={styles.emailHighlight}>{displayedEmail}</Text>
+            <Text style={styles.emailHighlight}>{email}</Text>
             {" adresine doğrulama bağlantısı gönderdik. Hesabını kullanmaya "}
             devam etmek için e-postandaki bağlantıya dokun.
           </Text>
@@ -296,6 +234,21 @@ export default function VerifyEmailScreen() {
             )}
           </Pressable>
 
+          <Pressable
+            accessibilityLabel="E-postamı doğruladım, giriş ekranına git"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={handleContinueToLogin}
+            style={styles.linkButton}
+          >
+            <Text
+              maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
+              style={styles.linkButtonText}
+            >
+              E-postamı doğruladım, giriş yap
+            </Text>
+          </Pressable>
+
           {statusMessage ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -349,11 +302,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AuthColors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   scrollContent: {
     flexGrow: 1,
@@ -452,6 +400,17 @@ const styles = StyleSheet.create({
     color: AuthColors.error,
     fontSize: 14,
     lineHeight: 20,
+    textAlign: "center",
+  },
+  linkButton: {
+    alignSelf: "center",
+    marginTop: 20,
+    paddingVertical: 6,
+  },
+  linkButtonText: {
+    color: AuthColors.primary,
+    fontSize: AuthTypography.link,
+    fontWeight: "900",
     textAlign: "center",
   },
   changeEmailRow: {

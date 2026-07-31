@@ -62,23 +62,22 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      console.log("SUPABASE LOGIN ÇALIŞTI", email);
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-
-      console.log("EMAIL:", email);
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
 
       if (error || !data.session) {
         Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
         return;
       }
 
-      router.replace("/(main)");
+      const onboardingCompleted =
+        data.session.user.user_metadata?.onboarding_completed === true;
+
+      router.replace(
+        onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
+      );
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
@@ -92,9 +91,9 @@ const handleGoogleLogin = async () => {
 
     // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
     const redirectTo = AuthSession.makeRedirectUri({
-  scheme: 'exercise-app', // app.json içindeki scheme adın
-  path: 'login',
-});
+      scheme: 'exercise-app', // app.json içindeki scheme adın
+      path: 'login',
+    });
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -110,10 +109,32 @@ const handleGoogleLogin = async () => {
       // Google oturum açma sayfasını mobil tarayıcıda açar
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-      if (result.type === 'success') {
-        // Oturumu doğrula ve Ana Sayfaya geçiş yap
-        await supabase.auth.getSession();
-        router.replace('/(main)');
+      if (result.type === 'success' && result.url) {
+        // supabase.ts içinde detectSessionInUrl kapalı (web SSR'ı çökertmemek
+        // için) ve React Native'de zaten otomatik URL algılama çalışmıyor;
+        // bu yüzden tarayıcıdan dönen code'u burada elle exchange etmemiz
+        // gerekiyor. Önceden bu adım hiç yapılmıyordu ve Google ile girişte
+        // session hiç kurulmuyordu.
+        const code = new URL(result.url).searchParams.get('code');
+
+        if (!code) {
+          throw new Error('Google girişinden geçerli bir kod alınamadı.');
+        }
+
+        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (exchangeError) throw exchangeError;
+
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        if (!sessionData.session) {
+          throw new Error('Oturum oluşturulamadı.');
+        }
+
+        const onboardingCompleted =
+          sessionData.session.user.user_metadata?.onboarding_completed === true;
+
+        router.replace(onboardingCompleted ? '/(main)' : '/onboarding/personal-info');
       }
     }
   } catch (error: any) {

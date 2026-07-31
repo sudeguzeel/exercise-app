@@ -16,7 +16,8 @@ import {
     View,
 } from "react-native";
 
-import { Gender, Goal, useOnboarding } from "@/context/OnboardingContext";
+import { Gender, Goal, useOnboarding } from "@/providers/OnboardingContext";
+import { savePersonalInfo } from "@/shared/lib/services/personalInfoService";
 
 const GREEN = "#79DE2D";
 const BACKGROUND = "#F7F8F2";
@@ -142,6 +143,7 @@ export default function PersonalInfoScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const [touched, setTouched] = useState({
     fullName: false,
@@ -297,11 +299,19 @@ export default function PersonalInfoScreen() {
     }
 
     setIsSaving(true);
+    setSaveError("");
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      const result = await savePersonalInfo(personalInfo);
+
+      if (!result.success) {
+        setSaveError(result.message);
+        return;
+      }
 
       router.push("/onboarding/fitness-experience");
+    } catch {
+      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
     } finally {
       setIsSaving(false);
     }
@@ -600,6 +610,8 @@ export default function PersonalInfoScreen() {
         {touched.targetWeight && targetWeightError ? (
           <Text style={styles.errorText}>{targetWeightError}</Text>
         ) : null}
+
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
 
         <View style={styles.buttonArea}>
           <Pressable

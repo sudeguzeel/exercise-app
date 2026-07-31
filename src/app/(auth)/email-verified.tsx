@@ -16,64 +16,96 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
-import { getEmailVerificationState } from "@/shared/lib/services/mockAuthService";
-import {
-  isValidEmail,
-  normalizeEmail,
-} from "@/shared/lib/validation/authValidation";
+import { supabase } from "@/shared/lib/supabase";
 
 export default function EmailVerifiedScreen() {
-  const { email: emailParameter } = useLocalSearchParams<{
-    email?: string | string[];
-  }>();
-  const routeEmail = Array.isArray(emailParameter)
-    ? emailParameter[0]
-    : emailParameter;
-  const expectedEmail =
-    routeEmail && isValidEmail(routeEmail)
-      ? normalizeEmail(routeEmail)
-      : null;
-  const [checkingVerification, setCheckingVerification] = useState(true);
+  const { code } = useLocalSearchParams<{ code?: string | string[] }>();
+
+  const [verifying, setVerifying] = useState(true);
+  const [verificationError, setVerificationError] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    const verifyCode = async () => {
+      const authCode = Array.isArray(code) ? code[0] : code;
 
-    const protectVerifiedScreen = async () => {
-      const state = await getEmailVerificationState(
-        expectedEmail ?? undefined,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      if (!state.isVerified) {
-        router.replace(
-          expectedEmail
-            ? {
-                pathname: "/verify-email",
-                params: { email: expectedEmail },
-              }
-            : "/register",
+      if (!authCode) {
+        setVerificationError(
+          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir doğrulama bağlantısı iste.",
         );
+        setVerifying(false);
         return;
       }
 
-      setCheckingVerification(false);
+      const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+
+      if (error) {
+        setVerificationError(
+          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir doğrulama bağlantısı iste.",
+        );
+      }
+
+      setVerifying(false);
     };
 
-    void protectVerifiedScreen();
+    void verifyCode();
+  }, [code]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [expectedEmail]);
+  const handleContinue = () => {
+    router.replace("/onboarding/personal-info");
+  };
 
-  if (checkingVerification) {
+  if (verifying) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
+        <View style={styles.centerContainer}>
           <ActivityIndicator color={AuthColors.primaryDark} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (verificationError) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centerContainer}>
+          <View style={styles.iconCircle}>
+            <Ionicons
+              color={AuthColors.error}
+              name="alert-circle-outline"
+              size={40}
+            />
+          </View>
+
+          <Text
+            maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
+            style={styles.title}
+          >
+            Bağlantı geçersiz
+          </Text>
+
+          <Text
+            maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
+            style={styles.description}
+          >
+            {verificationError}
+          </Text>
+
+          <Pressable
+            accessibilityLabel="Kayıt ekranına dön"
+            accessibilityRole="button"
+            onPress={() => router.replace("/register")}
+            style={({ pressed }) => [
+              styles.continueButton,
+              pressed ? styles.buttonPressed : null,
+            ]}
+          >
+            <Text
+              maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
+              style={styles.continueButtonText}
+            >
+              Kayıt ekranına dön
+            </Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -112,7 +144,7 @@ export default function EmailVerifiedScreen() {
           <Pressable
             accessibilityLabel="Devam et"
             accessibilityRole="button"
-            onPress={() => router.replace("/(main)")}
+            onPress={handleContinue}
             style={({ pressed }) => [
               styles.continueButton,
               pressed ? styles.buttonPressed : null,
@@ -136,13 +168,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: AuthColors.background,
   },
-  loadingContainer: {
+  scrollContent: {
+    flexGrow: 1,
+  },
+  centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: AuthLayout.horizontalPadding,
   },
-  scrollContent: {
-    flexGrow: 1,
+  iconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+    backgroundColor: AuthColors.errorBackground,
   },
   container: {
     width: "100%",

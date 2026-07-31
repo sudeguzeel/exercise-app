@@ -1,5 +1,7 @@
+import { useOnboarding } from "@/providers/OnboardingContext";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import * as AuthSession from "expo-auth-session";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -15,7 +17,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useOnboarding } from "@/context/OnboardingContext";
 
 export default function RegisterScreen() {
   const { resetOnboarding } = useOnboarding();
@@ -77,9 +78,15 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
 
+      const redirectTo = AuthSession.makeRedirectUri({
+        scheme: "exercise-app",
+        path: "email-verified",
+      });
+
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: { emailRedirectTo: redirectTo },
       });
 
       if (error) {
@@ -105,7 +112,6 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
-        // ENTEGRASYON BURADA: Artık sadece Alert vermek yerine arkadaşının yaptığı ekrana gidiyor.
         router.replace({
           pathname: "/verify-email",
           params: { email: email.trim() },
