@@ -14,6 +14,7 @@ export type ProgramRepositoryErrorCode =
   | "AUTH_REQUIRED"
   | "DUPLICATE_NAME"
   | "INVALID_INPUT"
+  | "EXERCISE_NOT_FOUND"
   | "REQUEST_FAILED";
 
 export class ProgramRepositoryError extends Error {
@@ -118,12 +119,58 @@ async function requireUserId(): Promise<string> {
 const PROGRAM_SELECT_WITH_EXERCISES =
   "id, name, training_days, muscle_group_ids, user_workout_program_exercises(id, exercise_id, sets, reps, rest_seconds, order_index)";
 
+// user_workout_program_exercises tablosundaki CHECK constraint'leriyle
+// birebir aynı sınırlar (bkz. extend_workout_programs_for_named_recurring_programs
+// migration'ı) — repository burada da doğruluyor ki geçersiz değerler DB'ye
+// gitmeden, net bir INVALID_INPUT hatasıyla reddedilsin.
+const VALUE_RANGES = {
+  sets: { min: 1, max: 10 },
+  reps: { min: 1, max: 100 },
+  restSeconds: { min: 0, max: 600 },
+} as const;
+
+function isWithinRange(value: number, range: { min: number; max: number }) {
+  return Number.isInteger(value) && value >= range.min && value <= range.max;
+}
+
+function assertValidExerciseValues(exercise: ProgramExercise) {
+  const valid =
+    isWithinRange(exercise.sets, VALUE_RANGES.sets) &&
+    isWithinRange(exercise.reps, VALUE_RANGES.reps) &&
+    isWithinRange(exercise.restSeconds, VALUE_RANGES.restSeconds);
+
+  if (!valid) {
+    throw new ProgramRepositoryError(
+      "INVALID_INPUT",
+      "Set (1–10), tekrar (1–100) veya dinlenme süresi (0–600 sn) aralığın dışında.",
+    );
+  }
+}
+
+// user_workout_programs.id uuid tipinde; PostgREST'e geçersiz formatlı bir
+// id ile `.in()` sorgusu atılırsa tüm sorgu hata döner ve diğer, geçerli
+// program id'leri de etkilenir. Bu yüzden DB'ye gitmeden önce format
+// doğrulaması yapılıyor — geçersiz formatlı id'ler ayrı "failed" sonucu
+// olarak işaretlenir, geri kalan geçerli id'ler normal akışına devam eder.
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 class SupabaseProgramRepository implements ProgramRepository {
   async listPrograms(): Promise<UserProgram[]> {
+    // RLS zaten sadece auth.uid() = user_id satırlarını döndürür, ama oturum
+    // yoksa bunu "başarılı ama boş liste" yerine açık bir AUTH_REQUIRED
+    // hatası olarak ele almak istiyoruz (diğer repository metotlarıyla aynı
+    // desen — bkz. createProgramWithExercise).
+    await requireUserId();
+
     const { data, error } = await supabase
       .from("user_workout_programs")
       .select(PROGRAM_SELECT_WITH_EXERCISES)
-      .order("created_at", { ascending: true });
+      // "created_at" tek başına sıralama için yeterli değil: aynı anda
+      // oluşturulan iki program varsa sıra garanti olmaz. "id" ikincil
+      // anahtar olarak eklenince sıralama deterministik olur.
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
 
     if (error || !data) {
       throw new ProgramRepositoryError("REQUEST_FAILED", "Programlar alınamadı.");
@@ -136,34 +183,85 @@ class SupabaseProgramRepository implements ProgramRepository {
     programIds: string[],
     exercise: ProgramExercise,
   ): Promise<AddExerciseToProgramsResult> {
-    const requestedIds = [...new Set(programIds)];
-
-    const { data, error } = await supabase
-      .from("user_workout_programs")
-      .select(
-        "id, name, user_workout_program_exercises(exercise_id, order_index)",
-      )
-      .in("id", requestedIds);
-
-    if (error || !data) {
+    const trimmedExerciseId = exercise.exerciseId?.trim();
+    if (!trimmedExerciseId) {
+      throw new ProgramRepositoryError("INVALID_INPUT", "Egzersiz kimliği eksik.");
+    }
+    if (!Array.isArray(programIds) || programIds.length === 0) {
       throw new ProgramRepositoryError(
-        "REQUEST_FAILED",
-        "Programlar güncellenemedi.",
+        "INVALID_INPUT",
+        "En az bir program seçilmelidir.",
       );
     }
+    assertValidExerciseValues(exercise);
+
+    // RLS zaten satırları sahibine göre süzüyor, ama oturum yoksa bunu açık
+    // bir AUTH_REQUIRED hatası olarak ele almak istiyoruz (bkz. listPrograms).
+    await requireUserId();
+
+    // Geçersiz egzersiz id'sinde hiçbir programa dokunulmamalı — bu yüzden
+    // programlara gitmeden önce egzersizin gerçekten var olduğu doğrulanıyor.
+    const { data: exerciseRow, error: exerciseError } = await supabase
+      .from("exercises")
+      .select("id")
+      .eq("id", trimmedExerciseId)
+      .maybeSingle();
+
+    if (exerciseError) {
+      throw new ProgramRepositoryError(
+        "REQUEST_FAILED",
+        "Egzersiz doğrulanamadı.",
+      );
+    }
+    if (!exerciseRow) {
+      throw new ProgramRepositoryError("EXERCISE_NOT_FOUND", "Egzersiz bulunamadı.");
+    }
+
+    const requestedIds = [...new Set(programIds)];
+    const validProgramIds = requestedIds.filter((id) => UUID_PATTERN.test(id));
 
     type Row = {
       id: string;
       name: string;
       user_workout_program_exercises: { exercise_id: string; order_index: number }[] | null;
     };
-    const programsById = new Map(
-      (data as unknown as Row[]).map((row) => [row.id, row]),
-    );
+
+    let programsById = new Map<string, Row>();
+    if (validProgramIds.length > 0) {
+      const { data, error } = await supabase
+        .from("user_workout_programs")
+        .select(
+          "id, name, user_workout_program_exercises(exercise_id, order_index)",
+        )
+        .in("id", validProgramIds);
+
+      if (error || !data) {
+        throw new ProgramRepositoryError(
+          "REQUEST_FAILED",
+          "Programlar güncellenemedi.",
+        );
+      }
+
+      programsById = new Map(
+        (data as unknown as Row[]).map((row) => [row.id, row]),
+      );
+    }
 
     const results: AddExerciseResultItem[] = [];
 
     for (const programId of requestedIds) {
+      if (!UUID_PATTERN.test(programId)) {
+        results.push({
+          programId,
+          programName: "Geçersiz program kimliği",
+          status: "failed",
+        });
+        continue;
+      }
+
+      // RLS nedeniyle başka kullanıcıya ait ya da hiç var olmayan program
+      // id'leri burada da "bulunamadı" olarak görünür — ikisi de aynı
+      // güvenli sonuca (erişim yok) indirgeniyor.
       const program = programsById.get(programId);
 
       if (!program) {
@@ -177,7 +275,7 @@ class SupabaseProgramRepository implements ProgramRepository {
 
       const existingExercises = program.user_workout_program_exercises ?? [];
       const alreadyExists = existingExercises.some(
-        (item) => item.exercise_id === exercise.exerciseId,
+        (item) => item.exercise_id === trimmedExerciseId,
       );
 
       if (alreadyExists) {
@@ -194,17 +292,28 @@ class SupabaseProgramRepository implements ProgramRepository {
         .from("user_workout_program_exercises")
         .insert({
           program_id: programId,
-          exercise_id: exercise.exerciseId,
+          exercise_id: trimmedExerciseId,
           sets: exercise.sets,
           reps: exercise.reps,
           rest_seconds: exercise.restSeconds,
           order_index: nextOrderIndex,
         });
 
+      // "alreadyExists" kontrolü yukarıda önceden çekilmiş veriyle yapıldığı
+      // için küçük bir yarış penceresi var (aynı egzersiz aynı programa eş
+      // zamanlı iki istekle eklenmeye çalışılırsa). DB'deki
+      // uwpe_program_exercise_unique (program_id, exercise_id) constraint'i
+      // bunu Postgres seviyesinde de engelliyor; 23505 burada "failed"
+      // yerine "alreadyExists" olarak ele alınıyor.
+      let status: AddExerciseResultItem["status"] = "added";
+      if (insertError) {
+        status = insertError.code === "23505" ? "alreadyExists" : "failed";
+      }
+
       results.push({
         programId,
         programName: program.name,
-        status: insertError ? "failed" : "added",
+        status,
       });
     }
 
@@ -214,64 +323,92 @@ class SupabaseProgramRepository implements ProgramRepository {
   async createProgramWithExercise(
     input: CreateProgramWithExerciseInput,
   ): Promise<UserProgram> {
-    const userId = await requireUserId();
     const trimmedName = input.name.trim();
+    const trimmedExerciseId = input.exercise.exerciseId?.trim();
 
     if (
       trimmedName.length === 0 ||
       input.trainingDays.length === 0 ||
-      input.muscleGroupIds.length === 0
+      input.muscleGroupIds.length === 0 ||
+      !trimmedExerciseId
     ) {
       throw new ProgramRepositoryError("INVALID_INPUT", "Program bilgileri eksik.");
     }
+    assertValidExerciseValues(input.exercise);
 
-    const { data: programRow, error: insertProgramError } = await supabase
+    // Program oluşturma + ilk egzersizi ekleme tek bir DB fonksiyonu
+    // (create_program_with_exercise, SECURITY INVOKER) içinde, tek
+    // transaction olarak yürütülüyor: fonksiyon içindeki iki insert'ten
+    // biri başarısız olursa (örn. sets/reps/rest CHECK constraint'i) tüm
+    // fonksiyon exception fırlatır ve PostgREST isteği rollback eder — bu
+    // yüzden client tarafında "programı geri al" gibi telafi edici bir
+    // ikinci çağrıya gerek yok.
+    const { data, error } = await supabase.rpc("create_program_with_exercise", {
+      p_name: trimmedName,
+      p_training_days: toDayCodes(input.trainingDays),
+      p_muscle_group_ids: input.muscleGroupIds,
+      p_exercise_id: trimmedExerciseId,
+      p_sets: input.exercise.sets,
+      p_reps: input.exercise.reps,
+      p_rest_seconds: input.exercise.restSeconds,
+    });
+
+    if (error || !data || data.length === 0) {
+      throw mapCreateProgramError(error);
+    }
+
+    const programId = data[0].program_id as string;
+
+    const { data: programRow, error: fetchError } = await supabase
       .from("user_workout_programs")
-      .insert({
-        user_id: userId,
-        name: trimmedName,
-        training_days: toDayCodes(input.trainingDays),
-        muscle_group_ids: input.muscleGroupIds,
-      })
-      .select("id, name, training_days, muscle_group_ids")
+      .select(PROGRAM_SELECT_WITH_EXERCISES)
+      .eq("id", programId)
       .single();
 
-    if (insertProgramError || !programRow) {
-      // Postgres unique_violation: (user_id, lower(btrim(name))) çakışması.
-      if (insertProgramError?.code === "23505") {
-        throw new ProgramRepositoryError(
-          "DUPLICATE_NAME",
-          "Bu ad ile zaten bir programınız var.",
-        );
-      }
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program oluşturulamadı.");
+    if (fetchError || !programRow) {
+      throw new ProgramRepositoryError(
+        "REQUEST_FAILED",
+        "Program oluşturuldu ama bilgileri okunamadı.",
+      );
     }
 
-    const { data: exerciseRow, error: insertExerciseError } = await supabase
-      .from("user_workout_program_exercises")
-      .insert({
-        program_id: programRow.id,
-        exercise_id: input.exercise.exerciseId,
-        sets: input.exercise.sets,
-        reps: input.exercise.reps,
-        rest_seconds: input.exercise.restSeconds,
-        order_index: 0,
-      })
-      .select("id, exercise_id, sets, reps, rest_seconds, order_index")
-      .single();
-
-    if (insertExerciseError || !exerciseRow) {
-      // Program oluşturuldu ama egzersiz eklenemedi; yarım kalmış bir program
-      // bırakmamak için oluşturulan programı geri al.
-      await supabase.from("user_workout_programs").delete().eq("id", programRow.id);
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program oluşturulamadı.");
-    }
-
-    return mapProgramRow({
-      ...programRow,
-      user_workout_program_exercises: [exerciseRow],
-    } as ProgramRow);
+    return mapProgramRow(programRow as unknown as ProgramRow);
   }
+}
+
+function mapCreateProgramError(error: { code?: string; message?: string } | null) {
+  const message = error?.message ?? "";
+
+  if (message.includes("AUTH_REQUIRED")) {
+    return new ProgramRepositoryError("AUTH_REQUIRED", "Oturum bulunamadı.");
+  }
+  if (message.includes("EXERCISE_NOT_FOUND")) {
+    return new ProgramRepositoryError("EXERCISE_NOT_FOUND", "Egzersiz bulunamadı.");
+  }
+  if (
+    message.includes("INVALID_NAME") ||
+    message.includes("AT_LEAST_ONE_DAY_REQUIRED") ||
+    message.includes("INVALID_DAY") ||
+    message.includes("AT_LEAST_ONE_MUSCLE_GROUP_REQUIRED") ||
+    message.includes("INVALID_MUSCLE_GROUP")
+  ) {
+    return new ProgramRepositoryError("INVALID_INPUT", "Program bilgileri eksik veya geçersiz.");
+  }
+  // Postgres unique_violation: (user_id, lower(btrim(name))) çakışması.
+  if (error?.code === "23505") {
+    return new ProgramRepositoryError(
+      "DUPLICATE_NAME",
+      "Bu ad ile zaten bir programınız var.",
+    );
+  }
+  // check_violation: sets (1-10) / reps (1-100) / rest_seconds (0-600) aralık dışı.
+  if (error?.code === "23514") {
+    return new ProgramRepositoryError(
+      "INVALID_INPUT",
+      "Set, tekrar veya dinlenme süresi geçerli aralığın dışında.",
+    );
+  }
+  return new ProgramRepositoryError("REQUEST_FAILED", "Program oluşturulamadı.");
 }
 
 export const programRepository: ProgramRepository = new SupabaseProgramRepository();
