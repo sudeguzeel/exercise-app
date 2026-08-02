@@ -19,6 +19,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -75,6 +76,7 @@ export default function ExerciseDetailScreen() {
     undefined,
   );
   const [loadError, setLoadError] = useState(false);
+  const [gifFailed, setGifFailed] = useState(false);
   const [useCustomValues, setUseCustomValues] = useState(false);
   const [customValues, setCustomValues] = useState<CustomExerciseValues>(
     INITIAL_CUSTOM_VALUES,
@@ -125,6 +127,7 @@ export default function ExerciseDetailScreen() {
     setUseCustomValues(!hasRecommendedValues);
     setCustomValues(INITIAL_CUSTOM_VALUES);
     setErrors({});
+    setGifFailed(false);
   }, [exercise?.id, hasRecommendedValues]);
 
   const handleValueChange = useCallback(
@@ -280,16 +283,26 @@ export default function ExerciseDetailScreen() {
                     </Text>
                   </View>
 
-                  <View
-                    accessibilityLabel={`${exercise.name} egzersiz görseli`}
-                    style={styles.mediaPlaceholder}
-                  >
-                    <Ionicons
-                      name={exercise.icon}
-                      size={112}
-                      color={MainColors.mutedText}
+                  {exercise.gifUrl && !gifFailed ? (
+                    <Image
+                      accessibilityLabel={`${exercise.name} egzersiz animasyonu`}
+                      onError={() => setGifFailed(true)}
+                      resizeMode="contain"
+                      source={{ uri: exercise.gifUrl }}
+                      style={styles.mediaImage}
                     />
-                  </View>
+                  ) : (
+                    <View
+                      accessibilityLabel={`${exercise.name} egzersiz görseli`}
+                      style={styles.mediaPlaceholder}
+                    >
+                      <Ionicons
+                        name={exercise.icon}
+                        size={112}
+                        color={MainColors.mutedText}
+                      />
+                    </View>
+                  )}
                 </View>
 
                 <Text maxFontSizeMultiplier={1.3} style={styles.title}>
@@ -576,6 +589,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "900",
     letterSpacing: 0.3,
+  },
+  mediaImage: {
+    width: "100%",
+    height: "100%",
   },
   mediaPlaceholder: {
     flex: 1,

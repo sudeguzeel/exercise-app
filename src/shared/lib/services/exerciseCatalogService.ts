@@ -19,6 +19,22 @@ export type BodyPartOption = {
   icon: IconName;
 };
 
+// exercises.image / exercises.gif_url DB'de "images/0001-2gPfomN.jpg" gibi
+// göreli bir yol olarak duruyor. Bu, veri setinin kaynağı olan
+// hasaneyldrm/exercises-dataset (GitHub) reposundaki dosya yoluyla birebir
+// aynı — o repo bu dosyaları "raw" olarak public servis ediyor, bu yüzden
+// yolu bu base URL ile birleştirip doğrudan gösterebiliyoruz.
+// Not: görsel/gif'ler © Gym visual'a ait, repo bunları "izinle" yeniden
+// dağıtıyor; kendi ticari kullanımınız için gymvisual.com'un şartlarından
+// ayrıca izin/lisans almanız gerekir (bkz. repo NOTICE.md).
+const EXERCISE_MEDIA_BASE_URL =
+  "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/";
+
+function buildMediaUrl(relativePath: string | null | undefined): string | null {
+  if (!relativePath) return null;
+  return `${EXERCISE_MEDIA_BASE_URL}${relativePath}`;
+}
+
 export type ExerciseSummary = {
   id: string;
   name: string;
@@ -28,6 +44,8 @@ export type ExerciseSummary = {
   // not); alan her zaman response'da bulunur ama deger null olabilir.
   level: string | null;
   icon: IconName;
+  // 180x180 küçük resim; her egzersizde var (bkz. buildMediaUrl notu).
+  imageUrl: string | null;
 };
 
 export type ExerciseDetail = ExerciseSummary & {
@@ -45,6 +63,8 @@ export type ExerciseDetail = ExerciseSummary & {
   recommendedSets: number | null;
   recommendedReps: number | null;
   recommendedRestSeconds: number | null;
+  // Hareket animasyonu (gif); her egzersizde var.
+  gifUrl: string | null;
 };
 
 export class ExerciseDetailError extends Error {
@@ -99,6 +119,7 @@ type ExerciseListRow = {
   body_part_id: string | null;
   body_parts: { name: string } | null;
   level: string | null;
+  image: string | null;
 };
 
 /**
@@ -114,7 +135,7 @@ export async function searchExercises({
 }: SearchExercisesParams): Promise<SearchExercisesResult> {
   let query = supabase
     .from("exercises")
-    .select("id, name, body_part_id, body_parts(name), level", {
+    .select("id, name, body_part_id, body_parts(name), level, image", {
       count: "exact",
     })
     // "name" tek başına sıralama anahtarı olarak yeterli değil: aynı isimde
@@ -149,6 +170,7 @@ export async function searchExercises({
       bodyPartName: translateBodyPart(rawBodyPartName),
       level: translateLevel(row.level),
       icon: bodyPartIcon(rawBodyPartName),
+      imageUrl: buildMediaUrl(row.image),
     };
   });
 
@@ -175,6 +197,8 @@ type ExerciseDetailRow = {
   target_muscle: { name: string } | null;
   exercise_steps: { step_order: number; description: string }[] | null;
   secondary_muscles: { muscles: { name: string } | null }[] | null;
+  image: string | null;
+  gif_url: string | null;
 };
 
 /**
@@ -215,6 +239,8 @@ export async function getExerciseDetail(
         "target_muscle:muscles!exercises_target_muscle_id_fkey(name)",
         "exercise_steps(step_order, description)",
         "secondary_muscles(muscles(name))",
+        "image",
+        "gif_url",
       ].join(", "),
     )
     .eq("id", trimmedId)
@@ -251,6 +277,7 @@ export async function getExerciseDetail(
     bodyPartName: translateBodyPart(rawBodyPartName),
     level: translateLevel(row.level),
     icon: bodyPartIcon(rawBodyPartName),
+    imageUrl: buildMediaUrl(row.image),
     exerciseType: translateExerciseType(row.exercise_type),
     equipmentName: translateEquipment(row.equipments?.name),
     targetMuscleName: translateMuscle(row.target_muscle?.name),
@@ -260,6 +287,7 @@ export async function getExerciseDetail(
     recommendedSets: row.recommended_sets,
     recommendedReps: row.recommended_reps,
     recommendedRestSeconds: row.recommended_rest_seconds,
+    gifUrl: buildMediaUrl(row.gif_url),
   };
 }
 
@@ -273,7 +301,7 @@ export async function getExerciseSummary(
 ): Promise<ExerciseSummary | null> {
   const { data, error } = await supabase
     .from("exercises")
-    .select("id, name, body_part_id, body_parts(name), level")
+    .select("id, name, body_part_id, body_parts(name), level, image")
     .eq("id", exerciseId)
     .maybeSingle();
 
@@ -291,5 +319,6 @@ export async function getExerciseSummary(
     bodyPartName: translateBodyPart(rawBodyPartName),
     level: translateLevel(row.level),
     icon: bodyPartIcon(rawBodyPartName),
+    imageUrl: buildMediaUrl(row.image),
   };
 }
