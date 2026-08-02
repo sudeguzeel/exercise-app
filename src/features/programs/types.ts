@@ -1,14 +1,17 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
-import type { ProgramSelectionPayload } from "@/src/features/exercises/program-selection";
+import type { ProgramSelectionPayload } from "@/features/exercises/program-selection";
 
 export type ProgramExercise = ProgramSelectionPayload;
+
+// user_workout_program_exercises satırına yazıldıktan sonra DB'nin ürettiği id.
+export type PersistedProgramExercise = ProgramExercise & { id: string };
 
 export type UserProgram = {
   id: string;
   name: string;
   trainingDays: TrainingDay[];
   muscleGroupIds: string[];
-  exercises: ProgramExercise[];
+  exercises: PersistedProgramExercise[];
 };
 
 export type AddExerciseStatus = "added" | "alreadyExists" | "failed";

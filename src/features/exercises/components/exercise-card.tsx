@@ -1,4 +1,4 @@
-import type { ExerciseListItem } from "@/src/features/exercises/exercise-catalog";
+import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -12,7 +12,11 @@ export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${exercise.name}, ${exercise.categoryName}, ${exercise.level}`}
+      accessibilityLabel={
+        exercise.level
+          ? `${exercise.name}, ${exercise.bodyPartName}, ${exercise.level}`
+          : `${exercise.name}, ${exercise.bodyPartName}`
+      }
       onPress={() => onPress(exercise)}
       style={({ pressed }) => [
         styles.card,
@@ -21,7 +25,7 @@ export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
     >
       <View style={styles.image}>
         <Ionicons
-          name={exercise.image}
+          name={exercise.icon}
           size={38}
           color={MainColors.mutedText}
         />
@@ -40,7 +44,9 @@ export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
           numberOfLines={1}
           style={styles.meta}
         >
-          {exercise.categoryName} · {exercise.level}
+          {exercise.level
+            ? `${exercise.bodyPartName} · ${exercise.level}`
+            : exercise.bodyPartName}
         </Text>
       </View>
 

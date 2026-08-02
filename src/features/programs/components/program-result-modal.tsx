@@ -1,4 +1,4 @@
-import type { ProgramResultGroup } from "@/src/features/programs/program-domain";
+import type { ProgramResultGroup } from "@/features/programs/program-domain";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import {

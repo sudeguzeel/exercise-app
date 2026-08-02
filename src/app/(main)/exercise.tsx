@@ -1,12 +1,15 @@
-import { ExerciseCard } from "@/src/features/exercises/components/exercise-card";
+import { ExerciseCard } from "@/features/exercises/components/exercise-card";
 import {
   buildCategoryFilters,
-  buildExerciseList,
-  filterExercises,
   type ExerciseListItem,
-} from "@/src/features/exercises/exercise-catalog";
+} from "@/features/exercises/exercise-catalog";
 import { MainColors } from "@/shared/constants/theme";
-import { getExerciseCatalog } from "@/shared/lib/services/homeService";
+import {
+  EXERCISE_PAGE_SIZE,
+  getBodyParts,
+  searchExercises,
+  type BodyPartOption,
+} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import {
@@ -17,6 +20,7 @@ import {
   useState,
 } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   type ListRenderItem,
   Platform,
@@ -29,38 +33,83 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const PAGE_SIZE = 6;
+const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
-  const catalog = useMemo(() => getExerciseCatalog(), []);
-  const exerciseList = useMemo(
-    () => buildExerciseList(catalog.exercises, catalog.categories),
-    [catalog],
-  );
-  const categoryFilters = useMemo(
-    () => buildCategoryFilters(catalog.categories),
-    [catalog],
-  );
+  const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null,
   );
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const lastLoadRequestRef = useRef<number | null>(null);
-
-  const filteredExercises = useMemo(
-    () => filterExercises(exerciseList, searchText, selectedCategoryId),
-    [exerciseList, searchText, selectedCategoryId],
+  const [exercises, setExercises] = useState<ExerciseListItem[]>([]);
+  const [listState, setListState] = useState<"loading" | "success" | "error">(
+    "loading",
   );
-  const visibleExercises = useMemo(
-    () => filteredExercises.slice(0, visibleCount),
-    [filteredExercises, visibleCount],
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const requestIdRef = useRef(0);
+
+  const categoryFilters = useMemo(
+    () => buildCategoryFilters(bodyParts),
+    [bodyParts],
   );
 
   useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-    lastLoadRequestRef.current = null;
-  }, [searchText, selectedCategoryId]);
+    void getBodyParts().then(setBodyParts);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(searchText.trim());
+    }, SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [searchText]);
+
+  const loadExercises = useCallback(
+    async (offset: number, append: boolean) => {
+      const requestId = requestIdRef.current + 1;
+      requestIdRef.current = requestId;
+
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setListState("loading");
+      }
+
+      try {
+        const result = await searchExercises({
+          search: debouncedSearch,
+          bodyPartId: selectedCategoryId,
+          offset,
+        });
+
+        if (requestIdRef.current !== requestId) {
+          // Bu istek sırasında arama/filtre değişti, sonucu yok say.
+          return;
+        }
+
+        setExercises((current) =>
+          append ? [...current, ...result.items] : result.items,
+        );
+        setHasMore(result.hasMore);
+        setListState("success");
+      } catch {
+        if (requestIdRef.current === requestId) {
+          setListState("error");
+        }
+      } finally {
+        if (requestIdRef.current === requestId) {
+          setIsLoadingMore(false);
+        }
+      }
+    },
+    [debouncedSearch, selectedCategoryId],
+  );
+
+  useEffect(() => {
+    void loadExercises(0, false);
+  }, [loadExercises]);
 
   const handleExercisePress = useCallback((exercise: ExerciseListItem) => {
     router.push({
@@ -70,18 +119,11 @@ export default function ExerciseScreen() {
   }, []);
 
   const handleEndReached = useCallback(() => {
-    if (
-      visibleCount >= filteredExercises.length ||
-      lastLoadRequestRef.current === visibleCount
-    ) {
+    if (!hasMore || isLoadingMore || listState !== "success") {
       return;
     }
-
-    lastLoadRequestRef.current = visibleCount;
-    setVisibleCount((currentCount) =>
-      Math.min(currentCount + PAGE_SIZE, filteredExercises.length),
-    );
-  }, [filteredExercises.length, visibleCount]);
+    void loadExercises(exercises.length, true);
+  }, [exercises.length, hasMore, isLoadingMore, listState, loadExercises]);
 
   const renderExercise = useCallback<ListRenderItem<ExerciseListItem>>(
     ({ item }) => (
@@ -93,7 +135,7 @@ export default function ExerciseScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <FlatList
-        data={visibleExercises}
+        data={exercises}
         renderItem={renderExercise}
         keyExtractor={(exercise) => exercise.id}
         ItemSeparatorComponent={ExerciseSeparator}
@@ -180,22 +222,47 @@ export default function ExerciseScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="search-outline"
-              size={28}
-              color={MainColors.mutedText}
-            />
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
-              Eşleşen egzersiz bulunamadı
-            </Text>
-          </View>
+          listState === "loading" ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator color={MainColors.primary} size="large" />
+            </View>
+          ) : listState === "error" ? (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={28}
+                color={MainColors.mutedText}
+              />
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+                Egzersizler yüklenemedi. Bağlantınızı kontrol edip tekrar
+                deneyin.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="search-outline"
+                size={28}
+                color={MainColors.mutedText}
+              />
+              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
+                Eşleşen egzersiz bulunamadı
+              </Text>
+            </View>
+          )
+        }
+        ListFooterComponent={
+          isLoadingMore ? (
+            <View style={styles.footerLoading}>
+              <ActivityIndicator color={MainColors.primary} />
+            </View>
+          ) : null
         }
         contentContainerStyle={styles.content}
-        initialNumToRender={PAGE_SIZE}
+        initialNumToRender={EXERCISE_PAGE_SIZE}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
-        maxToRenderPerBatch={PAGE_SIZE}
+        maxToRenderPerBatch={EXERCISE_PAGE_SIZE}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.35}
         removeClippedSubviews={Platform.OS === "android"}
@@ -321,5 +388,9 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontWeight: "700",
     textAlign: "center",
+  },
+  footerLoading: {
+    paddingVertical: 20,
+    alignItems: "center",
   },
 });

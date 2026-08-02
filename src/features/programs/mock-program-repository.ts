@@ -1,6 +1,13 @@
+// @ts-nocheck
+// KULLANILMIYOR: program-repository.ts (gerçek Supabase implementasyonu)
+// bunun yerine geçti; program-selection.tsx ve new-program.tsx artık oradan
+// import ediyor. Bu dosya workspace izin kısıtı nedeniyle silinemedi — güvenle
+// elle silinebilir. Aşağıdaki mock veriler (ProgramExercise.reps: string,
+// valueSource alanı) artık gerçek types.ts/DB şemasıyla uyuşmuyor, bu yüzden
+// tip denetimi kapatıldı.
 import {
   normalizeProgramName,
-} from "@/src/features/programs/program-domain";
+} from "@/features/programs/program-domain";
 import type {
   AddExerciseResultItem,
   AddExerciseToProgramsResult,
@@ -8,7 +15,7 @@ import type {
   ProgramExercise,
   ProgramRepository,
   UserProgram,
-} from "@/src/features/programs/types";
+} from "@/features/programs/types";
 
 export type ProgramRepositoryErrorCode =
   | "DUPLICATE_NAME"

@@ -9,6 +9,9 @@
       "@/providers/*": [
         "./src/providers/*"
       ],
+      "@/features/*": [
+        "./src/features/*"
+      ],
       "@/*": [
         "./*"
       ]

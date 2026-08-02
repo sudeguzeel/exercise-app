@@ -2,27 +2,29 @@ import type { TrainingDay } from "@/providers/OnboardingContext";
 import {
   parseProgramSelectionParams,
   type ProgramSelectionSearchParams,
-} from "@/src/features/exercises/program-selection";
-import { ProgramFlowHeader } from "@/src/features/programs/components/program-flow-header";
-import { ProgramResultModal } from "@/src/features/programs/components/program-result-modal";
-import { SelectionChip } from "@/src/features/programs/components/selection-chip";
+} from "@/features/exercises/program-selection";
+import { ProgramFlowHeader } from "@/features/programs/components/program-flow-header";
+import { ProgramResultModal } from "@/features/programs/components/program-result-modal";
+import { SelectionChip } from "@/features/programs/components/selection-chip";
 import {
   isProgramFormValid,
   toggleSelection,
   TRAINING_DAY_OPTIONS,
-} from "@/src/features/programs/program-domain";
+} from "@/features/programs/program-domain";
 import {
   ProgramRepositoryError,
   programRepository,
-} from "@/src/features/programs/mock-program-repository";
+} from "@/features/programs/program-repository";
 import { MainColors } from "@/shared/constants/theme";
 import {
-  getExerciseById,
-  getExerciseCatalog,
-} from "@/shared/lib/services/homeService";
+  getBodyParts,
+  getExerciseSummary,
+  type BodyPartOption,
+  type ExerciseSummary,
+} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -49,10 +51,27 @@ export default function NewProgramScreen() {
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
   );
-  const exercise = selection
-    ? getExerciseById(selection.exerciseId)
-    : undefined;
-  const muscleGroups = useMemo(() => getExerciseCatalog().categories, []);
+  const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
+  const [muscleGroups, setMuscleGroups] = useState<BodyPartOption[]>([]);
+
+  useEffect(() => {
+    if (!selection) {
+      setExercise(null);
+      return;
+    }
+    let mounted = true;
+    void getExerciseSummary(selection.exerciseId).then((result) => {
+      if (mounted) setExercise(result);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [selection]);
+
+  useEffect(() => {
+    void getBodyParts().then(setMuscleGroups);
+  }, []);
+
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
     new Set(),

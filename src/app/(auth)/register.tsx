@@ -4,6 +4,7 @@ import {
   rememberPendingVerificationEmail,
 } from "@/shared/lib/services/emailVerificationService";
 import { supabase } from "@/shared/lib/supabase";
+import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -32,10 +33,6 @@ export default function RegisterScreen() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  };
 
   const validateForm = () => {
     let isValid = true;

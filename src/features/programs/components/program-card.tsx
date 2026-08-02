@@ -1,4 +1,4 @@
-import type { UserProgram } from "@/src/features/programs/types";
+import type { UserProgram } from "@/features/programs/types";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";

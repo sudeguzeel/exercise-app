@@ -1,10 +1,16 @@
-import { useOnboarding } from "@/providers/OnboardingContext";
-import { buildHomeDashboard } from "@/shared/lib/home-dashboard";
+import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const GREEN = "#62B900";
@@ -16,15 +22,62 @@ const MAX_CHART_VALUE = 20;
 const CHART_HEIGHT = 150;
 
 export default function HomeScreen() {
-  const { trainingDays } = useOnboarding();
-  const dashboard = useMemo(
-    () =>
-      buildHomeDashboard(
-        getHomeSourceData(),
-        trainingDays,
-      ),
-    [trainingDays],
+  const [dashboard, setDashboard] = useState<HomeDashboard | null>(null);
+  const [loadState, setLoadState] = useState<"loading" | "success" | "error">(
+    "loading",
   );
+
+  const loadDashboard = useCallback(async () => {
+    setLoadState("loading");
+    try {
+      const source = await getHomeSourceData();
+      setDashboard(
+        buildHomeDashboard(
+          source.programs,
+          source.completedRecords,
+          source.exerciseLookup,
+          source.categories,
+        ),
+      );
+      setLoadState("success");
+    } catch {
+      setLoadState("error");
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDashboard();
+  }, [loadDashboard]);
+
+  if (loadState === "loading" || !dashboard) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.centerState}>
+          <ActivityIndicator color={GREEN} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadState === "error") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <View style={styles.centerState}>
+          <Ionicons name="alert-circle-outline" size={32} color={MUTED} />
+          <Text style={styles.errorText}>
+            Bilgiler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => void loadDashboard()}
+            style={styles.retryButton}
+          >
+            <Text style={styles.retryButtonText}>Yeniden dene</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -58,58 +111,63 @@ export default function HomeScreen() {
         </View>
 
         <SectionTitle>VÜCUT BÖLGELERİ (HAFTALIK)</SectionTitle>
-        <View style={styles.bodyAreasCard}>
-          {dashboard.categoryTotals.map((area) => (
-            <View key={area.id} style={styles.bodyAreaItem}>
-              <View style={styles.bodyAreaIcon}>
-                <Ionicons name={area.icon} size={27} color={TEXT} />
+        {dashboard.categoryTotals.length > 0 ? (
+          <View style={styles.bodyAreasCard}>
+            {dashboard.categoryTotals.map((area) => (
+              <View key={area.id} style={styles.bodyAreaItem}>
+                <View style={styles.bodyAreaIcon}>
+                  <Ionicons name={area.icon} size={27} color={TEXT} />
+                </View>
+                <Text style={styles.bodyAreaLabel}>{area.name}</Text>
+                <Text style={styles.bodyAreaValue}>{area.value}</Text>
               </View>
-              <Text style={styles.bodyAreaLabel}>{area.name}</Text>
-              <Text style={styles.bodyAreaValue}>{area.value}</Text>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        ) : (
+          <EmptyCard text="Henüz vücut bölgesi verisi yok." />
+        )}
 
         <SectionTitle>BU HAFTAKİ HEDEF</SectionTitle>
         {dashboard.targetDays.length > 0 ? (
           <View style={styles.targetDaysRow}>
             {dashboard.targetDays.map((day) => (
-                <View
-                  key={day.id}
+              <View
+                key={day.id}
+                style={[
+                  styles.targetDay,
+                  day.status === "completed" && styles.targetDayCompleted,
+                  day.status === "missed" && styles.targetDayMissed,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.targetDay,
-                    day.status === "completed" && styles.targetDayCompleted,
-                    day.status === "missed" && styles.targetDayMissed,
+                    styles.targetDayLabel,
+                    day.status === "completed" &&
+                      styles.targetDayCompletedText,
+                    day.status === "missed" && styles.targetDayMissedText,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.targetDayLabel,
-                      day.status === "completed" &&
-                        styles.targetDayCompletedText,
-                      day.status === "missed" && styles.targetDayMissedText,
-                    ]}
-                  >
-                    {day.label}
+                  {day.label}
+                </Text>
+                {day.status === "completed" ? (
+                  <Ionicons name="checkmark" size={22} color="#111111" />
+                ) : day.status === "missed" ? (
+                  <Ionicons name="close" size={22} color="#FFFFFF" />
+                ) : day.status === "today" ? (
+                  <Text style={styles.todayText}>Bugün</Text>
+                ) : (
+                  <Text style={styles.pendingText}>
+                    {day.status === "rest" ? "Dinlenme" : "Bekliyor"}
                   </Text>
-                  {day.status === "completed" ? (
-                    <Ionicons name="checkmark" size={22} color="#111111" />
-                  ) : day.status === "missed" ? (
-                    <Ionicons name="close" size={22} color="#FFFFFF" />
-                  ) : day.status === "today" ? (
-                    <Text style={styles.todayText}>Bugün</Text>
-                  ) : (
-                    <Text style={styles.pendingText}>
-                      {day.status === "rest" ? "Dinlenme" : "Bekliyor"}
-                    </Text>
-                  )}
-                </View>
-              ))}
+                )}
+              </View>
+            ))}
           </View>
         ) : (
           <View style={styles.emptyTargetCard}>
             <Text style={styles.emptyTargetText}>
-              Henüz bir antrenman günü seçilmedi.
+              Henüz bir programın yok. "Egzersizler" sekmesinden bir egzersiz
+              seçip yeni bir program oluşturabilirsin.
             </Text>
           </View>
         )}
@@ -161,11 +219,11 @@ export default function HomeScreen() {
           ) : (
             dashboard.todayProgram.map((plannedExercise, index) => (
               <Pressable
-                key={plannedExercise.exercise.id}
+                key={plannedExercise.id}
                 onPress={() =>
                   router.push({
                     pathname: "/exercise-detail",
-                    params: { exerciseId: plannedExercise.exercise.id },
+                    params: { exerciseId: plannedExercise.exerciseId },
                   })
                 }
                 style={({ pressed }) => [
@@ -175,9 +233,15 @@ export default function HomeScreen() {
                   pressed && styles.exerciseRowPressed,
                 ]}
               >
-                <Text style={styles.exerciseName}>
-                  {plannedExercise.exercise.name}
-                </Text>
+                <Ionicons name={plannedExercise.icon} size={22} color={GREEN} />
+                <View style={styles.exerciseTextColumn}>
+                  <Text style={styles.exerciseName}>
+                    {plannedExercise.exerciseName}
+                  </Text>
+                  <Text style={styles.exerciseProgramName}>
+                    {plannedExercise.programName}
+                  </Text>
+                </View>
                 <Text style={styles.exerciseSets}>
                   {plannedExercise.sets}×{plannedExercise.reps}
                 </Text>
@@ -195,67 +259,43 @@ function SectionTitle({ children }: { children: string }) {
   return <Text style={styles.sectionTitle}>{children}</Text>;
 }
 
+function EmptyCard({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyTargetCard}>
+      <Text style={styles.emptyTargetText}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",
   },
-  container: {
+  centerState: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 24,
+    gap: 14,
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-    backgroundColor: "rgba(116, 168, 0, 0.12)",
-  },
-  title: {
-    color: "#14171A",
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "900",
-  },
-  subtitle: {
-    marginTop: 7,
-    marginBottom: 32,
-    color: "#6C716C",
+  errorText: {
+    color: MUTED,
     fontSize: 14,
-    lineHeight: 21,
     textAlign: "center",
   },
-  signOutButton: {
-    height: 50,
-    minWidth: 160,
+  retryButton: {
+    height: 44,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: GREEN,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: "#95D600",
-    shadowColor: "#95D600",
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  signOutButtonText: {
+  retryButtonText: {
     color: "#101214",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
-  },
-  buttonPressed: {
-    opacity: 0.8,
-  },
-  buttonDisabled: {
-    opacity: 0.65,
   },
   content: {
     paddingHorizontal: 16,
@@ -494,6 +534,7 @@ const styles = StyleSheet.create({
     minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
+    gap: 12,
   },
   exerciseRowDivider: {
     borderBottomWidth: 1,
@@ -509,14 +550,23 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     textAlign: "center",
   },
-  exerciseName: {
+  exerciseTextColumn: {
     flex: 1,
+    minWidth: 0,
+  },
+  exerciseName: {
     color: TEXT,
     fontSize: 15,
     fontWeight: "600",
   },
+  exerciseProgramName: {
+    marginTop: 2,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "600",
+  },
   exerciseSets: {
-    marginHorizontal: 12,
+    marginHorizontal: 4,
     color: GREEN,
     fontSize: 18,
     fontWeight: "800",

@@ -1,5 +1,6 @@
 import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { supabase } from "@/shared/lib/supabase";
+import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
@@ -26,10 +27,6 @@ export default function LoginScreen() {
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  };
 
   const validateForm = () => {
     let isValid = true;

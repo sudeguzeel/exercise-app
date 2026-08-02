@@ -2,7 +2,7 @@ import type { TrainingDay } from "@/providers/OnboardingContext";
 import type {
   AddExerciseToProgramsResult,
   UserProgram,
-} from "@/src/features/programs/types";
+} from "@/features/programs/types";
 
 export const TRAINING_DAY_OPTIONS: {
   id: TrainingDay;

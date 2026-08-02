@@ -2,23 +2,25 @@ import {
   parseProgramSelectionParams,
   serializeProgramSelectionPayload,
   type ProgramSelectionSearchParams,
-} from "@/src/features/exercises/program-selection";
-import { ProgramCard } from "@/src/features/programs/components/program-card";
-import { ProgramFlowHeader } from "@/src/features/programs/components/program-flow-header";
-import { ProgramResultModal } from "@/src/features/programs/components/program-result-modal";
+} from "@/features/exercises/program-selection";
+import { ProgramCard } from "@/features/programs/components/program-card";
+import { ProgramFlowHeader } from "@/features/programs/components/program-flow-header";
+import { ProgramResultModal } from "@/features/programs/components/program-result-modal";
 import {
   buildAddResultPresentation,
   removeMissingProgramSelections,
   toggleSelection,
   type ProgramResultPresentation,
-} from "@/src/features/programs/program-domain";
-import { programRepository } from "@/src/features/programs/mock-program-repository";
-import type { UserProgram } from "@/src/features/programs/types";
+} from "@/features/programs/program-domain";
+import { programRepository } from "@/features/programs/program-repository";
+import type { UserProgram } from "@/features/programs/types";
 import { MainColors } from "@/shared/constants/theme";
 import {
-  getExerciseById,
-  getExerciseCatalog,
-} from "@/shared/lib/services/homeService";
+  getBodyParts,
+  getExerciseSummary,
+  type BodyPartOption,
+  type ExerciseSummary,
+} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -45,14 +47,31 @@ export default function ProgramSelectionScreen() {
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
   );
-  const exercise = selection
-    ? getExerciseById(selection.exerciseId)
-    : undefined;
-  const categories = useMemo(() => getExerciseCatalog().categories, []);
+  const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
+  const [categories, setCategories] = useState<BodyPartOption[]>([]);
   const categoryNames = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
     [categories],
   );
+
+  useEffect(() => {
+    if (!selection) {
+      setExercise(null);
+      return;
+    }
+    let mounted = true;
+    void getExerciseSummary(selection.exerciseId).then((result) => {
+      if (mounted) setExercise(result);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [selection]);
+
+  useEffect(() => {
+    void getBodyParts().then(setCategories);
+  }, []);
+
   const [programs, setPrograms] = useState<UserProgram[]>([]);
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(
     new Set(),

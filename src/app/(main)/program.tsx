@@ -1,12 +1,15 @@
 import {
   parseProgramSelectionParams,
   type ProgramSelectionSearchParams,
-} from "@/src/features/exercises/program-selection";
+} from "@/features/exercises/program-selection";
 import { MainColors } from "@/shared/constants/theme";
-import { getExerciseById } from "@/shared/lib/services/homeService";
+import {
+  getExerciseSummary,
+  type ExerciseSummary,
+} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,9 +20,21 @@ export default function ProgramScreen() {
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
   );
-  const exercise = selection
-    ? getExerciseById(selection.exerciseId)
-    : undefined;
+  const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
+
+  useEffect(() => {
+    if (!selection) {
+      setExercise(null);
+      return;
+    }
+    let mounted = true;
+    void getExerciseSummary(selection.exerciseId).then((result) => {
+      if (mounted) setExercise(result);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [selection]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -37,7 +52,7 @@ export default function ProgramScreen() {
             <View style={styles.selectionCard}>
               <View style={styles.exerciseIcon}>
                 <Ionicons
-                  name={exercise.image}
+                  name={exercise.icon}
                   size={34}
                   color={MainColors.primary}
                 />
@@ -46,14 +61,15 @@ export default function ProgramScreen() {
                 {exercise.name}
               </Text>
               <Text maxFontSizeMultiplier={1.3} style={styles.valueSource}>
-                {selection.valueSource === "custom"
-                  ? "Özel değerler"
-                  : "Önerilen değerler"}
+                {exercise.bodyPartName}
               </Text>
 
               <View style={styles.metrics}>
                 <ProgramMetric label="SET" value={String(selection.sets)} />
-                <ProgramMetric label="TEKRAR" value={selection.reps} />
+                <ProgramMetric
+                  label="TEKRAR"
+                  value={String(selection.reps)}
+                />
                 <ProgramMetric
                   label="DİNLENME"
                   value={`${selection.restSeconds} sn`}

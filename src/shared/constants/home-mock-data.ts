@@ -1,3 +1,9 @@
+// @ts-nocheck
+// KULLANILMIYOR: homeService.ts artık bu mock verileri değil, gerçek Supabase
+// sorgularını (exerciseCatalogService.ts, features/programs/program-repository.ts)
+// kullanıyor. Bu dosya workspace izin kısıtı nedeniyle silinemedi — güvenle
+// elle silinebilir. Aşağıdaki tipler (Exercise, ExerciseCategory, ...) artık
+// home-dashboard.ts'te mevcut değil, bu yüzden tip denetimi kapatıldı.
 import type {
   DailyPlanTemplate,
   Exercise,
