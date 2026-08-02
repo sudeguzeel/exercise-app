@@ -1,5 +1,6 @@
 import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
+import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -49,6 +50,14 @@ export default function HomeScreen() {
     void loadDashboard();
   }, [loadDashboard]);
 
+  const handleSignOut = useCallback(async () => {
+    // Henüz ayrı bir profil ekranı yok (bkz. görüşme notları); çıkış
+    // yapabilmek için geçici olarak bu ikon kullanılıyor. Profil ekranı
+    // yapıldığında bu davranış oraya taşınmalı.
+    await supabase.auth.signOut();
+    router.replace("/login");
+  }, []);
+
   if (loadState === "loading" || !dashboard) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -86,9 +95,18 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.profileRow}>
-          <View style={styles.profileButton}>
-            <Ionicons name="person-outline" size={23} color={TEXT} />
-          </View>
+          <Pressable
+            accessibilityHint="Profil ekranı hazır olana kadar geçici olarak oturumu kapatır"
+            accessibilityLabel="Çıkış yap"
+            accessibilityRole="button"
+            onPress={() => void handleSignOut()}
+            style={({ pressed }) => [
+              styles.profileButton,
+              pressed && styles.profileButtonPressed,
+            ]}
+          >
+            <Ionicons name="log-out-outline" size={23} color={TEXT} />
+          </Pressable>
         </View>
 
         <View style={styles.summaryCard}>
@@ -315,6 +333,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#FFFFFF",
+  },
+  profileButtonPressed: {
+    opacity: 0.7,
   },
   summaryCard: {
     minHeight: 168,
