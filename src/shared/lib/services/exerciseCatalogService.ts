@@ -5,6 +5,7 @@ import {
   bodyPartIcon,
   translateBodyPart,
   translateEquipment,
+  translateExerciseType,
   translateLevel,
   translateMuscle,
 } from "@/shared/constants/exercise-taxonomy";
@@ -30,11 +31,28 @@ export type ExerciseSummary = {
 };
 
 export type ExerciseDetail = ExerciseSummary & {
+  exerciseType: string | null;
   equipmentName: string | null;
   targetMuscleName: string | null;
   secondaryMuscleNames: string[];
+  // exercise_steps'ten (step_order'a göre sıralı) elde edilen adım adım
+  // açıklama listesi.
   steps: string[];
+  // steps'in tek paragrafta birleştirilmiş hali; hiç adım yoksa null.
+  description: string | null;
+  // exercises.recommended_* şu an veri setinde dolu değil, hepsi null
+  // dönebilir (bkz. add_exercise_type_and_recommended_values migration'ı).
+  recommendedSets: number | null;
+  recommendedReps: number | null;
+  recommendedRestSeconds: number | null;
 };
+
+export class ExerciseDetailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ExerciseDetailError";
+  }
+}
 
 // exercises tablosunda 1324 satır var; kataloğu tek seferde çekmek yerine
 // gerçek DB sorgularıyla arama + kategori filtresi + sayfalama (range) yapılır.
@@ -146,6 +164,10 @@ type ExerciseDetailRow = {
   body_part_id: string | null;
   body_parts: { name: string } | null;
   level: string | null;
+  exercise_type: string | null;
+  recommended_sets: number | null;
+  recommended_reps: number | null;
+  recommended_rest_seconds: number | null;
   equipments: { name: string } | null;
   // exercises tablosunda muscles'a iki ayrı FK var (target_muscle_id,
   // muscle_group_id); Supabase embed'inde hangi ilişkinin kastedildiğini
@@ -157,12 +179,25 @@ type ExerciseDetailRow = {
 
 /**
  * Tek bir egzersizin tüm detayını (hedef/ikincil kaslar, ekipman, adım adım
- * açıklama) getirir. Egzersiz kartına tıklandığında exercise-detail.tsx
- * bunu çağırır.
+ * açıklama, önerilen değerler) getirir. Egzersiz kartına tıklandığında
+ * exercise-detail.tsx bunu çağırır.
+ *
+ * Dönüş sözleşmesi:
+ * - Geçerli bir id ile eşleşen kayıt bulunamazsa `null` döner (ekran
+ *   "Egzersiz bulunamadı" durumunu gösterir).
+ * - Sorgu gerçekten başarısız olursa (ağ/DB hatası) `ExerciseDetailError`
+ *   fırlatır — çağıran taraf bunu "not found" ile karıştırmamalı, ayrı bir
+ *   hata/yeniden-dene durumu göstermeli.
+ * - Boş/geçersiz (örn. boş string) id ile çağrılırsa da `null` döner.
  */
 export async function getExerciseDetail(
   exerciseId: string,
 ): Promise<ExerciseDetail | null> {
+  const trimmedId = exerciseId?.trim();
+  if (!trimmedId) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from("exercises")
     .select(
@@ -172,16 +207,27 @@ export async function getExerciseDetail(
         "body_part_id",
         "body_parts(name)",
         "level",
+        "exercise_type",
+        "recommended_sets",
+        "recommended_reps",
+        "recommended_rest_seconds",
         "equipments(name)",
         "target_muscle:muscles!exercises_target_muscle_id_fkey(name)",
         "exercise_steps(step_order, description)",
         "secondary_muscles(muscles(name))",
       ].join(", "),
     )
-    .eq("id", exerciseId)
+    .eq("id", trimmedId)
     .maybeSingle();
 
-  if (error || !data) {
+  if (error) {
+    throw new ExerciseDetailError(
+      `Egzersiz detayı alınamadı: ${error.message}`,
+    );
+  }
+
+  if (!data) {
+    // Sorgu başarılı ama eşleşen kayıt yok — geçersiz/bulunamayan id.
     return null;
   }
 
@@ -192,6 +238,7 @@ export async function getExerciseDetail(
     .slice()
     .sort((a, b) => a.step_order - b.step_order)
     .map((step) => step.description);
+  const description = steps.length > 0 ? steps.join(" ") : null;
 
   const secondaryMuscleNames = (row.secondary_muscles ?? [])
     .map((entry) => translateMuscle(entry.muscles?.name))
@@ -204,10 +251,15 @@ export async function getExerciseDetail(
     bodyPartName: translateBodyPart(rawBodyPartName),
     level: translateLevel(row.level),
     icon: bodyPartIcon(rawBodyPartName),
+    exerciseType: translateExerciseType(row.exercise_type),
     equipmentName: translateEquipment(row.equipments?.name),
     targetMuscleName: translateMuscle(row.target_muscle?.name),
     secondaryMuscleNames,
     steps,
+    description,
+    recommendedSets: row.recommended_sets,
+    recommendedReps: row.recommended_reps,
+    recommendedRestSeconds: row.recommended_rest_seconds,
   };
 }
 

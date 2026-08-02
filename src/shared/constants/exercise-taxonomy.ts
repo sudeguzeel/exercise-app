@@ -152,3 +152,17 @@ export function translateLevel(rawLevel: string | null | undefined): string | nu
   if (!rawLevel) return null;
   return LEVEL_TR[rawLevel] ?? rawLevel;
 }
+
+// exercises.exercise_type de level gibi şu an veri setinde dolu değil
+// (bkz. add_exercise_type_and_recommended_values migration'ı).
+export const EXERCISE_TYPE_TR: Record<string, string> = {
+  compound: "Bileşik",
+  isolation: "İzolasyon",
+  mobility: "Mobilite",
+  cardio: "Kardiyo",
+};
+
+export function translateExerciseType(rawType: string | null | undefined): string | null {
+  if (!rawType) return null;
+  return EXERCISE_TYPE_TR[rawType] ?? rawType;
+}
