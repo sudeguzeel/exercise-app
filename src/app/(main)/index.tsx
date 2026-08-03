@@ -184,7 +184,7 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.emptyTargetCard}>
             <Text style={styles.emptyTargetText}>
-              Henüz bir programın yok. "Egzersizler" sekmesinden bir egzersiz
+              Henüz bir programın yok. “Egzersizler” sekmesinden bir egzersiz
               seçip yeni bir program oluşturabilirsin.
             </Text>
           </View>

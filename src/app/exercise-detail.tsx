@@ -9,6 +9,7 @@ import {
   serializeProgramSelectionPayload,
   type ProgramSelectionPayload,
 } from "@/features/exercises/program-selection";
+import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
 import { MainColors } from "@/shared/constants/theme";
 import {
   getExerciseDetail,
@@ -16,9 +17,10 @@ import {
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -67,10 +69,22 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function ExerciseDetailScreen() {
-  const { exerciseId } = useLocalSearchParams<{
+  const { exerciseId, selectionMode, editProgramId, selectedDate } = useLocalSearchParams<{
     exerciseId?: string | string[];
+    selectionMode?: string | string[];
+    editProgramId?: string | string[];
+    selectedDate?: string | string[];
   }>();
   const normalizedId = Array.isArray(exerciseId) ? exerciseId[0] : exerciseId;
+  const normalizedSelectionMode = Array.isArray(selectionMode)
+    ? selectionMode[0]
+    : selectionMode;
+  const normalizedEditProgramId = Array.isArray(editProgramId)
+    ? editProgramId[0]
+    : editProgramId;
+  const normalizedSelectedDate = Array.isArray(selectedDate)
+    ? selectedDate[0]
+    : selectedDate;
 
   const [exercise, setExercise] = useState<ExerciseDetail | null | undefined>(
     undefined,
@@ -186,11 +200,49 @@ export default function ExerciseDetailScreen() {
       };
     }
 
+    if (
+      normalizedSelectionMode === "program-edit" &&
+      normalizedEditProgramId
+    ) {
+      const result = addExerciseToProgramEditDraft(
+        normalizedEditProgramId,
+        payload,
+        exercise.name,
+      );
+      if (result === "duplicate") {
+        Alert.alert("Egzersiz zaten mevcut", "Bu egzersiz programda zaten bulunuyor.");
+        return;
+      }
+      if (result === "missing-draft") {
+        Alert.alert(
+          "Taslak bulunamadı",
+          "Program düzenleme bilgileri artık mevcut değil. Lütfen programa geri dönün.",
+        );
+        return;
+      }
+      router.replace({
+        pathname: "/program-edit" as never,
+        params: {
+          programId: normalizedEditProgramId,
+          ...(normalizedSelectedDate ? { selectedDate: normalizedSelectedDate } : {}),
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: "/program-selection",
       params: serializeProgramSelectionPayload(payload),
     });
-  }, [customValues, exercise, hasRecommendedValues, useCustomValues]);
+  }, [
+    customValues,
+    exercise,
+    hasRecommendedValues,
+    normalizedEditProgramId,
+    normalizedSelectedDate,
+    normalizedSelectionMode,
+    useCustomValues,
+  ]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>

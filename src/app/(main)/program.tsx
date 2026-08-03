@@ -1,245 +1,406 @@
 import {
-  parseProgramSelectionParams,
-  type ProgramSelectionSearchParams,
-} from "@/features/exercises/program-selection";
-import { MainColors } from "@/shared/constants/theme";
+  ProgramExerciseRow,
+  ProgramPills,
+  ProgramSummaryCard,
+  WeekDaySelector,
+  WeeklyTrainingChart,
+} from "@/features/programs/components/program-dashboard-components";
 import {
-  getExerciseSummary,
-  type ExerciseSummary,
-} from "@/shared/lib/services/exerciseCatalogService";
+  getCompletedExerciseIds,
+  getCurrentWeek,
+  getProgramCompletion,
+  getWeeklyCompletionValues,
+  programsForDate,
+  resolveActiveProgramId,
+  toLocalDateKey,
+  type ProgramCompletionRecord,
+} from "@/features/programs/program-dashboard";
+import { programRepository } from "@/features/programs/program-repository";
+import {
+  getCurrentUserDisplayName,
+  getProgramCompletionRecords,
+} from "@/features/programs/program-screen-service";
+import type { UserProgram } from "@/features/programs/types";
+import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+type LoadState = "loading" | "success" | "error";
+
+function singleParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 export default function ProgramScreen() {
-  const searchParams =
-    useLocalSearchParams<ProgramSelectionSearchParams>();
-  const selection = useMemo(
-    () => parseProgramSelectionParams(searchParams),
-    [searchParams],
+  const params = useLocalSearchParams<{
+    selectedDate?: string | string[];
+    activeProgramId?: string | string[];
+  }>();
+  const week = useMemo(() => getCurrentWeek(), []);
+  const requestedDate = singleParam(params.selectedDate);
+  const initialDate = week.some((day) => day.dateKey === requestedDate)
+    ? requestedDate!
+    : toLocalDateKey(new Date());
+
+  const [selectedDateKey, setSelectedDateKey] = useState(initialDate);
+  const [activeProgramId, setActiveProgramId] = useState<string | null>(
+    singleParam(params.activeProgramId) ?? null,
   );
-  const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
+  const [programs, setPrograms] = useState<UserProgram[]>([]);
+  const [programState, setProgramState] = useState<LoadState>("loading");
+  const [completionRecords, setCompletionRecords] = useState<
+    ProgramCompletionRecord[]
+  >([]);
+  const [chartState, setChartState] = useState<LoadState>("loading");
+  const [displayName, setDisplayName] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [navigationBusy, setNavigationBusy] = useState(false);
+  const navigationLock = useRef(false);
+
+  const loadPrograms = useCallback(async () => {
+    setProgramState("loading");
+    try {
+      setPrograms(await programRepository.listPrograms());
+      setProgramState("success");
+    } catch {
+      setProgramState("error");
+    }
+  }, []);
+
+  const loadChart = useCallback(async () => {
+    setChartState("loading");
+    try {
+      setCompletionRecords(
+        await getProgramCompletionRecords(
+          week[0].dateKey,
+          week[week.length - 1].dateKey,
+        ),
+      );
+      setChartState("success");
+    } catch {
+      setCompletionRecords([]);
+      setChartState("error");
+    }
+  }, [week]);
 
   useEffect(() => {
-    if (!selection) {
-      setExercise(null);
-      return;
-    }
     let mounted = true;
-    void getExerciseSummary(selection.exerciseId).then((result) => {
-      if (mounted) setExercise(result);
-    });
+    void getCurrentUserDisplayName()
+      .then((name) => {
+        if (mounted) setDisplayName(name);
+      })
+      .finally(() => {
+        if (mounted) setProfileLoading(false);
+      });
     return () => {
       mounted = false;
     };
-  }, [selection]);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      navigationLock.current = false;
+      setNavigationBusy(false);
+      void loadPrograms();
+      void loadChart();
+    }, [loadChart, loadPrograms]),
+  );
+
+  const dailyPrograms = useMemo(
+    () => programsForDate(programs, week, selectedDateKey),
+    [programs, selectedDateKey, week],
+  );
+
+  useEffect(() => {
+    setActiveProgramId((current) =>
+      resolveActiveProgramId(dailyPrograms, current),
+    );
+  }, [dailyPrograms]);
+
+  const activeProgram =
+    dailyPrograms.find((program) => program.id === activeProgramId) ?? null;
+  const completedExerciseIds = useMemo(
+    () => getCompletedExerciseIds(completionRecords, selectedDateKey),
+    [completionRecords, selectedDateKey],
+  );
+  const chartValues = useMemo(
+    () => getWeeklyCompletionValues(week, completionRecords),
+    [completionRecords, week],
+  );
+
+  const handleEdit = useCallback(
+    (programId: string) => {
+      router.push({
+        pathname: "/program-edit" as never,
+        params: { programId, selectedDate: selectedDateKey },
+      });
+    },
+    [selectedDateKey],
+  );
+
+  const handleStartWorkout = useCallback(() => {
+    if (!activeProgram || navigationLock.current) return;
+    navigationLock.current = true;
+    setNavigationBusy(true);
+    router.push({
+      pathname: "/workout" as never,
+      params: { programId: activeProgram.id, workoutDate: selectedDateKey },
+    });
+  }, [activeProgram, selectedDateKey]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <View style={styles.container}>
-        <Text maxFontSizeMultiplier={1.3} style={styles.title}>
-          {selection && exercise ? "Program seçimi" : "Program"}
-        </Text>
-
-        {selection && exercise ? (
-          <>
-            <Text maxFontSizeMultiplier={1.3} style={styles.description}>
-              Egzersiz ve kullanılacak değerler program seçimi için hazır.
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.topRow}>
+          <Text numberOfLines={1} style={styles.greeting}>
+            Merhaba,
+            <Text style={styles.greetingName}>
+              {profileLoading ? " …" : ` ${displayName ?? "Sporcu"}`}
             </Text>
+          </Text>
+          <Pressable
+            accessibilityLabel="Bildirimler"
+            accessibilityRole="button"
+            onPress={() => Alert.alert("Bildirimler", "Henüz yeni bir bildiriminiz yok.")}
+            style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="notifications-outline" size={22} color={MainColors.text} />
+          </Pressable>
+        </View>
 
-            <View style={styles.selectionCard}>
-              <View style={styles.exerciseIcon}>
-                <Ionicons
-                  name={exercise.icon}
-                  size={34}
-                  color={MainColors.primary}
-                />
-              </View>
-              <Text maxFontSizeMultiplier={1.3} style={styles.exerciseName}>
-                {exercise.name}
-              </Text>
-              <Text maxFontSizeMultiplier={1.3} style={styles.valueSource}>
-                {exercise.bodyPartName}
-              </Text>
+        <View style={styles.fullBleed}>
+          <WeekDaySelector
+            onSelect={setSelectedDateKey}
+            selectedDateKey={selectedDateKey}
+            week={week}
+          />
+        </View>
 
-              <View style={styles.metrics}>
-                <ProgramMetric label="SET" value={String(selection.sets)} />
-                <ProgramMetric
-                  label="TEKRAR"
-                  value={String(selection.reps)}
-                />
-                <ProgramMetric
-                  label="DİNLENME"
-                  value={`${selection.restSeconds} sn`}
-                />
-              </View>
-            </View>
-
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push("/exercise")}
-              style={({ pressed }) => [
-                styles.backToExercises,
-                pressed && styles.backToExercisesPressed,
-              ]}
-            >
-              <Text style={styles.backToExercisesText}>
-                Egzersizlere dön
-              </Text>
-            </Pressable>
-          </>
-        ) : (
-          <View style={styles.emptyCard}>
-            <Ionicons
-              name="document-text-outline"
-              size={42}
-              color={MainColors.primary}
-            />
-            <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
-              Program ekranı yakında burada olacak.
-            </Text>
+        {programState === "loading" ? (
+          <SectionState loading text="Programlar yükleniyor…" />
+        ) : programState === "error" ? (
+          <SectionState
+            onRetry={() => void loadPrograms()}
+            text="Programlar alınamadı. Lütfen tekrar deneyin."
+          />
+        ) : dailyPrograms.length > 0 ? (
+          <View style={styles.programCards}>
+            {dailyPrograms.map((program) => (
+              <ProgramSummaryCard
+                completion={getProgramCompletion(
+                  program,
+                  completionRecords,
+                  selectedDateKey,
+                )}
+                key={program.id}
+                onEdit={handleEdit}
+                program={program}
+              />
+            ))}
           </View>
+        ) : (
+          <EmptyCard text="Bu gün için planlanmış bir program bulunmuyor." />
         )}
+
+        <Text style={styles.sectionTitle}>BUGÜNKÜ PROGRAMLAR</Text>
+        {dailyPrograms.length > 0 ? (
+          <ProgramPills
+            activeProgramId={activeProgramId}
+            onSelect={setActiveProgramId}
+            programs={dailyPrograms}
+          />
+        ) : (
+          <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
+        )}
+
+        {chartState === "loading" ? (
+          <SectionState loading text="Haftalık grafik yükleniyor…" />
+        ) : chartState === "error" ? (
+          <SectionState
+            onRetry={() => void loadChart()}
+            text="Haftalık grafik alınamadı."
+          />
+        ) : (
+          <WeeklyTrainingChart values={chartValues} />
+        )}
+
+        <View style={styles.exerciseList}>
+          {activeProgram ? (
+            activeProgram.exercises.length > 0 ? (
+              activeProgram.exercises.map((exercise) => (
+                <ProgramExerciseRow
+                  completed={completedExerciseIds.has(exercise.id)}
+                  exercise={exercise}
+                  key={exercise.id}
+                />
+              ))
+            ) : (
+              <EmptyCard text="Bu programda henüz egzersiz bulunmuyor." />
+            )
+          ) : null}
+        </View>
+      </ScrollView>
+
+      <View style={styles.fixedFooter}>
+        <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !activeProgram || navigationBusy }}
+          disabled={!activeProgram || navigationBusy}
+          onPress={handleStartWorkout}
+          style={({ pressed }) => [
+            styles.startButton,
+            (!activeProgram || navigationBusy) && styles.startButtonDisabled,
+            pressed && activeProgram && styles.pressed,
+          ]}
+        >
+          {navigationBusy ? (
+            <ActivityIndicator color={MainColors.text} />
+          ) : (
+            <>
+              <Ionicons name="play" size={18} color={MainColors.text} />
+              <Text style={styles.startButtonText}>Antrenmana başla</Text>
+            </>
+          )}
+        </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
-type ProgramMetricProps = {
-  label: string;
-  value: string;
-};
-
-function ProgramMetric({ label, value }: ProgramMetricProps) {
+function SectionState({
+  loading = false,
+  text,
+  onRetry,
+}: {
+  loading?: boolean;
+  text: string;
+  onRetry?: () => void;
+}) {
   return (
-    <View style={styles.metric}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.metricLabel}>
-        {label}
-      </Text>
-      <Text
-        adjustsFontSizeToFit
-        maxFontSizeMultiplier={1.3}
-        minimumFontScale={0.75}
-        numberOfLines={1}
-        style={styles.metricValue}
-      >
-        {value}
-      </Text>
+    <View style={styles.stateCard}>
+      {loading ? (
+        <ActivityIndicator color={MainColors.primary} />
+      ) : (
+        <Ionicons name="alert-circle-outline" size={24} color={MainColors.mutedText} />
+      )}
+      <Text style={styles.stateText}>{text}</Text>
+      {onRetry ? (
+        <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retryButton}>
+          <Text style={styles.retryText}>Yeniden dene</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
+function EmptyCard({ text }: { text: string }) {
+  return (
+    <View style={styles.emptyCard}>
+      <Text style={styles.stateText}>{text}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: MainColors.background,
-  },
-  container: {
-    flex: 1,
+  safeArea: { flex: 1, backgroundColor: MainColors.background },
+  content: {
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
-    padding: 24,
+    paddingHorizontal: 18,
+    paddingBottom: 108,
+    gap: 18,
   },
-  title: {
-    marginTop: 24,
-    color: MainColors.text,
-    fontSize: 32,
-    fontWeight: "900",
-  },
-  description: {
-    marginTop: 8,
-    color: MainColors.mutedText,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  selectionCard: {
-    marginTop: 28,
-    padding: 22,
-    borderWidth: 1.5,
-    borderColor: MainColors.border,
-    borderRadius: 24,
-    backgroundColor: MainColors.surface,
-  },
-  exerciseIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: MainColors.paleGreen,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  exerciseName: {
-    marginTop: 18,
-    color: MainColors.text,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: "900",
-  },
-  valueSource: {
-    marginTop: 5,
-    color: MainColors.primary,
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  metrics: {
-    marginTop: 22,
+  topRow: {
+    minHeight: 72,
     flexDirection: "row",
-    gap: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
   },
-  metric: {
-    flex: 1,
-    minWidth: 0,
-    height: 82,
-    paddingHorizontal: 6,
+  greeting: { flex: 1, color: MainColors.mutedText, fontSize: 16, fontWeight: "500" },
+  greetingName: { color: MainColors.primary, fontWeight: "800" },
+  notificationButton: {
+    width: 42,
+    height: 42,
     borderWidth: 1.5,
     borderColor: MainColors.border,
-    borderRadius: 18,
+    borderRadius: 21,
+    backgroundColor: MainColors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  metricLabel: {
-    color: MainColors.mutedText,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  metricValue: {
-    marginTop: 5,
-    color: MainColors.text,
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  backToExercises: {
-    height: 54,
-    marginTop: 20,
-    borderRadius: 18,
-    backgroundColor: MainColors.primaryBright,
+  fullBleed: { marginHorizontal: -18 },
+  programCards: { gap: 12 },
+  sectionTitle: { marginTop: 2, color: MainColors.mutedText, fontSize: 15, fontWeight: "700" },
+  inlineEmpty: { color: MainColors.mutedText, fontSize: 14 },
+  exerciseList: { gap: 10 },
+  stateCard: {
+    minHeight: 118,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 20,
+    backgroundColor: MainColors.surface,
     alignItems: "center",
     justifyContent: "center",
-  },
-  backToExercisesPressed: {
-    backgroundColor: MainColors.primary,
-  },
-  backToExercisesText: {
-    color: MainColors.text,
-    fontSize: 16,
-    fontWeight: "900",
+    gap: 9,
   },
   emptyCard: {
-    marginTop: 28,
-    padding: 28,
+    minHeight: 84,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: MainColors.border,
-    borderRadius: 24,
+    borderRadius: 20,
     backgroundColor: MainColors.surface,
     alignItems: "center",
+    justifyContent: "center",
   },
-  emptyText: {
-    marginTop: 12,
-    color: MainColors.mutedText,
-    fontSize: 15,
-    textAlign: "center",
+  stateText: { color: MainColors.mutedText, fontSize: 14, lineHeight: 20, textAlign: "center" },
+  retryButton: { minHeight: 40, paddingHorizontal: 18, justifyContent: "center" },
+  retryText: { color: MainColors.primary, fontSize: 14, fontWeight: "800" },
+  fixedFooter: {
+    position: "absolute",
+    left: 18,
+    right: 18,
+    bottom: 10,
+    height: 66,
+    padding: 8,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 22,
+    backgroundColor: MainColors.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
+  startButton: {
+    flex: 1,
+    height: 50,
+    borderRadius: 18,
+    backgroundColor: MainColors.primaryBright,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  startButtonDisabled: { backgroundColor: MainColors.border, opacity: 0.72 },
+  startButtonText: { color: MainColors.text, fontSize: 16, fontWeight: "900" },
+  pressed: { opacity: 0.72 },
 });
