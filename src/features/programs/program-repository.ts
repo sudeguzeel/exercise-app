@@ -7,6 +7,7 @@ import type {
   PersistedProgramExercise,
   ProgramExercise,
   ProgramRepository,
+  UpdateProgramInput,
   UserProgram,
 } from "@/features/programs/types";
 
@@ -58,6 +59,7 @@ type ProgramExerciseRow = {
   reps: number;
   rest_seconds: number;
   order_index: number;
+  exercises: { name: string } | null;
 };
 
 type ProgramRow = {
@@ -75,6 +77,8 @@ function toPersistedExercise(row: ProgramExerciseRow): PersistedProgramExercise 
     sets: row.sets,
     reps: row.reps,
     restSeconds: row.rest_seconds,
+    name: row.exercises?.name ?? "Egzersiz",
+    orderIndex: row.order_index,
   };
 }
 
@@ -117,7 +121,7 @@ async function requireUserId(): Promise<string> {
 }
 
 const PROGRAM_SELECT_WITH_EXERCISES =
-  "id, name, training_days, muscle_group_ids, user_workout_program_exercises(id, exercise_id, sets, reps, rest_seconds, order_index)";
+  "id, name, training_days, muscle_group_ids, user_workout_program_exercises(id, exercise_id, sets, reps, rest_seconds, order_index, exercises(name))";
 
 // user_workout_program_exercises tablosundaki CHECK constraint'leriyle
 // birebir aynı sınırlar (bkz. extend_workout_programs_for_named_recurring_programs
@@ -155,6 +159,10 @@ function assertValidExerciseValues(exercise: ProgramExercise) {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export function isValidProgramId(value: string | null | undefined) {
+  return Boolean(value && UUID_PATTERN.test(value));
+}
+
 class SupabaseProgramRepository implements ProgramRepository {
   async listPrograms(): Promise<UserProgram[]> {
     // RLS zaten sadece auth.uid() = user_id satırlarını döndürür, ama oturum
@@ -177,6 +185,26 @@ class SupabaseProgramRepository implements ProgramRepository {
     }
 
     return (data as unknown as ProgramRow[]).map(mapProgramRow);
+  }
+
+  async getProgramById(programId: string): Promise<UserProgram | null> {
+    if (!isValidProgramId(programId)) {
+      return null;
+    }
+
+    await requireUserId();
+
+    const { data, error } = await supabase
+      .from("user_workout_programs")
+      .select(PROGRAM_SELECT_WITH_EXERCISES)
+      .eq("id", programId)
+      .maybeSingle();
+
+    if (error) {
+      throw new ProgramRepositoryError("REQUEST_FAILED", "Program alınamadı.");
+    }
+
+    return data ? mapProgramRow(data as unknown as ProgramRow) : null;
   }
 
   async addExerciseToPrograms(
@@ -373,6 +401,149 @@ class SupabaseProgramRepository implements ProgramRepository {
     }
 
     return mapProgramRow(programRow as unknown as ProgramRow);
+  }
+
+  async updateProgram(input: UpdateProgramInput): Promise<UserProgram> {
+    const trimmedName = input.name.trim();
+    if (
+      !isValidProgramId(input.id) ||
+      !trimmedName ||
+      input.trainingDays.length === 0 ||
+      input.muscleGroupIds.length === 0
+    ) {
+      throw new ProgramRepositoryError(
+        "INVALID_INPUT",
+        "Program bilgileri eksik veya geçersiz.",
+      );
+    }
+
+    const exerciseIds = input.exercises.map((exercise) => exercise.exerciseId);
+    if (new Set(exerciseIds).size !== exerciseIds.length) {
+      throw new ProgramRepositoryError(
+        "INVALID_INPUT",
+        "Aynı egzersiz bir programa yalnızca bir kez eklenebilir.",
+      );
+    }
+    input.exercises.forEach(assertValidExerciseValues);
+
+    await requireUserId();
+    const currentProgram = await this.getProgramById(input.id);
+    if (!currentProgram) {
+      throw new ProgramRepositoryError("REQUEST_FAILED", "Program bulunamadı.");
+    }
+
+    const { error: programError } = await supabase
+      .from("user_workout_programs")
+      .update({
+        name: trimmedName,
+        training_days: toDayCodes(input.trainingDays),
+        muscle_group_ids: input.muscleGroupIds,
+      })
+      .eq("id", input.id);
+
+    if (programError) {
+      if (programError.code === "23505") {
+        throw new ProgramRepositoryError(
+          "DUPLICATE_NAME",
+          "Bu ad ile zaten bir programınız var.",
+        );
+      }
+      throw new ProgramRepositoryError("REQUEST_FAILED", "Program güncellenemedi.");
+    }
+
+    const currentIds = new Set(
+      currentProgram.exercises.map((exercise) => exercise.id),
+    );
+    const nextExistingIds = new Set(
+      input.exercises
+        .filter((exercise) => currentIds.has(exercise.id))
+        .map((exercise) => exercise.id),
+    );
+    const removedIds = [...currentIds].filter((id) => !nextExistingIds.has(id));
+
+    if (removedIds.length > 0) {
+      const { error } = await supabase
+        .from("user_workout_program_exercises")
+        .delete()
+        .eq("program_id", input.id)
+        .in("id", removedIds);
+      if (error) {
+        throw new ProgramRepositoryError(
+          "REQUEST_FAILED",
+          "Program egzersizleri güncellenemedi.",
+        );
+      }
+    }
+
+    for (const [orderIndex, exercise] of input.exercises.entries()) {
+      if (!currentIds.has(exercise.id)) continue;
+      const { error } = await supabase
+        .from("user_workout_program_exercises")
+        .update({
+          sets: exercise.sets,
+          reps: exercise.reps,
+          rest_seconds: exercise.restSeconds,
+          order_index: orderIndex,
+        })
+        .eq("program_id", input.id)
+        .eq("id", exercise.id);
+      if (error) {
+        throw new ProgramRepositoryError(
+          "REQUEST_FAILED",
+          "Egzersiz sırası güncellenemedi.",
+        );
+      }
+    }
+
+    const addedExercises = input.exercises
+      .map((exercise, orderIndex) => ({ exercise, orderIndex }))
+      .filter(({ exercise }) => !currentIds.has(exercise.id));
+
+    if (addedExercises.length > 0) {
+      const { error } = await supabase
+        .from("user_workout_program_exercises")
+        .insert(
+          addedExercises.map(({ exercise, orderIndex }) => ({
+            program_id: input.id,
+            exercise_id: exercise.exerciseId,
+            sets: exercise.sets,
+            reps: exercise.reps,
+            rest_seconds: exercise.restSeconds,
+            order_index: orderIndex,
+          })),
+        );
+      if (error) {
+        throw new ProgramRepositoryError(
+          "REQUEST_FAILED",
+          "Yeni egzersizler programa eklenemedi.",
+        );
+      }
+    }
+
+    const updatedProgram = await this.getProgramById(input.id);
+    if (!updatedProgram) {
+      throw new ProgramRepositoryError(
+        "REQUEST_FAILED",
+        "Program güncellendi ancak yeniden yüklenemedi.",
+      );
+    }
+    return updatedProgram;
+  }
+
+  async deleteProgram(programId: string): Promise<void> {
+    if (!isValidProgramId(programId)) {
+      throw new ProgramRepositoryError("INVALID_INPUT", "Program kimliği geçersiz.");
+    }
+
+    await requireUserId();
+    const { error } = await supabase
+      .from("user_workout_programs")
+      .delete()
+      .eq("id", programId);
+
+    if (error) {
+      throw new ProgramRepositoryError("REQUEST_FAILED", "Program silinemedi.");
+    }
   }
 }
 

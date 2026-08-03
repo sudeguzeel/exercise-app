@@ -4,7 +4,11 @@ import type { ProgramSelectionPayload } from "@/features/exercises/program-selec
 export type ProgramExercise = ProgramSelectionPayload;
 
 // user_workout_program_exercises satırına yazıldıktan sonra DB'nin ürettiği id.
-export type PersistedProgramExercise = ProgramExercise & { id: string };
+export type PersistedProgramExercise = ProgramExercise & {
+  id: string;
+  name: string;
+  orderIndex: number;
+};
 
 export type UserProgram = {
   id: string;
@@ -33,8 +37,17 @@ export type CreateProgramWithExerciseInput = {
   exercise: ProgramExercise;
 };
 
+export type UpdateProgramInput = {
+  id: string;
+  name: string;
+  trainingDays: TrainingDay[];
+  muscleGroupIds: string[];
+  exercises: PersistedProgramExercise[];
+};
+
 export type ProgramRepository = {
   listPrograms: () => Promise<UserProgram[]>;
+  getProgramById: (programId: string) => Promise<UserProgram | null>;
   addExerciseToPrograms: (
     programIds: string[],
     exercise: ProgramExercise,
@@ -42,5 +55,7 @@ export type ProgramRepository = {
   createProgramWithExercise: (
     input: CreateProgramWithExerciseInput,
   ) => Promise<UserProgram>;
+  updateProgram: (input: UpdateProgramInput) => Promise<UserProgram>;
+  deleteProgram: (programId: string) => Promise<void>;
 };
 

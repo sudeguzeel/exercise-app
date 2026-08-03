@@ -11,7 +11,7 @@ import {
   type BodyPartOption,
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import {
   useCallback,
   useEffect,
@@ -36,6 +36,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
+  const params = useLocalSearchParams<{
+    selectionMode?: string | string[];
+    editProgramId?: string | string[];
+    selectedDate?: string | string[];
+  }>();
+  const selectionMode = Array.isArray(params.selectionMode)
+    ? params.selectionMode[0]
+    : params.selectionMode;
+  const editProgramId = Array.isArray(params.editProgramId)
+    ? params.editProgramId[0]
+    : params.editProgramId;
+  const selectedDate = Array.isArray(params.selectedDate)
+    ? params.selectedDate[0]
+    : params.selectedDate;
+  const isProgramEditSelection =
+    selectionMode === "program-edit" && Boolean(editProgramId);
   const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -111,12 +127,20 @@ export default function ExerciseScreen() {
     void loadExercises(0, false);
   }, [loadExercises]);
 
-  const handleExercisePress = useCallback((exercise: ExerciseListItem) => {
-    router.push({
-      pathname: "/exercise-detail",
-      params: { exerciseId: exercise.id },
-    });
-  }, []);
+  const handleExercisePress = useCallback(
+    (exercise: ExerciseListItem) => {
+      router.push({
+        pathname: "/exercise-detail",
+        params: {
+          exerciseId: exercise.id,
+          ...(isProgramEditSelection
+            ? { selectionMode: "program-edit", editProgramId, selectedDate }
+            : {}),
+        },
+      });
+    },
+    [editProgramId, isProgramEditSelection, selectedDate],
+  );
 
   const handleEndReached = useCallback(() => {
     if (!hasMore || isLoadingMore || listState !== "success") {
@@ -142,24 +166,43 @@ export default function ExerciseScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.profileRow}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Profil"
-                accessibilityHint="Profil ekranı henüz mevcut değil"
-                accessibilityState={{ disabled: true }}
-                disabled
-                style={styles.profileButton}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={25}
-                  color={MainColors.text}
-                />
-              </Pressable>
+              {isProgramEditSelection ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Program düzenlemeye geri dön"
+                  onPress={() =>
+                    router.replace({
+                      pathname: "/program-edit" as never,
+                      params: {
+                        programId: editProgramId!,
+                        ...(selectedDate ? { selectedDate } : {}),
+                      },
+                    })
+                  }
+                  style={styles.profileButton}
+                >
+                  <Ionicons name="chevron-back" size={25} color={MainColors.text} />
+                </Pressable>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Profil"
+                  accessibilityHint="Profil ekranı henüz mevcut değil"
+                  accessibilityState={{ disabled: true }}
+                  disabled
+                  style={styles.profileButton}
+                >
+                  <Ionicons
+                    name="person-outline"
+                    size={25}
+                    color={MainColors.text}
+                  />
+                </Pressable>
+              )}
             </View>
 
             <Text maxFontSizeMultiplier={1.3} style={styles.title}>
-              Egzersizler
+              {isProgramEditSelection ? "Programa egzersiz ekle" : "Egzersizler"}
             </Text>
 
             <View style={styles.searchContainer}>
