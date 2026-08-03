@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Linking from "expo-linking";
 
+import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { supabase } from "@/shared/lib/supabase";
 import { normalizeEmail } from "@/shared/lib/validation/authValidation";
 
@@ -16,23 +17,6 @@ export type EmailVerificationState = {
 export type EmailVerificationResult =
   | { success: true }
   | { success: false };
-
-function getCallbackParameters(url: string) {
-  const queryStart = url.indexOf("?");
-  const hashStart = url.indexOf("#");
-  const queryEnd =
-    hashStart >= 0 && hashStart > queryStart ? hashStart : url.length;
-  const query =
-    queryStart >= 0 ? url.slice(queryStart + 1, queryEnd) : "";
-  const fragment = hashStart >= 0 ? url.slice(hashStart + 1) : "";
-  const parameters = new URLSearchParams(query);
-
-  new URLSearchParams(fragment).forEach((value, key) => {
-    parameters.set(key, value);
-  });
-
-  return parameters;
-}
 
 export function getEmailVerificationRedirectUrl() {
   return Linking.createURL(EMAIL_VERIFICATION_CALLBACK_PATH);
@@ -137,7 +121,7 @@ export async function getEmailVerificationState(
 }
 
 export async function completeEmailVerificationFromUrl(url: string) {
-  const parameters = getCallbackParameters(url);
+  const parameters = getAuthCallbackParameters(url);
   const callbackError =
     parameters.get("error_description") ?? parameters.get("error");
 

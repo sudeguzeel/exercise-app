@@ -1,7 +1,8 @@
-import type { ExerciseListItem } from "@/src/features/exercises/exercise-catalog";
+import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 type ExerciseCardProps = {
   exercise: ExerciseListItem;
@@ -9,10 +10,18 @@ type ExerciseCardProps = {
 };
 
 export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
+  // Her kart kendi görsel yükleme hatasını takip eder — bir egzersizin
+  // görseli 404 verirse yalnızca o kart ikon placeholder'a düşer.
+  const [imageFailed, setImageFailed] = useState(false);
+
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${exercise.name}, ${exercise.categoryName}, ${exercise.level}`}
+      accessibilityLabel={
+        exercise.level
+          ? `${exercise.name}, ${exercise.bodyPartName}, ${exercise.level}`
+          : `${exercise.name}, ${exercise.bodyPartName}`
+      }
       onPress={() => onPress(exercise)}
       style={({ pressed }) => [
         styles.card,
@@ -20,11 +29,20 @@ export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
       ]}
     >
       <View style={styles.image}>
-        <Ionicons
-          name={exercise.image}
-          size={38}
-          color={MainColors.mutedText}
-        />
+        {exercise.imageUrl && !imageFailed ? (
+          <Image
+            onError={() => setImageFailed(true)}
+            resizeMode="cover"
+            source={{ uri: exercise.imageUrl }}
+            style={styles.imagePhoto}
+          />
+        ) : (
+          <Ionicons
+            name={exercise.icon}
+            size={38}
+            color={MainColors.mutedText}
+          />
+        )}
       </View>
 
       <View style={styles.content}>
@@ -40,7 +58,9 @@ export function ExerciseCard({ exercise, onPress }: ExerciseCardProps) {
           numberOfLines={1}
           style={styles.meta}
         >
-          {exercise.categoryName} · {exercise.level}
+          {exercise.level
+            ? `${exercise.bodyPartName} · ${exercise.level}`
+            : exercise.bodyPartName}
         </Text>
       </View>
 
@@ -77,7 +97,12 @@ const styles = StyleSheet.create({
     backgroundColor: MainColors.paleGreen,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     flexShrink: 0,
+  },
+  imagePhoto: {
+    width: "100%",
+    height: "100%",
   },
   content: {
     flex: 1,

@@ -1,15 +1,17 @@
 import {
   validateCustomExerciseValues,
-} from "@/src/features/exercises/exercise-detail-validation";
+} from "@/features/exercises/exercise-detail-validation";
 
-export type ProgramValueSource = "recommended" | "custom";
-
+// Not: DB'deki exercises kataloğunda "önerilen set/tekrar/dinlenme" alanı
+// yok (bkz. exercise_taxonomy.ts / exerciseCatalogService.ts), bu yüzden
+// "recommended" değer kaynağı kavramı kaldırıldı — kullanıcı set/tekrar/
+// dinlenmeyi her zaman kendisi giriyor. reps de artık user_workout_program_
+// exercises.reps ile aynı tipte (smallint) bir sayı.
 export type ProgramSelectionPayload = {
   exerciseId: string;
   sets: number;
-  reps: string;
+  reps: number;
   restSeconds: number;
-  valueSource: ProgramValueSource;
 };
 
 export type ProgramSelectionSearchParams = {
@@ -17,7 +19,6 @@ export type ProgramSelectionSearchParams = {
   sets?: string | string[];
   reps?: string | string[];
   restSeconds?: string | string[];
-  valueSource?: string | string[];
 };
 
 export function serializeProgramSelectionPayload(
@@ -26,9 +27,8 @@ export function serializeProgramSelectionPayload(
   return {
     exerciseId: payload.exerciseId,
     sets: String(payload.sets),
-    reps: payload.reps,
+    reps: String(payload.reps),
     restSeconds: String(payload.restSeconds),
-    valueSource: payload.valueSource,
   };
 }
 
@@ -39,58 +39,22 @@ export function parseProgramSelectionParams(
   const sets = getSingleParam(params.sets)?.trim();
   const reps = getSingleParam(params.reps)?.trim();
   const restSeconds = getSingleParam(params.restSeconds)?.trim();
-  const valueSource = getSingleParam(params.valueSource);
 
-  if (
-    !exerciseId ||
-    sets === undefined ||
-    !reps ||
-    restSeconds === undefined ||
-    (valueSource !== "recommended" && valueSource !== "custom")
-  ) {
+  if (!exerciseId || sets === undefined || reps === undefined || restSeconds === undefined) {
     return null;
   }
 
-  if (valueSource === "custom") {
-    const validation = validateCustomExerciseValues({
-      sets,
-      reps,
-      restSeconds,
-    });
-    if (!validation.success) return null;
-
-    return {
-      exerciseId,
-      sets: validation.values.sets,
-      reps: String(validation.values.reps),
-      restSeconds: validation.values.restSeconds,
-      valueSource,
-    };
-  }
-
-  if (!isIntegerInRange(sets, 1, 10) || !isIntegerInRange(restSeconds, 0, 600)) {
-    return null;
-  }
+  const validation = validateCustomExerciseValues({ sets, reps, restSeconds });
+  if (!validation.success) return null;
 
   return {
     exerciseId,
-    sets: Number(sets),
-    reps,
-    restSeconds: Number(restSeconds),
-    valueSource,
+    sets: validation.values.sets,
+    reps: validation.values.reps,
+    restSeconds: validation.values.restSeconds,
   };
 }
 
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function isIntegerInRange(value: string, min: number, max: number) {
-  if (!/^\d+$/.test(value)) return false;
-  const parsedValue = Number(value);
-  return (
-    Number.isSafeInteger(parsedValue) &&
-    parsedValue >= min &&
-    parsedValue <= max
-  );
 }

@@ -1,6 +1,6 @@
+import { getPasswordResetRedirectUrl } from "@/shared/lib/services/passwordResetService";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import * as AuthSession from "expo-auth-session";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -48,15 +48,9 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
 
-      // Şifre yenileme ekranının mobil deep link adresi
-      const redirectTo = AuthSession.makeRedirectUri({
-        scheme: "exercise-app",
-        path: "reset-password",
-      });
-
       // 3. Supabase Şifre Sıfırlama İsteği
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo,
+        redirectTo: getPasswordResetRedirectUrl(),
       });
 
       // 4. Kayıtlı Olmayan Kullanıcı / Hata Durumu

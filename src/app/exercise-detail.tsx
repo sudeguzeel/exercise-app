@@ -4,22 +4,22 @@ import {
   type CustomExerciseValueErrors,
   type CustomExerciseValueKey,
   type CustomExerciseValues,
-} from "@/src/features/exercises/exercise-detail-validation";
+} from "@/features/exercises/exercise-detail-validation";
 import {
   serializeProgramSelectionPayload,
   type ProgramSelectionPayload,
-} from "@/src/features/exercises/program-selection";
+} from "@/features/exercises/program-selection";
 import { MainColors } from "@/shared/constants/theme";
 import {
-  getExerciseById,
-  getExerciseCategoryName,
-} from "@/shared/lib/services/homeService";
+  getExerciseDetail,
+  type ExerciseDetail,
+} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -53,29 +53,84 @@ const CUSTOM_FIELDS: {
   },
 ];
 
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text maxFontSizeMultiplier={1.3} style={styles.metricValue}>
+        {value}
+      </Text>
+      <Text maxFontSizeMultiplier={1.3} style={styles.metricLabel}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 export default function ExerciseDetailScreen() {
   const { exerciseId } = useLocalSearchParams<{
     exerciseId?: string | string[];
   }>();
   const normalizedId = Array.isArray(exerciseId) ? exerciseId[0] : exerciseId;
-  const exercise = normalizedId ? getExerciseById(normalizedId) : undefined;
-  const categoryName = exercise
-    ? getExerciseCategoryName(exercise.categoryId)
-    : undefined;
+
+  const [exercise, setExercise] = useState<ExerciseDetail | null | undefined>(
+    undefined,
+  );
+  const [loadError, setLoadError] = useState(false);
+  const [gifFailed, setGifFailed] = useState(false);
   const [useCustomValues, setUseCustomValues] = useState(false);
   const [customValues, setCustomValues] = useState<CustomExerciseValues>(
     INITIAL_CUSTOM_VALUES,
   );
   const [errors, setErrors] = useState<CustomExerciseValueErrors>({});
-  const [isMediaLoading, setIsMediaLoading] = useState(false);
-  const [hasMediaError, setHasMediaError] = useState(false);
+
+  const hasRecommendedValues = Boolean(
+    exercise &&
+      exercise.recommendedSets !== null &&
+      exercise.recommendedReps !== null &&
+      exercise.recommendedRestSeconds !== null,
+  );
+
+  const loadExercise = useCallback(
+    async (mountedRef?: { current: boolean }) => {
+      if (!normalizedId) {
+        setExercise(null);
+        return;
+      }
+
+      setExercise(undefined);
+      setLoadError(false);
+
+      try {
+        const result = await getExerciseDetail(normalizedId);
+        if (!mountedRef || mountedRef.current) setExercise(result);
+      } catch {
+        // getExerciseDetail sadece gerçek bir sorgu hatasında (ağ/DB)
+        // fırlatır; "bulunamadı" durumu zaten null döner ve ayrı bir
+        // ekranla ele alınır.
+        if (!mountedRef || mountedRef.current) setLoadError(true);
+      }
+    },
+    [normalizedId],
+  );
 
   useEffect(() => {
-    setIsMediaLoading(Boolean(exercise?.animationUri));
-    setHasMediaError(false);
-  }, [exercise?.animationUri]);
+    const mountedRef = { current: true };
+    void loadExercise(mountedRef);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadExercise]);
 
-  const handleCustomValueChange = useCallback(
+  // Egzersiz değişince (veya önerilen değer bulunmuyorsa) her zaman manuel
+  // girişten başla; önerilen değer varsa önce onu göster.
+  useEffect(() => {
+    setUseCustomValues(!hasRecommendedValues);
+    setCustomValues(INITIAL_CUSTOM_VALUES);
+    setErrors({});
+    setGifFailed(false);
+  }, [exercise?.id, hasRecommendedValues]);
+
+  const handleValueChange = useCallback(
     (field: CustomExerciseValueKey, value: string) => {
       setCustomValues((currentValues) => ({
         ...currentValues,
@@ -94,7 +149,7 @@ export default function ExerciseDetailScreen() {
   );
 
   const handleCustomToggle = useCallback(() => {
-    setUseCustomValues((currentValue) => !currentValue);
+    setUseCustomValues((current) => !current);
     setErrors({});
   }, []);
 
@@ -102,7 +157,21 @@ export default function ExerciseDetailScreen() {
     if (!exercise) return;
 
     let payload: ProgramSelectionPayload;
-    if (useCustomValues) {
+
+    if (
+      !useCustomValues &&
+      hasRecommendedValues &&
+      exercise.recommendedSets !== null &&
+      exercise.recommendedReps !== null &&
+      exercise.recommendedRestSeconds !== null
+    ) {
+      payload = {
+        exerciseId: exercise.id,
+        sets: exercise.recommendedSets,
+        reps: exercise.recommendedReps,
+        restSeconds: exercise.recommendedRestSeconds,
+      };
+    } else {
       const validation = validateCustomExerciseValues(customValues);
       if (!validation.success) {
         setErrors(validation.errors);
@@ -112,25 +181,16 @@ export default function ExerciseDetailScreen() {
       payload = {
         exerciseId: exercise.id,
         sets: validation.values.sets,
-        reps: String(validation.values.reps),
+        reps: validation.values.reps,
         restSeconds: validation.values.restSeconds,
-        valueSource: "custom",
-      };
-    } else {
-      payload = {
-        exerciseId: exercise.id,
-        sets: exercise.recommendedSets,
-        reps: exercise.recommendedReps,
-        restSeconds: exercise.recommendedRestSeconds,
-        valueSource: "recommended",
       };
     }
 
     router.push({
-      pathname: "/program",
+      pathname: "/program-selection",
       params: serializeProgramSelectionPayload(payload),
     });
-  }, [customValues, exercise, useCustomValues]);
+  }, [customValues, exercise, hasRecommendedValues, useCustomValues]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -178,7 +238,32 @@ export default function ExerciseDetailScreen() {
               </Pressable>
             </View>
 
-            {exercise ? (
+            {loadError ? (
+              <View style={styles.notFoundCard}>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={48}
+                  color={MainColors.primary}
+                />
+                <Text maxFontSizeMultiplier={1.3} style={styles.notFoundTitle}>
+                  Egzersiz yüklenemedi
+                </Text>
+                <Text maxFontSizeMultiplier={1.3} style={styles.notFoundText}>
+                  Bağlantınızı kontrol edip tekrar deneyin.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => void loadExercise()}
+                  style={styles.notFoundButton}
+                >
+                  <Text style={styles.notFoundButtonText}>Yeniden dene</Text>
+                </Pressable>
+              </View>
+            ) : exercise === undefined ? (
+              <View style={styles.loadingCard}>
+                <ActivityIndicator color={MainColors.primary} size="large" />
+              </View>
+            ) : exercise ? (
               <>
                 <View style={styles.mediaCard}>
                   <View style={styles.mediaBadge}>
@@ -187,25 +272,24 @@ export default function ExerciseDetailScreen() {
                       numberOfLines={1}
                       style={styles.mediaBadgeText}
                     >
-                      {(categoryName ?? exercise.categoryId).toLocaleUpperCase(
-                        "tr-TR",
-                      )}{" "}
-                      · {exercise.exerciseType.toLocaleUpperCase("tr-TR")}
+                      {[
+                        exercise.bodyPartName,
+                        exercise.exerciseType,
+                        exercise.level,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                        .toLocaleUpperCase("tr-TR")}
                     </Text>
                   </View>
 
-                  {exercise.animationUri && !hasMediaError ? (
+                  {exercise.gifUrl && !gifFailed ? (
                     <Image
-                      accessibilityLabel={`${exercise.name} uygulama animasyonu`}
-                      contentFit="contain"
-                      onError={() => {
-                        setHasMediaError(true);
-                        setIsMediaLoading(false);
-                      }}
-                      onLoad={() => setIsMediaLoading(false)}
-                      onLoadStart={() => setIsMediaLoading(true)}
-                      source={{ uri: exercise.animationUri }}
-                      style={styles.animation}
+                      accessibilityLabel={`${exercise.name} egzersiz animasyonu`}
+                      onError={() => setGifFailed(true)}
+                      resizeMode="contain"
+                      source={{ uri: exercise.gifUrl }}
+                      style={styles.mediaImage}
                     />
                   ) : (
                     <View
@@ -213,21 +297,12 @@ export default function ExerciseDetailScreen() {
                       style={styles.mediaPlaceholder}
                     >
                       <Ionicons
-                        name={exercise.image}
+                        name={exercise.icon}
                         size={112}
                         color={MainColors.mutedText}
                       />
                     </View>
                   )}
-
-                  {isMediaLoading ? (
-                    <View style={styles.mediaLoading}>
-                      <ActivityIndicator
-                        color={MainColors.primary}
-                        size="large"
-                      />
-                    </View>
-                  ) : null}
                 </View>
 
                 <Text maxFontSizeMultiplier={1.3} style={styles.title}>
@@ -235,15 +310,27 @@ export default function ExerciseDetailScreen() {
                 </Text>
 
                 <View style={styles.muscleTags}>
-                  <View style={[styles.muscleTag, styles.primaryMuscleTag]}>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.primaryMuscleText}
-                    >
-                      {exercise.primaryMuscle} (Ana)
-                    </Text>
-                  </View>
-                  {exercise.secondaryMuscles.map((muscle) => (
+                  {exercise.targetMuscleName ? (
+                    <View style={[styles.muscleTag, styles.primaryMuscleTag]}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.primaryMuscleText}
+                      >
+                        {exercise.targetMuscleName} (Ana)
+                      </Text>
+                    </View>
+                  ) : null}
+                  {exercise.equipmentName ? (
+                    <View style={styles.muscleTag}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.secondaryMuscleText}
+                      >
+                        {exercise.equipmentName}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {exercise.secondaryMuscleNames.map((muscle) => (
                     <View key={muscle} style={styles.muscleTag}>
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -255,97 +342,137 @@ export default function ExerciseDetailScreen() {
                   ))}
                 </View>
 
-                <Text maxFontSizeMultiplier={1.3} style={styles.description}>
-                  {exercise.description}
-                </Text>
-
-                <View style={styles.metricRow}>
-                  <MetricCard
-                    label="SET"
-                    value={String(exercise.recommendedSets)}
-                  />
-                  <MetricCard
-                    label="TEKRAR"
-                    value={exercise.recommendedReps}
-                  />
-                  <MetricCard
-                    label="DİNLENME"
-                    value={`${exercise.recommendedRestSeconds} sn`}
-                  />
-                </View>
-
-                <Pressable
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: useCustomValues }}
-                  onPress={handleCustomToggle}
-                  style={({ pressed }) => [
-                    styles.customToggle,
-                    pressed && styles.buttonPressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      useCustomValues && styles.checkboxSelected,
-                    ]}
-                  >
-                    {useCustomValues ? (
-                      <Ionicons
-                        name="checkmark"
-                        size={20}
-                        color={MainColors.surface}
-                      />
-                    ) : null}
-                  </View>
-                  <Text
-                    maxFontSizeMultiplier={1.3}
-                    style={styles.customToggleText}
-                  >
-                    Kendi set, tekrar ve dinlenme değerlerimi belirlemek
-                    istiyorum.
+                {exercise.description ? (
+                  <Text maxFontSizeMultiplier={1.3} style={styles.description}>
+                    {exercise.description}
                   </Text>
-                </Pressable>
+                ) : null}
 
-                {useCustomValues ? (
-                  <View style={styles.customFieldRow}>
-                    {CUSTOM_FIELDS.map((field) => (
-                      <View key={field.key} style={styles.customField}>
+                {exercise.steps.length > 0 ? (
+                  <View style={styles.stepsSection}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
+                      Nasıl yapılır?
+                    </Text>
+                    {exercise.steps.map((step, index) => (
+                      <View key={index} style={styles.stepRow}>
+                        <View style={styles.stepIndex}>
+                          <Text
+                            maxFontSizeMultiplier={1.3}
+                            style={styles.stepIndexText}
+                          >
+                            {index + 1}
+                          </Text>
+                        </View>
                         <Text
                           maxFontSizeMultiplier={1.3}
-                          style={styles.customFieldLabel}
+                          style={styles.stepDescription}
                         >
-                          {field.label}
-                        </Text>
-                        <TextInput
-                          accessibilityLabel={`Özel ${field.label.toLocaleLowerCase(
-                            "tr-TR",
-                          )}`}
-                          inputMode="numeric"
-                          keyboardType="number-pad"
-                          maxFontSizeMultiplier={1.3}
-                          maxLength={field.maxLength}
-                          onChangeText={(value) =>
-                            handleCustomValueChange(field.key, value)
-                          }
-                          placeholder={field.placeholder}
-                          placeholderTextColor={MainColors.mutedText}
-                          returnKeyType="done"
-                          style={[
-                            styles.customInput,
-                            errors[field.key] && styles.customInputError,
-                          ]}
-                          value={customValues[field.key]}
-                        />
-                        <Text
-                          accessibilityLiveRegion="polite"
-                          maxFontSizeMultiplier={1.3}
-                          style={styles.fieldError}
-                        >
-                          {errors[field.key] ?? " "}
+                          {step}
                         </Text>
                       </View>
                     ))}
                   </View>
+                ) : null}
+
+                <Text maxFontSizeMultiplier={1.3} style={styles.fieldsTitle}>
+                  Set / tekrar / dinlenme belirle
+                </Text>
+
+                {hasRecommendedValues &&
+                exercise.recommendedSets !== null &&
+                exercise.recommendedReps !== null &&
+                exercise.recommendedRestSeconds !== null &&
+                !useCustomValues ? (
+                  <View style={styles.metricRow}>
+                    <MetricCard
+                      label="SET"
+                      value={String(exercise.recommendedSets)}
+                    />
+                    <MetricCard
+                      label="TEKRAR"
+                      value={String(exercise.recommendedReps)}
+                    />
+                    <MetricCard
+                      label="DİNLENME"
+                      value={`${exercise.recommendedRestSeconds} sn`}
+                    />
+                  </View>
+                ) : null}
+
+                {hasRecommendedValues ? (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: useCustomValues }}
+                    onPress={handleCustomToggle}
+                    style={({ pressed }) => [
+                      styles.customToggle,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        useCustomValues && styles.checkboxSelected,
+                      ]}
+                    >
+                      {useCustomValues ? (
+                        <Ionicons
+                          name="checkmark"
+                          size={20}
+                          color={MainColors.surface}
+                        />
+                      ) : null}
+                    </View>
+                    <Text
+                      maxFontSizeMultiplier={1.3}
+                      style={styles.customToggleText}
+                    >
+                      Kendi set, tekrar ve dinlenme değerlerimi belirlemek
+                      istiyorum.
+                    </Text>
+                  </Pressable>
+                ) : null}
+
+                {useCustomValues || !hasRecommendedValues ? (
+                <View style={styles.customFieldRow}>
+                  {CUSTOM_FIELDS.map((field) => (
+                    <View key={field.key} style={styles.customField}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.customFieldLabel}
+                      >
+                        {field.label}
+                      </Text>
+                      <TextInput
+                        accessibilityLabel={`${field.label.toLocaleLowerCase(
+                          "tr-TR",
+                        )}`}
+                        inputMode="numeric"
+                        keyboardType="number-pad"
+                        maxFontSizeMultiplier={1.3}
+                        maxLength={field.maxLength}
+                        onChangeText={(value) =>
+                          handleValueChange(field.key, value)
+                        }
+                        placeholder={field.placeholder}
+                        placeholderTextColor={MainColors.mutedText}
+                        returnKeyType="done"
+                        style={[
+                          styles.customInput,
+                          errors[field.key] && styles.customInputError,
+                        ]}
+                        value={customValues[field.key]}
+                      />
+                      <Text
+                        accessibilityLiveRegion="polite"
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.fieldError}
+                      >
+                        {errors[field.key] ?? " "}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
                 ) : null}
 
                 <Pressable
@@ -392,30 +519,6 @@ export default function ExerciseDetailScreen() {
   );
 }
 
-type MetricCardProps = {
-  label: string;
-  value: string;
-};
-
-function MetricCard({ label, value }: MetricCardProps) {
-  return (
-    <View style={styles.metricCard}>
-      <Text maxFontSizeMultiplier={1.3} style={styles.metricLabel}>
-        {label}
-      </Text>
-      <Text
-        adjustsFontSizeToFit
-        maxFontSizeMultiplier={1.3}
-        minimumFontScale={0.78}
-        numberOfLines={1}
-        style={styles.metricValue}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -452,8 +555,14 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.7,
   },
-  mediaCard: {
+  loadingCard: {
     height: 300,
+    marginTop: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mediaCard: {
+    height: 240,
     marginTop: 28,
     borderWidth: 1.5,
     borderColor: MainColors.border,
@@ -481,19 +590,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.3,
   },
-  animation: {
+  mediaImage: {
     width: "100%",
     height: "100%",
   },
   mediaPlaceholder: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 36,
-  },
-  mediaLoading: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(241, 246, 235, 0.72)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -541,66 +643,104 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: "600",
   },
-  metricRow: {
-    marginTop: 24,
+  stepsSection: {
+    marginTop: 26,
+  },
+  stepsTitle: {
+    color: MainColors.text,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: 12,
+  },
+  stepRow: {
     flexDirection: "row",
-    gap: 10,
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 12,
+  },
+  stepIndex: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: MainColors.paleGreen,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  stepIndexText: {
+    color: MainColors.primary,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  stepDescription: {
+    flex: 1,
+    color: MainColors.mutedText,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "600",
+  },
+  fieldsTitle: {
+    marginTop: 28,
+    color: MainColors.text,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  metricRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    gap: 8,
   },
   metricCard: {
     flex: 1,
     minWidth: 0,
-    height: 92,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: MainColors.border,
-    borderRadius: 22,
-    backgroundColor: MainColors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  metricLabel: {
-    color: MainColors.mutedText,
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "800",
-  },
-  metricValue: {
-    marginTop: 5,
-    color: MainColors.text,
-    fontSize: 22,
-    lineHeight: 27,
-    fontWeight: "900",
-  },
-  customToggle: {
-    marginTop: 26,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
-  },
-  checkbox: {
-    width: 36,
-    height: 36,
-    borderWidth: 2,
-    borderColor: MainColors.primary,
     borderRadius: 18,
     backgroundColor: MainColors.surface,
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+  },
+  metricValue: {
+    color: MainColors.text,
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  metricLabel: {
+    marginTop: 4,
+    color: MainColors.mutedText,
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  customToggle: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  checkbox: {
+    width: 26,
+    height: 26,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 8,
+    backgroundColor: MainColors.surface,
+    alignItems: "center",
+    justifyContent: "center",
   },
   checkboxSelected: {
-    backgroundColor: MainColors.primary,
+    borderColor: MainColors.primaryBright,
+    backgroundColor: MainColors.primaryBright,
   },
   customToggleText: {
     flex: 1,
-    paddingTop: 2,
     color: MainColors.text,
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: "800",
+    fontSize: 14,
+    fontWeight: "700",
   },
   customFieldRow: {
-    marginTop: 20,
+    marginTop: 14,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,

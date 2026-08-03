@@ -1,8 +1,10 @@
-import { supabase } from "@/shared/lib/supabase";
+import { useOnboarding } from "@/providers/OnboardingContext";
 import {
   getEmailVerificationRedirectUrl,
   rememberPendingVerificationEmail,
 } from "@/shared/lib/services/emailVerificationService";
+import { supabase } from "@/shared/lib/supabase";
+import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -19,7 +21,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useOnboarding } from "@/context/OnboardingContext";
 
 export default function RegisterScreen() {
   const { resetOnboarding } = useOnboarding();
@@ -32,10 +33,6 @@ export default function RegisterScreen() {
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  };
 
   const validateForm = () => {
     let isValid = true;
@@ -112,6 +109,9 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
+        // Supabase projesinde "Confirm email" kapalıysa buraya hiç
+        // düşülmez (signUp anında session döner). Açık olduğu ihtimale
+        // karşı doğrulama bekleme ekranına yönlendiriyoruz.
         await rememberPendingVerificationEmail(email.trim());
 
         router.replace({
@@ -121,10 +121,9 @@ export default function RegisterScreen() {
         return;
       }
 
-      router.replace({
-        pathname: "/email-verified",
-        params: { email: email.trim() },
-      });
+      // "Confirm email" kapalı olduğu için normal durum bu: hesap anında
+      // hazır, doğrulama beklemeden direkt onboarding'e geçiyoruz.
+      router.replace("/onboarding/personal-info");
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {

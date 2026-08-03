@@ -11,7 +11,8 @@ import {
     View,
 } from "react-native";
 
-import { TrainingDay, useOnboarding } from "@/context/OnboardingContext";
+import { TrainingDay, useOnboarding } from "@/providers/OnboardingContext";
+import { saveWeeklyTrainingDays } from "@/shared/lib/services/weeklyTrainingDaysService";
 
 const GREEN = "#79DE2D";
 const BACKGROUND = "#F7F8F2";
@@ -38,6 +39,7 @@ export default function WeeklyTrainingDaysScreen() {
   const { trainingDays, setTrainingDays } = useOnboarding();
 
   const [isCreating, setIsCreating] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const isButtonEnabled = trainingDays.length > 0 && !isCreating;
 
@@ -57,13 +59,20 @@ export default function WeeklyTrainingDaysScreen() {
     }
 
     setIsCreating(true);
+    setSaveError("");
 
     try {
-      // Backend bağlantısı eklenene kadar geçici işlem.
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const result = await saveWeeklyTrainingDays(trainingDays);
+
+      if (!result.success) {
+        setSaveError(result.message);
+        return;
+      }
 
       // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
       router.replace("/(main)");
+    } catch {
+      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
     } finally {
       setIsCreating(false);
     }
@@ -141,6 +150,8 @@ export default function WeeklyTrainingDaysScreen() {
             serini kazanırsın.
           </Text>
         </View>
+
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
 
         <View style={styles.buttonArea}>
           <Pressable
@@ -316,5 +327,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#101010",
+  },
+  errorText: {
+    marginTop: 14,
+    color: "#D94B4B",
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
   },
 });
