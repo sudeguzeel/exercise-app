@@ -34,9 +34,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const INITIAL_CUSTOM_VALUES: CustomExerciseValues = {
-  sets: "",
-  reps: "",
-  restSeconds: "",
+  sets: "3",
+  reps: "10",
+  restSeconds: "45",
 };
 
 const CUSTOM_FIELDS: {
@@ -51,7 +51,7 @@ const CUSTOM_FIELDS: {
     key: "restSeconds",
     label: "DİNLENME",
     placeholder: "0–600",
-    maxLength: 3,
+    maxLength: 4,
   },
 ];
 
@@ -138,7 +138,7 @@ export default function ExerciseDetailScreen() {
   // Egzersiz değişince (veya önerilen değer bulunmuyorsa) her zaman manuel
   // girişten başla; önerilen değer varsa önce onu göster.
   useEffect(() => {
-    setUseCustomValues(!hasRecommendedValues);
+    setUseCustomValues(true);
     setCustomValues(INITIAL_CUSTOM_VALUES);
     setErrors({});
     setGifFailed(false);
@@ -504,7 +504,12 @@ export default function ExerciseDetailScreen() {
                         maxFontSizeMultiplier={1.3}
                         maxLength={field.maxLength}
                         onChangeText={(value) =>
-                          handleValueChange(field.key, value)
+                          handleValueChange(
+                            field.key,
+                            field.key === "restSeconds"
+                              ? value.replace(/\D/g, "")
+                              : value,
+                          )
                         }
                         placeholder={field.placeholder}
                         placeholderTextColor={MainColors.mutedText}
@@ -513,7 +518,11 @@ export default function ExerciseDetailScreen() {
                           styles.customInput,
                           errors[field.key] && styles.customInputError,
                         ]}
-                        value={customValues[field.key]}
+                        value={
+                          field.key === "restSeconds"
+                            ? `${customValues[field.key]}s`
+                            : customValues[field.key]
+                        }
                       />
                       <Text
                         accessibilityLiveRegion="polite"
