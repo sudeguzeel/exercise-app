@@ -1,5 +1,6 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import {
+  parseInitialTrainingDay,
   parseProgramSelectionParams,
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
@@ -15,6 +16,7 @@ import {
   ProgramRepositoryError,
   programRepository,
 } from "@/features/programs/program-repository";
+import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import { MainColors } from "@/shared/constants/theme";
 import {
   getBodyParts,
@@ -24,7 +26,7 @@ import {
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -51,6 +53,10 @@ export default function NewProgramScreen() {
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
   );
+  const initialTrainingDay = useMemo(
+    () => parseInitialTrainingDay(searchParams),
+    [searchParams],
+  );
   const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
   const [muscleGroups, setMuscleGroups] = useState<BodyPartOption[]>([]);
 
@@ -74,13 +80,26 @@ export default function NewProgramScreen() {
 
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
-    new Set(),
+    () => new Set(initialTrainingDay ? [initialTrainingDay] : []),
   );
+  const lastAppliedInitialTrainingDay = useRef(initialTrainingDay);
+
+  useEffect(() => {
+    if (
+      initialTrainingDay &&
+      initialTrainingDay !== lastAppliedInitialTrainingDay.current
+    ) {
+      setSelectedDays(new Set([initialTrainingDay]));
+    }
+    lastAppliedInitialTrainingDay.current = initialTrainingDay;
+  }, [initialTrainingDay]);
+
   const [selectedMuscleGroupIds, setSelectedMuscleGroupIds] = useState<
     Set<string>
   >(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<FormModalState>(null);
+  const [createdProgramId, setCreatedProgramId] = useState<string | null>(null);
 
   const isRouteValid = Boolean(selection && exercise);
   const canSubmit =
@@ -98,12 +117,13 @@ export default function NewProgramScreen() {
 
     setIsSubmitting(true);
     try {
-      await programRepository.createProgramWithExercise({
+      const createdProgram = await programRepository.createProgramWithExercise({
         name: programName,
         trainingDays: [...selectedDays],
         muscleGroupIds: [...selectedMuscleGroupIds],
         exercise: selection,
       });
+      setCreatedProgramId(createdProgram.id);
       setModalState({
         title: "Program oluşturuldu",
         message:
@@ -145,9 +165,19 @@ export default function NewProgramScreen() {
     const shouldLeaveScreen = modalState?.success === true;
     setModalState(null);
     if (shouldLeaveScreen) {
-      router.replace("/exercise");
+      const selectedDate = initialTrainingDay
+        ? getCurrentWeek().find((day) => day.day === initialTrainingDay)?.dateKey
+        : undefined;
+      if (selectedDate && createdProgramId) {
+        router.replace({
+          pathname: "/(main)/program",
+          params: { selectedDate, activeProgramId: createdProgramId },
+        });
+        return;
+      }
+      router.replace("/(main)");
     }
-  }, [modalState?.success]);
+  }, [createdProgramId, initialTrainingDay, modalState?.success]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>

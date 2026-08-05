@@ -253,26 +253,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     startLocks.add(lockKey);
 
     try {
-      const sessions = await readSessions(userId);
-      const candidates = sessions
-        .filter(
-          (session) =>
-            session.programId === programId && session.workoutDate === workoutDate,
-        )
-        .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
-      const resumable = candidates.find((session) => session.status !== "completed");
-      const completed = candidates.find((session) => session.status === "completed");
-      const existing = resumable ?? completed;
-
-      if (existing) {
-        if (existing.status === "paused") {
-          existing.status = "active";
-          existing.lastResumedAt = new Date().toISOString();
-          return saveSession(userId, existing);
-        }
-        return clone(existing);
-      }
-
       const program = await programRepository.getProgramById(programId);
       if (!program) {
         throw new WorkoutRepositoryError("NOT_FOUND", "Program bulunamadı.");
@@ -284,9 +264,67 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         );
       }
 
+      const [sessions, completions] = await Promise.all([
+        readSessions(userId),
+        readList<WorkoutCompletion>(completionsKey(userId)),
+      ]);
+      const candidates = sessions
+        .filter(
+          (session) =>
+            session.programId === programId && session.workoutDate === workoutDate,
+        )
+        .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+      const resumable = candidates.find((session) => session.status !== "completed");
+      const completed = candidates.find((session) => session.status === "completed");
+      const completedProgramExerciseIds = new Set(
+        completions
+          .filter(
+            (completion) =>
+              completion.programId === programId &&
+              completion.workoutDate === workoutDate,
+          )
+          .flatMap((completion) =>
+            completion.exercises
+              .filter((exercise) =>
+                exercise.sets.every((set) => Boolean(set.completedAt)),
+              )
+              .map((exercise) => exercise.programExerciseId),
+          ),
+      );
+      const pendingExercises = program.exercises.filter(
+        (exercise) => !completedProgramExerciseIds.has(exercise.id),
+      );
+
+      if (pendingExercises.length === 0 && completed) {
+        return clone(completed);
+      }
+
+      if (resumable) {
+        const existingSnapshots = new Map(
+          resumable.exercises.map((exercise) => [
+            exercise.programExerciseId,
+            exercise,
+          ]),
+        );
+        resumable.exercises = await Promise.all(
+          pendingExercises.map(
+            async (exercise) =>
+              existingSnapshots.get(exercise.id) ??
+              buildExerciseSnapshot(exercise),
+          ),
+        );
+        resumable.programName = program.name;
+        resumable.programTrainingDays = [...program.trainingDays];
+        if (resumable.status === "paused") {
+          resumable.status = "active";
+          resumable.lastResumedAt = new Date().toISOString();
+        }
+        return saveSession(userId, resumable);
+      }
+
       const now = new Date().toISOString();
       const exercises = await Promise.all(
-        [...program.exercises]
+        [...pendingExercises]
           .sort((left, right) => left.orderIndex - right.orderIndex)
           .map(buildExerciseSnapshot),
       );

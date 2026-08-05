@@ -44,7 +44,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type LoadState = "loading" | "success" | "error";
 
 function singleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? value[value.length - 1] : value;
 }
 
 export default function ProgramScreen() {
@@ -72,6 +72,24 @@ export default function ProgramScreen() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const navigationLock = useRef(false);
+  const lastAppliedDateParam = useRef(requestedDate);
+  const requestedProgramId = singleParam(params.activeProgramId) ?? null;
+  const lastAppliedProgramParam = useRef(requestedProgramId);
+
+  useEffect(() => {
+    if (
+      requestedDate !== lastAppliedDateParam.current &&
+      week.some((day) => day.dateKey === requestedDate)
+    ) {
+      setSelectedDateKey(requestedDate!);
+    }
+    lastAppliedDateParam.current = requestedDate;
+
+    if (requestedProgramId !== lastAppliedProgramParam.current) {
+      setActiveProgramId(requestedProgramId);
+    }
+    lastAppliedProgramParam.current = requestedProgramId;
+  }, [requestedDate, requestedProgramId, week]);
 
   const loadPrograms = useCallback(async () => {
     setProgramState("loading");
@@ -128,10 +146,11 @@ export default function ProgramScreen() {
   );
 
   useEffect(() => {
+    if (programState !== "success") return;
     setActiveProgramId((current) =>
       resolveActiveProgramId(dailyPrograms, current),
     );
-  }, [dailyPrograms]);
+  }, [dailyPrograms, programState]);
 
   const activeProgram =
     dailyPrograms.find((program) => program.id === activeProgramId) ?? null;

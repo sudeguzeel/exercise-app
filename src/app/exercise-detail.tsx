@@ -6,7 +6,9 @@ import {
   type CustomExerciseValues,
 } from "@/features/exercises/exercise-detail-validation";
 import {
+  parseInitialTrainingDay,
   serializeProgramSelectionPayload,
+  type ProgramSelectionSearchParams,
   type ProgramSelectionPayload,
 } from "@/features/exercises/program-selection";
 import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
@@ -17,7 +19,7 @@ import {
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -69,12 +71,16 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function ExerciseDetailScreen() {
-  const { exerciseId, selectionMode, editProgramId, selectedDate } = useLocalSearchParams<{
-    exerciseId?: string | string[];
+  const searchParams = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
     editProgramId?: string | string[];
     selectedDate?: string | string[];
   }>();
+  const { exerciseId, selectionMode, editProgramId, selectedDate } = searchParams;
+  const initialTrainingDay = useMemo(
+    () => parseInitialTrainingDay(searchParams),
+    [searchParams],
+  );
   const normalizedId = Array.isArray(exerciseId) ? exerciseId[0] : exerciseId;
   const normalizedSelectionMode = Array.isArray(selectionMode)
     ? selectionMode[0]
@@ -232,7 +238,7 @@ export default function ExerciseDetailScreen() {
 
     router.push({
       pathname: "/program-selection",
-      params: serializeProgramSelectionPayload(payload),
+      params: serializeProgramSelectionPayload(payload, initialTrainingDay),
     });
   }, [
     customValues,
@@ -241,6 +247,7 @@ export default function ExerciseDetailScreen() {
     normalizedEditProgramId,
     normalizedSelectedDate,
     normalizedSelectionMode,
+    initialTrainingDay,
     useCustomValues,
   ]);
 

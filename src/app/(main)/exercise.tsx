@@ -3,6 +3,10 @@ import {
   buildCategoryFilters,
   type ExerciseListItem,
 } from "@/features/exercises/exercise-catalog";
+import {
+  parseInitialTrainingDay,
+  type ProgramSelectionSearchParams,
+} from "@/features/exercises/program-selection";
 import { MainColors } from "@/shared/constants/theme";
 import {
   EXERCISE_PAGE_SIZE,
@@ -11,6 +15,7 @@ import {
   type BodyPartOption,
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
+import { useScrollToTop } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   useCallback,
@@ -36,11 +41,15 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
-  const params = useLocalSearchParams<{
+  const params = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
     editProgramId?: string | string[];
     selectedDate?: string | string[];
   }>();
+  const initialTrainingDay = useMemo(
+    () => parseInitialTrainingDay(params),
+    [params],
+  );
   const selectionMode = Array.isArray(params.selectionMode)
     ? params.selectionMode[0]
     : params.selectionMode;
@@ -52,6 +61,7 @@ export default function ExerciseScreen() {
     : params.selectedDate;
   const isProgramEditSelection =
     selectionMode === "program-edit" && Boolean(editProgramId);
+  const listRef = useRef<FlatList<ExerciseListItem>>(null);
   const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -65,6 +75,8 @@ export default function ExerciseScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const requestIdRef = useRef(0);
+
+  useScrollToTop(listRef);
 
   const categoryFilters = useMemo(
     () => buildCategoryFilters(bodyParts),
@@ -136,10 +148,11 @@ export default function ExerciseScreen() {
           ...(isProgramEditSelection
             ? { selectionMode: "program-edit", editProgramId, selectedDate }
             : {}),
+          ...(initialTrainingDay ? { initialTrainingDay } : {}),
         },
       });
     },
-    [editProgramId, isProgramEditSelection, selectedDate],
+    [editProgramId, initialTrainingDay, isProgramEditSelection, selectedDate],
   );
 
   const handleEndReached = useCallback(() => {
@@ -159,6 +172,7 @@ export default function ExerciseScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <FlatList
+        ref={listRef}
         data={exercises}
         renderItem={renderExercise}
         keyExtractor={(exercise) => exercise.id}
