@@ -1,4 +1,5 @@
 import { programRepository } from "@/features/programs/program-repository";
+import { workoutRepository } from "@/features/workouts/workout-repository";
 import { bodyPartIcon } from "@/shared/constants/exercise-taxonomy";
 import type {
   CompletedExerciseRecord,
@@ -25,10 +26,9 @@ export type HomeSourceData = {
  * vücut-bölgesi bilgisi ve bu haftaki tamamlanma kayıtları
  * (user_completed_exercises).
  *
- * Not: Uygulamada henüz "egzersizi tamamlandı işaretle" akışı yok, bu yüzden
- * user_completed_exercises şu an için her zaman boş dönebilir — dashboard bu
- * durumda dürüstçe "not_started" gösterir (mock veri döneminde olduğu gibi
- * rastgele "tamamlandı" kayıtları uydurulmaz).
+ * Tamamlanma kayıtları mevcut Supabase kaynağıyla cihazdaki aktif antrenman
+ * repository'sinden birleştirilir. Backend akışı hazır olduğunda ekranın veri
+ * sözleşmesi değişmeden yerel kaynak kaldırılabilir.
  */
 export async function getHomeSourceData(): Promise<HomeSourceData> {
   const programs = await programRepository.listPrograms();
@@ -80,21 +80,41 @@ async function buildExerciseLookup(
 }
 
 async function getCompletedExercisesThisWeek(): Promise<CompletedExerciseRecord[]> {
-  const { data, error } = await supabase
-    .from("user_completed_exercises")
-    .select("exercise_id, program_exercise_id, workout_date");
+  const [remoteResult, localResult] = await Promise.allSettled([
+    supabase
+      .from("user_completed_exercises")
+      .select("exercise_id, program_exercise_id, workout_date"),
+    workoutRepository.getLocalCompletedExerciseRecords(),
+  ]);
 
-  if (error || !data) {
-    return [];
+  const records: CompletedExerciseRecord[] = [];
+  if (
+    remoteResult.status === "fulfilled" &&
+    !remoteResult.value.error &&
+    remoteResult.value.data
+  ) {
+    records.push(
+      ...(remoteResult.value.data as unknown as {
+        exercise_id: string;
+        program_exercise_id: string;
+        workout_date: string;
+      }[]).map((row) => ({
+        exerciseId: row.exercise_id,
+        programExerciseId: row.program_exercise_id,
+        workoutDate: row.workout_date,
+      })),
+    );
+  }
+  if (localResult.status === "fulfilled") {
+    records.push(...localResult.value);
   }
 
-  return (data as unknown as {
-    exercise_id: string;
-    program_exercise_id: string;
-    workout_date: string;
-  }[]).map((row) => ({
-    exerciseId: row.exercise_id,
-    programExerciseId: row.program_exercise_id,
-    workoutDate: row.workout_date,
-  }));
+  const uniqueRecords = new Map<string, CompletedExerciseRecord>();
+  for (const record of records) {
+    uniqueRecords.set(
+      `${record.exerciseId}:${record.programExerciseId}:${record.workoutDate}`,
+      record,
+    );
+  }
+  return [...uniqueRecords.values()];
 }

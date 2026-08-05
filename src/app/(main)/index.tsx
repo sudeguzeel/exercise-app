@@ -1,8 +1,9 @@
 import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -45,9 +46,11 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    void loadDashboard();
-  }, [loadDashboard]);
+  useFocusEffect(
+    useCallback(() => {
+      void loadDashboard();
+    }, [loadDashboard]),
+  );
 
   if (loadState === "loading" || !dashboard) {
     return (
