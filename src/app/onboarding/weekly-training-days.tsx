@@ -3,18 +3,16 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 
-import { supabase } from "@/shared/lib/supabase";
 
-import { TrainingDay, useOnboarding } from "@/context/OnboardingContext";
+import { TrainingDay, useOnboarding } from "@/providers/OnboardingContext";
 
 const GREEN = "#79DE2D";
 const BACKGROUND = "#F7F8F2";
@@ -51,6 +49,7 @@ export default function WeeklyTrainingDaysScreen() {
   const { trainingDays, setTrainingDays } = useOnboarding();
 
   const [isCreating, setIsCreating] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const isButtonEnabled = trainingDays.length > 0 && !isCreating;
 
@@ -73,28 +72,11 @@ export default function WeeklyTrainingDaysScreen() {
     setIsCreating(true);
 
     try {
-      const apiDays = trainingDays.map((day) => dayToApiCode[day]);
+      // Backend bağlantısı eklenene kadar geçici işlem.
+      await new Promise((resolve) => setTimeout(resolve, 900));
 
-      const { data, error } = await supabase.functions.invoke(
-        "save-onboarding-weekly-goal",
-        { body: { days: apiDays } }
-      );
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.error) {
-        Alert.alert(
-          "Kaydedilemedi",
-          data.fieldErrors?.days ?? data.message ?? "Bir hata oluştu, tekrar deneyin."
-        );
-        return;
-      }
-
+      // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
       router.replace("/(main)");
-    } catch (err) {
-      Alert.alert("Kaydedilemedi", "Bağlantı hatası, tekrar deneyin.");
     } finally {
       setIsCreating(false);
     }
@@ -173,6 +155,8 @@ export default function WeeklyTrainingDaysScreen() {
             serini kazanırsın.
           </Text>
         </View>
+
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
 
         <View style={styles.buttonArea}>
           <Pressable
@@ -348,5 +332,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#101010",
+  },
+  errorText: {
+    marginTop: 14,
+    color: "#D94B4B",
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
   },
 });

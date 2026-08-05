@@ -1,7 +1,7 @@
-import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import * as Linking from "expo-linking";
+import { router } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,8 +16,12 @@ import {
   View,
 } from "react-native";
 
+import { establishPasswordResetSession } from "@/shared/lib/services/passwordResetService";
+import { supabase } from "@/shared/lib/supabase";
+
 export default function ResetPasswordScreen() {
-  const { code } = useLocalSearchParams<{ code?: string | string[] }>();
+  const linkingUrl = Linking.useLinkingURL();
+  const sessionPromiseRef = useRef<Promise<void> | null>(null);
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,30 +34,22 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const exchangeCode = async () => {
-      const authCode = Array.isArray(code) ? code[0] : code;
+    if (!linkingUrl || sessionPromiseRef.current) {
+      return;
+    }
 
-      if (!authCode) {
-        setSessionError(
-          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir sıfırlama bağlantısı iste.",
-        );
-        setPreparing(false);
-        return;
-      }
+    const prepareSession = async () => {
+      const result = await establishPasswordResetSession(linkingUrl);
 
-      const { error } = await supabase.auth.exchangeCodeForSession(authCode);
-
-      if (error) {
-        setSessionError(
-          "Bağlantı geçersiz veya süresi dolmuş. Lütfen yeni bir sıfırlama bağlantısı iste.",
-        );
+      if (!result.success) {
+        setSessionError(result.message);
       }
 
       setPreparing(false);
     };
 
-    exchangeCode();
-  }, [code]);
+    sessionPromiseRef.current = prepareSession();
+  }, [linkingUrl]);
 
   const validateForm = () => {
     let isValid = true;

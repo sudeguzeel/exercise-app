@@ -1,9 +1,11 @@
+import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { supabase } from "@/shared/lib/supabase";
+import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
 import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -26,9 +28,72 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isValidEmail = (value: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-  };
+  // Web'de Google girişi tam sayfa yönlendirmesiyle çalışıyor (bkz.
+  // handleGoogleLogin'deki web dalı): Google'dan dönüşte tarayıcı bu sayfaya
+  // (`redirectTo` = ".../login") token'ları URL fragment'ında taşıyarak geri
+  // geliyor (`#access_token=...&refresh_token=...`). `detectSessionInUrl`
+  // kapalı olduğu için (bkz. supabase.ts) bunu burada elle işlememiz
+  // gerekiyor — aksi halde kullanıcı hesabı seçtikten sonra login
+  // ekranına döner ama hiçbir zaman oturum açılmış olmaz.
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") {
+      return;
+    }
+
+    const parameters = getAuthCallbackParameters(window.location.href);
+    const accessToken = parameters.get("access_token");
+    const refreshToken = parameters.get("refresh_token");
+
+    if (!accessToken || !refreshToken) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) throw sessionError;
+
+        // Token'ları URL'den temizle — sayfa yenilendiğinde ya da geri
+        // gidildiğinde aynı token'lar tekrar işlenmeye çalışılmasın.
+        window.history.replaceState(null, "", window.location.pathname);
+
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          throw new Error("Oturum oluşturulamadı.");
+        }
+
+        if (cancelled) return;
+
+        const onboardingCompleted =
+          sessionData.session.user.user_metadata?.onboarding_completed === true;
+
+        router.replace(
+          onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
+        );
+      } catch (error: any) {
+        if (!cancelled) {
+          Alert.alert(
+            "Google Giriş Hatası",
+            error?.message ?? "Oturum tamamlanamadı.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sadece mount'ta bir kez çalışmalı
+  }, []);
 
   const validateForm = () => {
     let isValid = true;
@@ -62,23 +127,22 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      console.log("SUPABASE LOGIN ÇALIŞTI", email);
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
-
-      console.log("EMAIL:", email);
-      console.log("DATA:", data);
-      console.log("ERROR:", error);
 
       if (error || !data.session) {
         Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
         return;
       }
 
-      router.replace("/(main)");
+      const onboardingCompleted =
+        data.session.user.user_metadata?.onboarding_completed === true;
+
+      router.replace(
+        onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
+      );
     } catch {
       Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
     } finally {
@@ -90,11 +154,38 @@ const handleGoogleLogin = async () => {
   try {
     setLoading(true);
 
-    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres
-    const redirectTo = AuthSession.makeRedirectUri({
-  scheme: 'exercise-app', // app.json içindeki scheme adın
-  path: 'login',
-});
+    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres.
+    // `scheme` bilerek verilmiyor: Expo Go'da app.json'daki özel scheme
+    // ("exercise-app") hiçbir zaman çalışmaz (Expo Go sadece kendi "exp://"
+    // şemasını tanır) — scheme'i sabitlersek Expo Go bunu sessizce görmezden
+    // gelip ne döndüreceği belirsizleşiyordu. Scheme'i boş bırakınca Expo
+    // Go'da otomatik "exp://<ip>:<port>/--/login", dev-client/production
+    // build'de ise app.json'daki "exercise-app://login" üretilir.
+    const redirectTo = AuthSession.makeRedirectUri({ path: 'login' });
+
+    // Bu adresi Supabase'in "Redirect URLs" listesine eklemen gerekiyor.
+    // Metro terminalinde/browser konsolunda bu satırı arayıp tam adresi
+    // görebilirsin.
+    console.log('[Google OAuth] redirectTo:', redirectTo);
+
+    if (Platform.OS === 'web') {
+      // Web'de WebBrowser.openAuthSessionAsync (popup + polling) güvenilir
+      // çalışmıyor — Google hesap seçiminden sonra pencere hiç kapanmadan
+      // asılı kalabiliyor. Bunun yerine tam sayfa yönlendirmesi kullanılıyor;
+      // `skipBrowserRedirect` verilmediğinde supabase-js web'de otomatik
+      // olarak `window.location`'ı Google'a yönlendirir. Dönüşü yukarıdaki
+      // useEffect (URL fragment'ından token okuyup setSession çağıran) ele
+      // alıyor.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo },
+      });
+
+      if (error) throw error;
+      // Tarayıcı burada Google'a yönlendiği için fonksiyon devam etmeyecek;
+      // finally bloğu loading'i kapatmaya çalışsa da sayfa zaten ayrılıyor.
+      return;
+    }
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -110,10 +201,39 @@ const handleGoogleLogin = async () => {
       // Google oturum açma sayfasını mobil tarayıcıda açar
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-      if (result.type === 'success') {
-        // Oturumu doğrula ve Ana Sayfaya geçiş yap
-        await supabase.auth.getSession();
-        router.replace('/(main)');
+      if (result.type === 'success' && result.url) {
+        // supabase.ts içinde detectSessionInUrl kapalı (web SSR'ı çökertmemek
+        // için) ve React Native'de zaten otomatik URL algılama çalışmıyor;
+        // bu yüzden tarayıcıdan dönen token'ları burada elle okuyup session
+        // kurmamız gerekiyor. Proje flowType:"implicit" kullandığı için
+        // token'lar `?code=` değil `#access_token=&refresh_token=` şeklinde
+        // geliyor — önceden burada code exchange deneniyordu, hiç eşleşmediği
+        // için Google ile girişte session hiç kurulmuyordu.
+        const parameters = getAuthCallbackParameters(result.url);
+        const accessToken = parameters.get('access_token');
+        const refreshToken = parameters.get('refresh_token');
+
+        if (!accessToken || !refreshToken) {
+          throw new Error('Google girişinden geçerli bir oturum bilgisi alınamadı.');
+        }
+
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (sessionError) throw sessionError;
+
+        const { data: sessionData } = await supabase.auth.getSession();
+
+        if (!sessionData.session) {
+          throw new Error('Oturum oluşturulamadı.');
+        }
+
+        const onboardingCompleted =
+          sessionData.session.user.user_metadata?.onboarding_completed === true;
+
+        router.replace(onboardingCompleted ? '/(main)' : '/onboarding/personal-info');
       }
     }
   } catch (error: any) {

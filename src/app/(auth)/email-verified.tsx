@@ -16,7 +16,10 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
-import { getEmailVerificationState } from "@/shared/lib/services/mockAuthService";
+import {
+  clearPendingVerificationEmail,
+  getEmailVerificationState,
+} from "@/shared/lib/services/emailVerificationService";
 import {
   isValidEmail,
   normalizeEmail,
@@ -56,6 +59,12 @@ export default function EmailVerifiedScreen() {
               }
             : "/register",
         );
+        return;
+      }
+
+      await clearPendingVerificationEmail();
+
+      if (!mounted) {
         return;
       }
 

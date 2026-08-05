@@ -8,12 +8,12 @@ import React, {
 
 export type Gender = "female" | "male" | "other" | "";
 
-export type Goal =
-  | "lose-weight"
-  | "gain-weight"
-  | "build-muscle"
-  | "stay-fit"
-  | "";
+// Not: personal-info.tsx'teki goalOptions ve personalInfoService.ts'teki GOAL_MAP
+// sadece bu ucu sunar/eslendirir; DB'deki fitness_preferences.goal CHECK
+// constraint'i de (muscle_gain / fat_loss / general_fitness) yalnizca bu ucunu
+// karsiliyor. Daha once burada tanimli olup hicbir yerde sunulmayan/eslenmeyen
+// "gain-weight" kaldirildi.
+export type Goal = "lose-weight" | "build-muscle" | "stay-fit" | "";
 
 export type FitnessPreference = "cardio" | "strength" | "flexibility";
 

@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Platform,
     Pressable,
     ScrollView,
@@ -12,7 +11,8 @@ import {
     View,
 } from "react-native";
 
-import { FitnessPreference, useOnboarding } from "@/context/OnboardingContext";
+import { FitnessPreference, useOnboarding } from "@/providers/OnboardingContext";
+import { saveFitnessPreferences } from "@/shared/lib/services/fitnessPreferencesService";
 
 const GREEN = "#79DE2D";
 const BACKGROUND = "#F7F8F2";
@@ -52,6 +52,7 @@ export default function FitnessExperienceScreen() {
   const { fitnessPreferences, setFitnessPreferences } = useOnboarding();
 
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const isContinueEnabled = fitnessPreferences.length > 0 && !isSaving;
 
@@ -73,16 +74,19 @@ export default function FitnessExperienceScreen() {
     }
 
     setIsSaving(true);
+    setSaveError("");
 
     try {
-      // Backend bağlantısı eklenene kadar geçici kayıt işlemi.
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      const result = await saveFitnessPreferences(fitnessPreferences);
 
-      Alert.alert("Başarılı", "Fitness tercihleriniz kaydedildi.");
+      if (!result.success) {
+        setSaveError(result.message);
+        return;
+      }
 
-      // Dördüncü onboarding ekranının yolu belli olduğunda
-      // aşağıdaki yönlendirme onunla değiştirilecek.
       router.push("/onboarding/weekly-training-days");
+    } catch {
+      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
     } finally {
       setIsSaving(false);
     }
@@ -160,6 +164,8 @@ export default function FitnessExperienceScreen() {
             );
           })}
         </View>
+
+        {saveError ? <Text style={styles.errorText}>{saveError}</Text> : null}
 
         <Pressable
           disabled={!isContinueEnabled}
@@ -323,5 +329,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "800",
     color: "#101010",
+  },
+  errorText: {
+    marginTop: 14,
+    color: "#D94B4B",
+    fontSize: 12,
+    lineHeight: 16,
+    textAlign: "center",
   },
 });
