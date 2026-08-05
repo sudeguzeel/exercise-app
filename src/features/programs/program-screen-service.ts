@@ -1,4 +1,5 @@
 import type { ProgramCompletionRecord } from "@/features/programs/program-dashboard";
+import { workoutRepository } from "@/features/workouts/workout-repository";
 import { supabase } from "@/shared/lib/supabase";
 
 export async function getCurrentUserDisplayName(): Promise<string | null> {
@@ -30,21 +31,52 @@ export async function getProgramCompletionRecords(
   weekStart: string,
   weekEnd: string,
 ): Promise<ProgramCompletionRecord[]> {
-  const { data, error } = await supabase
-    .from("user_completed_exercises")
-    .select("program_exercise_id, workout_date")
-    .gte("workout_date", weekStart)
-    .lte("workout_date", weekEnd);
+  const [remoteResult, localResult] = await Promise.allSettled([
+    supabase
+      .from("user_completed_exercises")
+      .select("program_exercise_id, workout_date")
+      .gte("workout_date", weekStart)
+      .lte("workout_date", weekEnd),
+    workoutRepository.getLocalCompletedExerciseRecords(weekStart, weekEnd),
+  ]);
 
-  if (error || !data) {
+  const remoteRecords: ProgramCompletionRecord[] = [];
+  if (
+    remoteResult.status === "fulfilled" &&
+    !remoteResult.value.error &&
+    remoteResult.value.data
+  ) {
+    for (const row of remoteResult.value.data as unknown as {
+      program_exercise_id: string;
+      workout_date: string;
+    }[]) {
+      remoteRecords.push({
+        programExerciseId: row.program_exercise_id,
+        workoutDate: row.workout_date,
+      });
+    }
+  }
+
+  const localRecords =
+    localResult.status === "fulfilled"
+      ? localResult.value.map((record) => ({
+          programExerciseId: record.programExerciseId,
+          workoutDate: record.workoutDate,
+        }))
+      : [];
+
+  const remoteUnavailable =
+    remoteResult.status === "rejected" || Boolean(remoteResult.value.error);
+  if (remoteUnavailable && localResult.status === "rejected") {
     throw new Error("Haftalık antrenman bilgileri alınamadı.");
   }
 
-  return (data as unknown as {
-    program_exercise_id: string;
-    workout_date: string;
-  }[]).map((row) => ({
-    programExerciseId: row.program_exercise_id,
-    workoutDate: row.workout_date,
-  }));
+  const uniqueRecords = new Map<string, ProgramCompletionRecord>();
+  for (const record of [...remoteRecords, ...localRecords]) {
+    uniqueRecords.set(
+      `${record.programExerciseId}:${record.workoutDate}`,
+      record,
+    );
+  }
+  return [...uniqueRecords.values()];
 }

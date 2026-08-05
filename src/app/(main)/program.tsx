@@ -21,6 +21,10 @@ import {
   getProgramCompletionRecords,
 } from "@/features/programs/program-screen-service";
 import type { UserProgram } from "@/features/programs/types";
+import {
+  workoutRepository,
+  WorkoutRepositoryError,
+} from "@/features/workouts/workout-repository";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -150,14 +154,36 @@ export default function ProgramScreen() {
     [selectedDateKey],
   );
 
-  const handleStartWorkout = useCallback(() => {
+  const handleStartWorkout = useCallback(async () => {
     if (!activeProgram || navigationLock.current) return;
+    if (activeProgram.exercises.length === 0) {
+      Alert.alert(
+        "Antrenman başlatılamadı",
+        "Bu programda henüz egzersiz bulunmuyor.",
+      );
+      return;
+    }
     navigationLock.current = true;
     setNavigationBusy(true);
-    router.push({
-      pathname: "/workout" as never,
-      params: { programId: activeProgram.id, workoutDate: selectedDateKey },
-    });
+    try {
+      const session = await workoutRepository.startOrResumeSession(
+        activeProgram.id,
+        selectedDateKey,
+      );
+      router.push({
+        pathname: "/workout" as never,
+        params: { workoutSessionId: session.id },
+      });
+    } catch (error) {
+      navigationLock.current = false;
+      setNavigationBusy(false);
+      Alert.alert(
+        "Antrenman başlatılamadı",
+        error instanceof WorkoutRepositoryError
+          ? error.message
+          : "Bağlantınızı kontrol edip tekrar deneyin.",
+      );
+    }
   }, [activeProgram, selectedDateKey]);
 
   return (
@@ -260,12 +286,16 @@ export default function ProgramScreen() {
         <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: !activeProgram || navigationBusy }}
-          disabled={!activeProgram || navigationBusy}
-          onPress={handleStartWorkout}
+          accessibilityState={{
+            disabled:
+              !activeProgram || navigationBusy || programState === "loading",
+          }}
+          disabled={!activeProgram || navigationBusy || programState === "loading"}
+          onPress={() => void handleStartWorkout()}
           style={({ pressed }) => [
             styles.startButton,
-            (!activeProgram || navigationBusy) && styles.startButtonDisabled,
+            (!activeProgram || navigationBusy || programState === "loading") &&
+              styles.startButtonDisabled,
             pressed && activeProgram && styles.pressed,
           ]}
         >

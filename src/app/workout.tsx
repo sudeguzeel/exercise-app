@@ -1,177 +1,615 @@
-import { isValidProgramId, programRepository } from "@/features/programs/program-repository";
-import type { UserProgram } from "@/features/programs/types";
+import {
+  ExerciseInfoCard,
+  ExerciseMedia,
+  RepetitionCounter,
+  SetSelector,
+  WeightInput,
+  WorkoutTopBar,
+} from "@/features/workouts/components/active-workout-components";
+import {
+  findFirstIncompleteSet,
+  findSetPosition,
+  formatElapsedDuration,
+  getElapsedDurationMs,
+  validateWeightInput,
+} from "@/features/workouts/workout-domain";
+import {
+  isValidWorkoutSessionId,
+  workoutRepository,
+} from "@/features/workouts/workout-repository";
+import type { WorkoutSession } from "@/features/workouts/types";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { router, Stack, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  AppState,
+  BackHandler,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
 export default function WorkoutScreen() {
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
-    programId?: string | string[];
-    workoutDate?: string | string[];
+    workoutSessionId?: string | string[];
   }>();
-  const programId = singleParam(params.programId)?.trim() ?? "";
-  const workoutDate = singleParam(params.workoutDate);
-  const [program, setProgram] = useState<UserProgram | null | undefined>(undefined);
-  const [loadError, setLoadError] = useState(false);
+  const workoutSessionId =
+    singleParam(params.workoutSessionId)?.trim() ?? "";
+  const [session, setSession] = useState<WorkoutSession | null | undefined>(
+    undefined,
+  );
+  const [viewedSetId, setViewedSetId] = useState("");
+  const [now, setNow] = useState(Date.now());
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const mountedRef = useRef(true);
+  const sessionRef = useRef<WorkoutSession | null>(null);
+  const isSavingRef = useRef(false);
+  const exitPromptOpenRef = useRef(false);
+  const draftQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const appStateQueueRef = useRef<Promise<unknown>>(Promise.resolve());
 
-  const loadProgram = useCallback(async () => {
-    if (!isValidProgramId(programId)) {
-      setProgram(null);
+  const replaceWithCompletion = useCallback(() => {
+    router.replace({
+      pathname: "/workout-complete",
+      params: { workoutSessionId },
+    });
+  }, [workoutSessionId]);
+
+  const loadSession = useCallback(async () => {
+    if (!isValidWorkoutSessionId(workoutSessionId)) {
+      setSession(null);
+      setLoadError("Antrenman bağlantısı geçersiz.");
       return;
     }
-    setProgram(undefined);
-    setLoadError(false);
+
+    setSession(undefined);
+    setLoadError(null);
     try {
-      setProgram(await programRepository.getProgramById(programId));
+      const completion = await workoutRepository.getCompletion(workoutSessionId);
+      if (completion) {
+        replaceWithCompletion();
+        return;
+      }
+      let nextSession = await workoutRepository.getSession(workoutSessionId);
+      if (!nextSession) {
+        setSession(null);
+        setLoadError("Antrenman oturumu bulunamadı.");
+        return;
+      }
+      if (nextSession.status === "paused") {
+        nextSession = await workoutRepository.resumeSession(workoutSessionId);
+      }
+      const active = findFirstIncompleteSet(nextSession);
+      const initialSet =
+        active?.set ?? nextSession.exercises.at(-1)?.sets.at(-1) ?? null;
+      sessionRef.current = nextSession;
+      setSession(nextSession);
+      setViewedSetId(initialSet?.id ?? "");
+      setNow(Date.now());
+      if (!active) {
+        setCompletionError(
+          "Setler tamamlandı. Antrenman kaydını bitirmek için tekrar deneyin.",
+        );
+      }
     } catch {
-      setLoadError(true);
+      setSession(null);
+      setLoadError("Antrenman yüklenemedi. Bağlantınızı kontrol edip yeniden deneyin.");
     }
-  }, [programId]);
+  }, [replaceWithCompletion, workoutSessionId]);
 
   useEffect(() => {
-    void loadProgram();
-  }, [loadProgram]);
+    mountedRef.current = true;
+    void loadSession();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadSession]);
 
-  const goBack = () =>
-    router.replace({
-      pathname: "/(main)/program",
-      params: {
-        ...(workoutDate ? { selectedDate: workoutDate } : {}),
-        ...(program ? { activeProgramId: program.id } : {}),
-      },
+  useEffect(() => {
+    sessionRef.current = session ?? null;
+  }, [session]);
+
+  useEffect(() => {
+    if (session?.status !== "active") return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [session?.status]);
+
+  useEffect(() => {
+    if (!isValidWorkoutSessionId(workoutSessionId)) return;
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      appStateQueueRef.current = appStateQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          const current = sessionRef.current;
+          if (!current || current.status === "completed") return;
+          await draftQueueRef.current.catch(() => undefined);
+          const updated =
+            nextState === "active"
+              ? await workoutRepository.resumeSession(workoutSessionId)
+              : current.status === "active"
+                ? await workoutRepository.pauseSession(workoutSessionId)
+                : current;
+          sessionRef.current = updated;
+          if (mountedRef.current) setSession(updated);
+        })
+        .catch(() => undefined);
     });
+    return () => subscription.remove();
+  }, [workoutSessionId]);
+
+  const leaveWorkout = useCallback(async () => {
+    try {
+      if (isValidWorkoutSessionId(workoutSessionId)) {
+        await draftQueueRef.current.catch(() => undefined);
+        const active = sessionRef.current
+          ? findFirstIncompleteSet(sessionRef.current)
+          : null;
+        if (active) {
+          await workoutRepository.updateSetDraft(
+            workoutSessionId,
+            active.set.id,
+            {
+              actualReps: active.set.actualReps,
+              weightInput: active.set.weightInput,
+            },
+          );
+        }
+        await workoutRepository.pauseSession(workoutSessionId);
+      }
+      const current = sessionRef.current;
+      router.replace({
+        pathname: "/(main)/program",
+        params: {
+          ...(current?.workoutDate
+            ? { selectedDate: current.workoutDate }
+            : {}),
+          ...(current?.programId
+            ? { activeProgramId: current.programId }
+            : {}),
+        },
+      });
+    } catch {
+      Alert.alert(
+        "Antrenman kaydedilemedi",
+        "Taslak bilgiler güvenli biçimde saklanamadığı için ekrandan çıkılmadı. Lütfen yeniden deneyin.",
+      );
+    }
+  }, [workoutSessionId]);
+
+  const requestExit = useCallback(() => {
+    if (!sessionRef.current) {
+      router.replace("/(main)/program");
+      return;
+    }
+    if (exitPromptOpenRef.current || isSavingRef.current) return;
+    exitPromptOpenRef.current = true;
+    Alert.alert(
+      "Antrenmandan çıkmak istiyor musun?",
+      "Tamamladığın setler korunacak ancak antrenman tamamlanmış sayılmayacak.",
+      [
+        {
+          text: "Antrenmana devam et",
+          style: "cancel",
+          onPress: () => {
+            exitPromptOpenRef.current = false;
+          },
+        },
+        {
+          text: "Antrenmandan çık",
+          style: "destructive",
+          onPress: () => {
+            exitPromptOpenRef.current = false;
+            void leaveWorkout();
+          },
+        },
+      ],
+      {
+        cancelable: true,
+        onDismiss: () => {
+          exitPromptOpenRef.current = false;
+        },
+      },
+    );
+  }, [leaveWorkout]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        requestExit();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [requestExit]);
+
+  const activePosition = useMemo(
+    () => (session ? findFirstIncompleteSet(session) : null),
+    [session],
+  );
+  const viewedPosition = useMemo(() => {
+    if (!session) return null;
+    return findSetPosition(session, viewedSetId) ?? activePosition;
+  }, [activePosition, session, viewedSetId]);
+  const isViewedSetEditable = Boolean(
+    activePosition && viewedPosition?.set.id === activePosition.set.id,
+  );
+  const weightValidation = viewedPosition
+    ? validateWeightInput(viewedPosition.set.weightInput)
+    : null;
+  const weightError =
+    weightValidation && !weightValidation.success && isViewedSetEditable
+      ? weightValidation.message
+      : null;
+  const setActionDisabled = Boolean(
+    isSaving ||
+      (activePosition &&
+        (!isViewedSetEditable || !weightValidation?.success)),
+  );
+
+  const updateDraft = useCallback(
+    (actualReps: number, weightInput: string) => {
+      const current = sessionRef.current;
+      const active = current ? findFirstIncompleteSet(current) : null;
+      if (!current || !active) return;
+
+      const updated: WorkoutSession = {
+        ...current,
+        exercises: current.exercises.map((exercise, exerciseIndex) =>
+          exerciseIndex !== active.exerciseIndex
+            ? exercise
+            : {
+                ...exercise,
+                sets: exercise.sets.map((set, setIndex) =>
+                  setIndex === active.setIndex
+                    ? { ...set, actualReps, weightInput }
+                    : set,
+                ),
+              },
+        ),
+      };
+      sessionRef.current = updated;
+      setSession(updated);
+      draftQueueRef.current = draftQueueRef.current
+        .catch(() => undefined)
+        .then(() =>
+          workoutRepository.updateSetDraft(
+            workoutSessionId,
+            active.set.id,
+            { actualReps, weightInput },
+          ),
+        )
+        .then(() => {
+          if (mountedRef.current) setCompletionError(null);
+        })
+        .catch(() => {
+          if (mountedRef.current) {
+            setCompletionError(
+              "Set taslağı kaydedilemedi. Değerlerin ekranda korunuyor; yeniden düzenleyerek tekrar deneyebilirsin.",
+            );
+          }
+        });
+    },
+    [workoutSessionId],
+  );
+
+  const finishWorkout = useCallback(async () => {
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
+    setIsSaving(true);
+    setCompletionError(null);
+    try {
+      await draftQueueRef.current.catch(() => undefined);
+      await workoutRepository.completeWorkout(workoutSessionId);
+      replaceWithCompletion();
+    } catch {
+      setCompletionError(
+        "Antrenman kaydı tamamlanamadı. Verilerin korunuyor; yeniden deneyebilirsin.",
+      );
+    } finally {
+      isSavingRef.current = false;
+      if (mountedRef.current) setIsSaving(false);
+    }
+  }, [replaceWithCompletion, workoutSessionId]);
+
+  const completeCurrentSet = useCallback(async () => {
+    if (isSavingRef.current) return;
+    const current = sessionRef.current;
+    const active = current ? findFirstIncompleteSet(current) : null;
+    if (!current || !active) {
+      await finishWorkout();
+      return;
+    }
+    const validation = validateWeightInput(active.set.weightInput);
+    if (!validation.success) {
+      return;
+    }
+
+    isSavingRef.current = true;
+    setIsSaving(true);
+    setCompletionError(null);
+    try {
+      await draftQueueRef.current.catch(() => undefined);
+      const updated = await workoutRepository.completeSet({
+        workoutSessionId,
+        setId: active.set.id,
+        actualReps: active.set.actualReps,
+        weightKg: validation.value,
+      });
+      sessionRef.current = updated;
+      setSession(updated);
+      const next = findFirstIncompleteSet(updated);
+      if (next) {
+        setViewedSetId(next.set.id);
+        if (next.exerciseIndex !== active.exerciseIndex) {
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+        }
+      } else {
+        isSavingRef.current = false;
+        setIsSaving(false);
+        await finishWorkout();
+        return;
+      }
+    } catch {
+      setCompletionError(
+        "Set kaydedilemedi. Girdiğin değerler korunuyor; yeniden deneyebilirsin.",
+      );
+    } finally {
+      isSavingRef.current = false;
+      if (mountedRef.current) setIsSaving(false);
+    }
+  }, [finishWorkout, workoutSessionId]);
+
+  if (session === undefined && !loadError) {
+    return (
+      <ScreenState>
+        <ActivityIndicator color={MainColors.primary} size="large" />
+        <Text style={styles.stateText}>Antrenman hazırlanıyor…</Text>
+      </ScreenState>
+    );
+  }
+
+  if (!session || loadError || !viewedPosition) {
+    return (
+      <ScreenState>
+        <Ionicons name="alert-circle-outline" size={42} color={MainColors.primary} />
+        <Text style={styles.stateTitle}>Antrenman açılamadı</Text>
+        <Text style={styles.stateText}>{loadError ?? "Antrenman verisi eksik."}</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void loadSession()}
+          style={styles.statePrimaryButton}
+        >
+          <Text style={styles.statePrimaryText}>Yeniden dene</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={requestExit}>
+          <Text style={styles.stateLink}>Programlara dön</Text>
+        </Pressable>
+      </ScreenState>
+    );
+  }
+
+  const exercise = viewedPosition.exercise;
+  const set = viewedPosition.set;
+  const elapsed = formatElapsedDuration(getElapsedDurationMs(session, now));
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityLabel="Programlara geri dön"
-          accessibilityRole="button"
-          onPress={goBack}
-          style={styles.backButton}
+    <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+      <Stack.Screen options={{ gestureEnabled: false }} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          ref={scrollRef}
+          showsVerticalScrollIndicator={false}
         >
-          <Ionicons name="chevron-back" size={22} color={MainColors.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Antrenman</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+          <WorkoutTopBar elapsed={elapsed} onExit={requestExit} />
+          <ExerciseInfoCard
+            exercise={exercise}
+            exerciseIndex={viewedPosition.exerciseIndex}
+            totalExercises={session.exercises.length}
+          />
+          <ExerciseMedia
+            exerciseName={exercise.name}
+            mediaUrl={exercise.mediaUrl}
+          />
+          <SetSelector
+            activeSetId={activePosition?.set.id ?? null}
+            onSelect={(setId) => {
+              setViewedSetId(setId);
+            }}
+            sets={exercise.sets}
+            viewedSetId={set.id}
+          />
 
-      {program === undefined && !loadError ? (
-        <View style={styles.centerState}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
-          <Text style={styles.mutedText}>Program hazırlanıyor…</Text>
-        </View>
-      ) : loadError ? (
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={38} color={MainColors.primary} />
-          <Text style={styles.title}>Program hazırlanamadı</Text>
-          <Pressable onPress={() => void loadProgram()} style={styles.retryButton}>
-            <Text style={styles.retryText}>Yeniden dene</Text>
-          </Pressable>
-        </View>
-      ) : program ? (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.heroCard}>
-            <Text style={styles.eyebrow}>SEÇİLİ PROGRAM</Text>
-            <Text style={styles.title}>{program.name}</Text>
-            <Text style={styles.mutedText}>
-              {program.exercises.length} egzersiz antrenman için hazır.
+          {!isViewedSetEditable && activePosition ? (
+            <Text style={styles.readOnlyNote}>
+              Tamamlanan set görüntüleniyor. Devam etmek için aktif sete dokun.
             </Text>
+          ) : null}
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>TEKRAR SAYISI</Text>
+            <RepetitionCounter
+              disabled={!isViewedSetEditable || isSaving}
+              onChange={(value) =>
+                updateDraft(value, activePosition?.set.weightInput ?? "")
+              }
+              value={set.actualReps}
+            />
           </View>
-          {program.exercises.map((exercise, index) => (
-            <View key={exercise.id} style={styles.exerciseRow}>
-              <View style={styles.indexCircle}>
-                <Text style={styles.indexText}>{index + 1}</Text>
-              </View>
-              <Text numberOfLines={2} style={styles.exerciseName}>
-                {exercise.name}
-              </Text>
-              <Text style={styles.exerciseValue}>
-                {exercise.sets}×{exercise.reps}
-              </Text>
-            </View>
-          ))}
-          <Text style={styles.scopeNote}>
-            Bu ekran seçili programı antrenman akışına hazırlar. Tamamlama kaydı
-            oluşturan backend akışı bu görevin kapsamına dahil edilmemiştir.
-          </Text>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>KULLANDIĞIN AĞIRLIK</Text>
+            <WeightInput
+              disabled={!isViewedSetEditable || isSaving}
+              error={weightError}
+              onChange={(value) => {
+                updateDraft(activePosition?.set.actualReps ?? set.actualReps, value);
+              }}
+              value={set.weightInput}
+            />
+          </View>
         </ScrollView>
-      ) : (
-        <View style={styles.centerState}>
-          <Text style={styles.title}>Program bulunamadı</Text>
-          <Pressable onPress={goBack} style={styles.retryButton}>
-            <Text style={styles.retryText}>Programlara dön</Text>
+
+        <View
+          style={[
+            styles.stickyFooter,
+            { paddingBottom: Math.max(insets.bottom, 14) },
+          ]}
+        >
+          {completionError ? (
+            <Text accessibilityLiveRegion="polite" style={styles.completionError}>
+              {completionError}
+            </Text>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{
+              busy: isSaving,
+              disabled: setActionDisabled,
+            }}
+            disabled={setActionDisabled}
+            onPress={() => void completeCurrentSet()}
+            style={({ pressed }) => [
+              styles.completeButton,
+              setActionDisabled && styles.disabledButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            {isSaving ? (
+              <ActivityIndicator color={MainColors.text} />
+            ) : (
+              <Text style={styles.completeButtonText}>
+                {activePosition
+                  ? "Seti tamamla ✓"
+                  : completionError
+                    ? "Yeniden dene"
+                    : "Antrenmanı kaydet"}
+              </Text>
+            )}
           </Pressable>
         </View>
-      )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+function ScreenState({ children }: { children: React.ReactNode }) {
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <Stack.Screen options={{ gestureEnabled: false }} />
+      <View style={styles.centerState}>{children}</View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: MainColors.background },
-  header: {
-    height: 72,
-    paddingHorizontal: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  content: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 17,
+    paddingBottom: 26,
+    gap: 12,
   },
-  backButton: {
-    width: 42,
-    height: 42,
-    borderWidth: 1.5,
-    borderColor: MainColors.border,
-    borderRadius: 21,
-    backgroundColor: MainColors.surface,
+  fieldGroup: { marginTop: 2 },
+  fieldLabel: {
+    marginBottom: 10,
+    color: MainColors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  readOnlyNote: {
+    color: MainColors.mutedText,
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  stickyFooter: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 17,
+    paddingTop: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: MainColors.subtleBorder,
+    backgroundColor: MainColors.background,
+  },
+  completionError: {
+    marginBottom: 8,
+    color: "#B73535",
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  completeButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    backgroundColor: MainColors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerTitle: { color: MainColors.mutedText, fontSize: 16, fontWeight: "700" },
-  headerSpacer: { width: 42 },
-  centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 14 },
-  content: { width: "100%", maxWidth: 680, alignSelf: "center", padding: 18, gap: 10 },
-  heroCard: {
-    marginBottom: 8,
-    padding: 22,
-    borderWidth: 1.5,
-    borderColor: MainColors.border,
-    borderRadius: 22,
-    backgroundColor: MainColors.surface,
+  disabledButton: { opacity: 0.48 },
+  completeButtonText: {
+    color: MainColors.text,
+    fontSize: 16,
+    fontWeight: "900",
   },
-  eyebrow: { color: MainColors.primary, fontSize: 12, fontWeight: "900" },
-  title: { marginTop: 6, color: MainColors.text, fontSize: 22, fontWeight: "900", textAlign: "center" },
-  mutedText: { marginTop: 7, color: MainColors.mutedText, fontSize: 14, lineHeight: 20, textAlign: "center" },
-  exerciseRow: {
-    minHeight: 62,
-    paddingHorizontal: 14,
-    borderWidth: 1.5,
-    borderColor: MainColors.border,
-    borderRadius: 18,
-    backgroundColor: MainColors.surface,
-    flexDirection: "row",
+  pressed: { opacity: 0.72 },
+  centerState: {
+    flex: 1,
+    padding: 28,
     alignItems: "center",
-    gap: 11,
+    justifyContent: "center",
+    gap: 12,
   },
-  indexCircle: { width: 30, height: 30, borderRadius: 15, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
-  indexText: { color: MainColors.primary, fontWeight: "900" },
-  exerciseName: { flex: 1, color: MainColors.text, fontSize: 15, fontWeight: "700" },
-  exerciseValue: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
-  retryButton: { minHeight: 46, paddingHorizontal: 22, borderRadius: 18, backgroundColor: MainColors.primaryBright, justifyContent: "center" },
-  retryText: { color: MainColors.text, fontWeight: "800" },
-  scopeNote: { padding: 16, color: MainColors.mutedText, fontSize: 12, lineHeight: 18, textAlign: "center" },
+  stateTitle: {
+    color: MainColors.text,
+    fontSize: 23,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  stateText: {
+    maxWidth: 360,
+    color: MainColors.mutedText,
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  statePrimaryButton: {
+    minHeight: 48,
+    marginTop: 8,
+    paddingHorizontal: 24,
+    borderRadius: 17,
+    backgroundColor: MainColors.primaryBright,
+    justifyContent: "center",
+  },
+  statePrimaryText: { color: MainColors.text, fontWeight: "900" },
+  stateLink: { padding: 8, color: MainColors.primary, fontWeight: "800" },
 });
