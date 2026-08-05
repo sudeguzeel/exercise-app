@@ -22,7 +22,6 @@ import {
 import {
   ActivityIndicator,
   FlatList,
-  type ListRenderItem,
   Platform,
   Pressable,
   ScrollView,
@@ -30,6 +29,7 @@ import {
   Text,
   TextInput,
   View,
+  type ListRenderItem,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -165,41 +165,32 @@ export default function ExerciseScreen() {
         ItemSeparatorComponent={ExerciseSeparator}
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.profileRow}>
-              {isProgramEditSelection ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Program düzenlemeye geri dön"
-                  onPress={() =>
-                    router.replace({
-                      pathname: "/program-edit" as never,
-                      params: {
-                        programId: editProgramId!,
-                        ...(selectedDate ? { selectedDate } : {}),
-                      },
-                    })
-                  }
-                  style={styles.profileButton}
-                >
-                  <Ionicons name="chevron-back" size={25} color={MainColors.text} />
-                </Pressable>
-              ) : (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Profil"
-                  accessibilityHint="Profil ekranı henüz mevcut değil"
-                  accessibilityState={{ disabled: true }}
-                  disabled
-                  style={styles.profileButton}
-                >
-                  <Ionicons
-                    name="person-outline"
-                    size={25}
-                    color={MainColors.text}
-                  />
-                </Pressable>
-              )}
-            </View>
+          <View style={styles.profileRow}>
+  {isProgramEditSelection ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Program düzenlemeye geri dön"
+      onPress={() =>
+        router.replace({
+          pathname: "/program-edit" as never,
+          params: {
+            programId: editProgramId!,
+            ...(selectedDate ? { selectedDate } : {}),
+          },
+        })
+      }
+      style={styles.profileButton}
+    >
+      <Ionicons
+        name="chevron-back"
+        size={25}
+        color={MainColors.text}
+      />
+    </Pressable>
+  ) : (
+    <View style={{ width: 50, height: 50 }} />
+  )}
+</View>
 
             <Text maxFontSizeMultiplier={1.3} style={styles.title}>
               {isProgramEditSelection ? "Programa egzersiz ekle" : "Egzersizler"}

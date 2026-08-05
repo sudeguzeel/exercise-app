@@ -32,12 +32,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -199,14 +198,21 @@ export default function ProgramScreen() {
               {profileLoading ? " …" : ` ${displayName ?? "Sporcu"}`}
             </Text>
           </Text>
-          <Pressable
-            accessibilityLabel="Bildirimler"
-            accessibilityRole="button"
-            onPress={() => Alert.alert("Bildirimler", "Henüz yeni bir bildiriminiz yok.")}
-            style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
-          >
-            <Ionicons name="notifications-outline" size={22} color={MainColors.text} />
-          </Pressable>
+        <Pressable
+  accessibilityLabel="Profil"
+  accessibilityRole="button"
+  onPress={() => router.push("/(main)/profile")}
+  style={({ pressed }) => [
+    styles.notificationButton,
+    pressed && styles.pressed,
+  ]}
+>
+  <Ionicons
+    name="person-outline"
+    size={22}
+    color={MainColors.text}
+  />
+</Pressable>
         </View>
 
         <View style={styles.fullBleed}>
