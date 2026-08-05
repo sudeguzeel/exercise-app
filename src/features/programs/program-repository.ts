@@ -1,4 +1,5 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
+import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import { supabase } from "@/shared/lib/supabase";
 import type {
   AddExerciseResultItem,
@@ -57,7 +58,7 @@ type ProgramExerciseRow = {
   exercise_id: string;
   sets: number;
   reps: number;
-  rest_seconds: number;
+  rest_seconds: number | null | undefined;
   order_index: number;
   exercises: { name: string } | null;
 };
@@ -71,12 +72,18 @@ type ProgramRow = {
 };
 
 function toPersistedExercise(row: ProgramExerciseRow): PersistedProgramExercise {
+  const hasStoredRestSeconds =
+    typeof row.rest_seconds === "number" && Number.isFinite(row.rest_seconds);
   return {
     id: row.id,
     exerciseId: row.exercise_id,
     sets: row.sets,
     reps: row.reps,
-    restSeconds: row.rest_seconds,
+    restSeconds: resolveProgramExerciseRestSeconds({
+      customRestSeconds: row.rest_seconds,
+      recommendedRestSeconds: null,
+    }),
+    restSecondsOrigin: hasStoredRestSeconds ? "stored" : "fallback",
     name: row.exercises?.name ?? "Egzersiz",
     orderIndex: row.order_index,
   };
@@ -123,14 +130,12 @@ async function requireUserId(): Promise<string> {
 const PROGRAM_SELECT_WITH_EXERCISES =
   "id, name, training_days, muscle_group_ids, user_workout_program_exercises(id, exercise_id, sets, reps, rest_seconds, order_index, exercises(name))";
 
-// user_workout_program_exercises tablosundaki CHECK constraint'leriyle
-// birebir aynı sınırlar (bkz. extend_workout_programs_for_named_recurring_programs
-// migration'ı) — repository burada da doğruluyor ki geçersiz değerler DB'ye
-// gitmeden, net bir INVALID_INPUT hatasıyla reddedilsin.
+// Program akışındaki istemci sınırları. Eski kayıtlar map aşamasında bu
+// aralığa normalize edilir; yeni değerler DB'ye gitmeden doğrulanır.
 const VALUE_RANGES = {
   sets: { min: 1, max: 10 },
   reps: { min: 1, max: 100 },
-  restSeconds: { min: 0, max: 600 },
+  restSeconds: { min: 0, max: 300 },
 } as const;
 
 function isWithinRange(value: number, range: { min: number; max: number }) {
@@ -146,7 +151,7 @@ function assertValidExerciseValues(exercise: ProgramExercise) {
   if (!valid) {
     throw new ProgramRepositoryError(
       "INVALID_INPUT",
-      "Set (1–10), tekrar (1–100) veya dinlenme süresi (0–600 sn) aralığın dışında.",
+      "Set (1–10), tekrar (1–100) veya dinlenme süresi (0–300 sn) aralığın dışında.",
     );
   }
 }

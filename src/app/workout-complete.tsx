@@ -26,15 +26,15 @@ function singleParam(value: string | string[] | undefined) {
 
 function getCompletionMessage(completion: WorkoutCompletion) {
   if (!completion.plannedDay) {
-    return "Bugünkü antrenmanını tamamladın. Plan dışı bu çalışma da ilerlemene eklendi.";
+    return "Seçtiğin antrenmanı tamamladın. Plan dışı bu çalışma da ilerlemene eklendi.";
   }
   if (completion.currentStreak > 1) {
-    return `Bugünkü antrenmanını tamamladın. Serin ${completion.currentStreak} güne ulaştı.`;
+    return `Seçtiğin antrenmanı tamamladın. Serin ${completion.currentStreak} güne ulaştı.`;
   }
   if (completion.currentStreak === 1) {
-    return "Bugünkü antrenmanını tamamladın. Yeni serinin ilk gününü başarıyla bitirdin.";
+    return "Seçtiğin antrenmanı tamamladın. Yeni serinin ilk gününü başarıyla bitirdin.";
   }
-  return "Bugünkü antrenmanını tamamladın. Sonucun ilerlemene eklendi.";
+  return "Seçtiğin antrenmanı tamamladın. Sonucun ilerlemene eklendi.";
 }
 
 export default function WorkoutCompleteScreen() {
