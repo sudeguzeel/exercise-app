@@ -213,13 +213,29 @@ export function buildHomeDashboard(
     categoryTotals,
     dailyTotals,
     targetDays,
-    streakDays: calculateStreak(programs, completedKeySet, today),
+    streakDays: calculateStreakFromKeys(programs, completedKeySet, today),
     todayProgram: todayProgramExercises,
     isRestDay: todayProgramExercises.length === 0,
   };
 }
 
-function calculateStreak(
+export function calculateStreakDays(
+  programs: UserProgram[],
+  completedRecords: CompletedExerciseRecord[],
+  referenceDateKey: string,
+) {
+  return calculateStreakFromKeys(
+    programs,
+    new Set(
+      completedRecords.map(
+        (record) => `${record.programExerciseId}|${record.workoutDate}`,
+      ),
+    ),
+    referenceDateKey,
+  );
+}
+
+function calculateStreakFromKeys(
   programs: UserProgram[],
   completedKeySet: Set<string>,
   today: string,
