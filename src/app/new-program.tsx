@@ -19,9 +19,7 @@ import {
 import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import { MainColors } from "@/shared/constants/theme";
 import {
-  getBodyParts,
   getExerciseSummary,
-  type BodyPartOption,
   type ExerciseSummary,
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
@@ -58,7 +56,6 @@ export default function NewProgramScreen() {
     [searchParams],
   );
   const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
-  const [muscleGroups, setMuscleGroups] = useState<BodyPartOption[]>([]);
 
   useEffect(() => {
     if (!selection) {
@@ -73,10 +70,6 @@ export default function NewProgramScreen() {
       mounted = false;
     };
   }, [selection]);
-
-  useEffect(() => {
-    void getBodyParts().then(setMuscleGroups);
-  }, []);
 
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
@@ -94,20 +87,21 @@ export default function NewProgramScreen() {
     lastAppliedInitialTrainingDay.current = initialTrainingDay;
   }, [initialTrainingDay]);
 
-  const [selectedMuscleGroupIds, setSelectedMuscleGroupIds] = useState<
-    Set<string>
-  >(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<FormModalState>(null);
   const [createdProgramId, setCreatedProgramId] = useState<string | null>(null);
 
   const isRouteValid = Boolean(selection && exercise);
+  const muscleGroupIds = useMemo(
+    () => new Set(exercise?.bodyPartId ? [exercise.bodyPartId] : []),
+    [exercise?.bodyPartId],
+  );
   const canSubmit =
     isRouteValid &&
     isProgramFormValid(
       programName,
       selectedDays,
-      selectedMuscleGroupIds,
+      muscleGroupIds,
     ) &&
     !isSubmitting;
   const trimmedProgramName = programName.trim();
@@ -120,7 +114,7 @@ export default function NewProgramScreen() {
       const createdProgram = await programRepository.createProgramWithExercise({
         name: programName,
         trainingDays: [...selectedDays],
-        muscleGroupIds: [...selectedMuscleGroupIds],
+        muscleGroupIds: [...muscleGroupIds],
         exercise: selection,
       });
       setCreatedProgramId(createdProgram.id);
@@ -157,7 +151,7 @@ export default function NewProgramScreen() {
     isSubmitting,
     programName,
     selectedDays,
-    selectedMuscleGroupIds,
+    muscleGroupIds,
     selection,
   ]);
 
@@ -242,32 +236,6 @@ export default function NewProgramScreen() {
                             )
                           }
                           selected={selectedDays.has(day.id)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.section}>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.sectionLabel}
-                    >
-                      ODAKLANILAN KAS GRUPLARI
-                    </Text>
-                    <View style={styles.muscleGrid}>
-                      {muscleGroups.map((muscleGroup) => (
-                        <SelectionChip
-                          key={muscleGroup.id}
-                          label={muscleGroup.name}
-                          onPress={() =>
-                            setSelectedMuscleGroupIds((currentSelection) =>
-                              toggleSelection(
-                                currentSelection,
-                                muscleGroup.id,
-                              ),
-                            )
-                          }
-                          selected={selectedMuscleGroupIds.has(muscleGroup.id)}
                         />
                       ))}
                     </View>
@@ -426,11 +394,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   dayGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  muscleGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
