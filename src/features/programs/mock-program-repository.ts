@@ -286,7 +286,7 @@ function isProgramExerciseValid(exercise: ProgramExercise) {
     exercise.reps.trim().length > 0 &&
     Number.isSafeInteger(exercise.restSeconds) &&
     exercise.restSeconds >= 0 &&
-    exercise.restSeconds <= 600
+    exercise.restSeconds <= 300
   );
 }
 

@@ -9,6 +9,7 @@ import {
   serializeProgramSelectionPayload,
   type ProgramSelectionPayload,
 } from "@/features/exercises/program-selection";
+import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
 import { MainColors } from "@/shared/constants/theme";
 import {
@@ -50,7 +51,7 @@ const CUSTOM_FIELDS: {
   {
     key: "restSeconds",
     label: "DİNLENME",
-    placeholder: "0–600",
+    placeholder: "0–300",
     maxLength: 4,
   },
 ];
@@ -135,10 +136,9 @@ export default function ExerciseDetailScreen() {
     };
   }, [loadExercise]);
 
-  // Egzersiz değişince (veya önerilen değer bulunmuyorsa) her zaman manuel
-  // girişten başla; önerilen değer varsa önce onu göster.
+  // Öneri varsa önce dataset değerini kullan; öneri yoksa manuel alanları aç.
   useEffect(() => {
-    setUseCustomValues(true);
+    setUseCustomValues(!hasRecommendedValues);
     setCustomValues(INITIAL_CUSTOM_VALUES);
     setErrors({});
     setGifFailed(false);
@@ -183,7 +183,10 @@ export default function ExerciseDetailScreen() {
         exerciseId: exercise.id,
         sets: exercise.recommendedSets,
         reps: exercise.recommendedReps,
-        restSeconds: exercise.recommendedRestSeconds,
+        restSeconds: resolveProgramExerciseRestSeconds({
+          customRestSeconds: null,
+          recommendedRestSeconds: exercise.recommendedRestSeconds,
+        }),
       };
     } else {
       const validation = validateCustomExerciseValues(customValues);
@@ -196,7 +199,10 @@ export default function ExerciseDetailScreen() {
         exerciseId: exercise.id,
         sets: validation.values.sets,
         reps: validation.values.reps,
-        restSeconds: validation.values.restSeconds,
+        restSeconds: resolveProgramExerciseRestSeconds({
+          customRestSeconds: validation.values.restSeconds,
+          recommendedRestSeconds: exercise.recommendedRestSeconds,
+        }),
       };
     }
 
@@ -446,7 +452,11 @@ export default function ExerciseDetailScreen() {
                     />
                     <MetricCard
                       label="DİNLENME"
-                      value={`${exercise.recommendedRestSeconds} sn`}
+                      value={`${resolveProgramExerciseRestSeconds({
+                        customRestSeconds: null,
+                        recommendedRestSeconds:
+                          exercise.recommendedRestSeconds,
+                      })} sn`}
                     />
                   </View>
                 ) : null}
