@@ -1,5 +1,20 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
-import type { WorkoutSession, WorkoutSetPosition } from "@/features/workouts/types";
+import {
+  clampRestSeconds,
+  DEFAULT_PROGRAM_EXERCISE_REST_SECONDS,
+  MAX_PROGRAM_EXERCISE_REST_SECONDS,
+  resolveProgramExerciseRestSeconds,
+} from "@/features/exercises/program-exercise-rest";
+import type {
+  PendingWorkoutTarget,
+  WorkoutExerciseSnapshot,
+  WorkoutSession,
+  WorkoutSetPosition,
+} from "@/features/workouts/types";
+
+export const DEFAULT_REST_SECONDS = DEFAULT_PROGRAM_EXERCISE_REST_SECONDS;
+export const MAX_REST_SECONDS = MAX_PROGRAM_EXERCISE_REST_SECONDS;
+export { clampRestSeconds };
 
 const DAY_BY_JS_INDEX: TrainingDay[] = [
   "sunday",
@@ -58,38 +73,141 @@ export function findSetPosition(
   return null;
 }
 
-export function areAllSetsCompleted(session: WorkoutSession) {
+export function isWorkoutExerciseCompleted(
+  exercise: WorkoutExerciseSnapshot,
+) {
   return (
-    session.exercises.length > 0 &&
-    session.exercises.every(
-      (exercise) =>
-        exercise.sets.length > 0 && exercise.sets.every((set) => set.completedAt),
-    )
+    Number.isInteger(exercise.targetSets) &&
+    exercise.targetSets > 0 &&
+    exercise.sets.length === exercise.targetSets &&
+    exercise.sets.every((set) => Boolean(set.completedAt))
   );
 }
 
-export function clampReps(value: number) {
-  if (!Number.isFinite(value)) return 1;
-  return Math.min(100, Math.max(1, Math.round(value)));
+export function getWorkoutProgress(
+  exercises: readonly WorkoutExerciseSnapshot[],
+) {
+  const totalExerciseCount = exercises.length;
+  const hasValidExerciseStructure =
+    totalExerciseCount > 0 &&
+    exercises.every(
+      (exercise) =>
+        Number.isInteger(exercise.targetSets) &&
+        exercise.targetSets > 0 &&
+        exercise.sets.length === exercise.targetSets,
+    );
+  const requiredSetCount = hasValidExerciseStructure
+    ? exercises.reduce((total, exercise) => total + exercise.targetSets, 0)
+    : 0;
+  const completedSetCount = exercises.reduce(
+    (total, exercise) =>
+      total + exercise.sets.filter((set) => Boolean(set.completedAt)).length,
+    0,
+  );
+  const completedExerciseCount = exercises.filter(
+    isWorkoutExerciseCompleted,
+  ).length;
+  const percentage =
+    totalExerciseCount === 0
+      ? 0
+      : Math.min(
+          100,
+          Math.max(
+            0,
+            Math.round((completedExerciseCount / totalExerciseCount) * 100),
+          ),
+        );
+
+  const canFinalize =
+    hasValidExerciseStructure &&
+    requiredSetCount > 0 &&
+    completedSetCount === requiredSetCount &&
+    completedExerciseCount === totalExerciseCount &&
+    percentage === 100;
+
+  return {
+    completedSetCount,
+    requiredSetCount,
+    completedExerciseCount,
+    totalExerciseCount,
+    percentage,
+    canFinalize,
+    isComplete: canFinalize,
+  };
 }
 
-export type WeightValidationResult =
-  | { success: true; value: number }
-  | { success: false; message: string };
+export function areAllSetsCompleted(session: WorkoutSession) {
+  return getWorkoutProgress(session.exercises).isComplete;
+}
 
-export function validateWeightInput(rawValue: string): WeightValidationResult {
-  const trimmed = rawValue.trim();
-  if (!trimmed) {
-    return { success: false, message: "Kullandığınız ağırlığı girin." };
-  }
-  if (!/^\d+(?:[.,]\d+)?$/.test(trimmed)) {
-    return { success: false, message: "Geçerli bir ağırlık girin." };
-  }
-  const value = Number(trimmed.replace(",", "."));
-  if (!Number.isFinite(value) || value < 0) {
-    return { success: false, message: "Ağırlık sıfır veya daha büyük olmalıdır." };
-  }
-  return { success: true, value };
+export function createWorkoutOccurrenceKey({
+  userId,
+  programId,
+  workoutDate,
+}: {
+  userId: string;
+  programId: string;
+  workoutDate: string;
+}) {
+  return `${userId}:${programId}:${workoutDate}`;
+}
+
+export function toLocalDateKey(date: Date) {
+  if (!Number.isFinite(date.getTime())) return null;
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getLocalDateKeyFromTimestamp(
+  value: string | null | undefined,
+) {
+  if (!value) return null;
+  return toLocalDateKey(new Date(value));
+}
+
+export function toPendingWorkoutTarget(
+  position: WorkoutSetPosition,
+): PendingWorkoutTarget {
+  return {
+    exerciseIndex: position.exerciseIndex,
+    setIndex: position.setIndex,
+    setId: position.set.id,
+  };
+}
+
+export function findPendingWorkoutTarget(
+  session: WorkoutSession,
+): WorkoutSetPosition | null {
+  const target = session.pendingTarget;
+  if (!target) return null;
+  const exercise = session.exercises[target.exerciseIndex];
+  const set = exercise?.sets[target.setIndex];
+  if (!exercise || !set || set.id !== target.setId || set.completedAt) return null;
+  return {
+    exerciseIndex: target.exerciseIndex,
+    setIndex: target.setIndex,
+    exercise,
+    set,
+  };
+}
+
+export function resolveRestDurationSeconds(value: number | null | undefined) {
+  return resolveProgramExerciseRestSeconds({
+    customRestSeconds: value,
+    recommendedRestSeconds: null,
+  });
+}
+
+export function getRestRemainingSeconds(
+  restEndsAt: string | null,
+  now = Date.now(),
+) {
+  if (!restEndsAt) return 0;
+  const endTimestamp = new Date(restEndsAt).getTime();
+  if (!Number.isFinite(endTimestamp)) return 0;
+  return clampRestSeconds(Math.ceil((endTimestamp - now) / 1000));
 }
 
 export function getElapsedDurationMs(session: WorkoutSession, now = Date.now()) {
@@ -111,7 +229,14 @@ export function formatElapsedDuration(durationMs: number) {
 
 export function formatCompletionDuration(durationMs: number) {
   const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
   const seconds = totalSeconds % 60;
-  return minutes > 0 ? `${minutes} dk ${seconds > 0 ? `${seconds} sn` : ""}`.trim() : `${seconds} sn`;
+  if (hours > 0) {
+    return `${hours} sa${minutes > 0 ? ` ${minutes} dk` : ""}`;
+  }
+  return totalMinutes > 0
+    ? `${totalMinutes} dk${seconds > 0 ? ` ${seconds} sn` : ""}`
+    : `${seconds} sn`;
 }

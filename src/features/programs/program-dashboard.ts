@@ -3,6 +3,7 @@ import type { UserProgram } from "@/features/programs/types";
 
 export type ProgramCompletionRecord = {
   programExerciseId: string;
+  programId: string | null;
   workoutDate: string;
 };
 
@@ -71,10 +72,15 @@ export function clampPercentage(value: number) {
 export function getCompletedExerciseIds(
   records: ProgramCompletionRecord[],
   dateKey: string,
+  programId: string,
 ) {
   return new Set(
     records
-      .filter((record) => record.workoutDate === dateKey)
+      .filter(
+        (record) =>
+          record.workoutDate === dateKey &&
+          (record.programId === null || record.programId === programId),
+      )
       .map((record) => record.programExerciseId),
   );
 }
@@ -85,7 +91,7 @@ export function getProgramCompletion(
   dateKey: string,
 ) {
   if (program.exercises.length === 0) return 0;
-  const completed = getCompletedExerciseIds(records, dateKey);
+  const completed = getCompletedExerciseIds(records, dateKey, program.id);
   const completedCount = program.exercises.filter((exercise) =>
     completed.has(exercise.id),
   ).length;

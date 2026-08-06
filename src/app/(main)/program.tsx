@@ -66,8 +66,8 @@ export default function ProgramScreen() {
   const [programs, setPrograms] = useState<UserProgram[]>([]);
   const [programState, setProgramState] = useState<LoadState>("loading");
   const [completionRecords, setCompletionRecords] = useState<
-    ProgramCompletionRecord[]
-  >([]);
+    ProgramCompletionRecord[] | null
+  >(null);
   const [chartState, setChartState] = useState<LoadState>("loading");
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -96,7 +96,7 @@ export default function ProgramScreen() {
       );
       setChartState("success");
     } catch {
-      setCompletionRecords([]);
+      setCompletionRecords(null);
       setChartState("error");
     }
   }, [week]);
@@ -194,13 +194,24 @@ export default function ProgramScreen() {
     ]);
   }, [activeProgram, loadChart, selectedDateKey]);
 
+  const currentCompletionRecords = useMemo(
+    () => completionRecords ?? [],
+    [completionRecords],
+  );
   const completedExerciseIds = useMemo(
-    () => getCompletedExerciseIds(completionRecords, selectedDateKey),
-    [completionRecords, selectedDateKey],
+    () =>
+      activeProgram
+        ? getCompletedExerciseIds(
+            currentCompletionRecords,
+            selectedDateKey,
+            activeProgram.id,
+          )
+        : new Set<string>(),
+    [activeProgram, currentCompletionRecords, selectedDateKey],
   );
   const chartValues = useMemo(
-    () => getWeeklyCompletionValues(week, completionRecords),
-    [completionRecords, week],
+    () => getWeeklyCompletionValues(week, currentCompletionRecords),
+    [currentCompletionRecords, week],
   );
 
   const handleEdit = useCallback(
@@ -296,7 +307,7 @@ export default function ProgramScreen() {
               <ProgramSummaryCard
                 completion={getProgramCompletion(
                   program,
-                  completionRecords,
+                  currentCompletionRecords,
                   selectedDateKey,
                 )}
                 key={program.id}
@@ -332,7 +343,7 @@ export default function ProgramScreen() {
         )}
 
         <View style={styles.exerciseList}>
-          {activeProgram ? (
+          {activeProgram && completionRecords !== null ? (
             activeProgram.exercises.length > 0 ? (
               activeProgram.exercises.map((exercise) => (
                 <ProgramExerciseRow

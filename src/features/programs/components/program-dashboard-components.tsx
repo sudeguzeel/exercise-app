@@ -169,7 +169,13 @@ export function ProgramExerciseRow({
   completed: boolean;
 }) {
   return (
-    <View style={styles.exerciseRow}>
+    <View
+      accessibilityLabel={`${exercise.name}, ${completed ? "tamamlandı" : "tamamlanmadı"}`}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: completed }}
+      accessible
+      style={styles.exerciseRow}
+    >
       <View style={[styles.statusCircle, completed && styles.statusCircleCompleted]}>
         {completed ? (
           <Ionicons name="checkmark" size={17} color={MainColors.text} />

@@ -52,6 +52,7 @@ export async function getProgramCompletionRecords(
     }[]) {
       remoteRecords.push({
         programExerciseId: row.program_exercise_id,
+        programId: null,
         workoutDate: row.workout_date,
       });
     }
@@ -61,6 +62,7 @@ export async function getProgramCompletionRecords(
     localResult.status === "fulfilled"
       ? localResult.value.map((record) => ({
           programExerciseId: record.programExerciseId,
+          programId: record.programId,
           workoutDate: record.workoutDate,
         }))
       : [];

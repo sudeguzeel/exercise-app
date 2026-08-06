@@ -28,8 +28,8 @@ const FIELD_RULES: Record<
   },
   restSeconds: {
     min: 0,
-    max: 600,
-    message: "Dinlenme süresi 0 ile 600 saniye arasında olmalıdır.",
+    max: 300,
+    message: "Dinlenme süresi 0 ile 300 saniye arasında olmalıdır.",
   },
 };
 
