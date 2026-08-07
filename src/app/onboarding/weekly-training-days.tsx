@@ -2,17 +2,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
 } from "react-native";
 
+
 import { TrainingDay, useOnboarding } from "@/providers/OnboardingContext";
-import { saveWeeklyTrainingDays } from "@/shared/lib/services/weeklyTrainingDaysService";
 
 const GREEN = "#79DE2D";
 const BACKGROUND = "#F7F8F2";
@@ -35,6 +35,16 @@ const dayOptions: DayOption[] = [
   { id: "sunday", label: "Paz" },
 ];
 
+const dayToApiCode: Record<TrainingDay, string> = {
+  monday: "mon",
+  tuesday: "tue",
+  wednesday: "wed",
+  thursday: "thu",
+  friday: "fri",
+  saturday: "sat",
+  sunday: "sun",
+};
+
 export default function WeeklyTrainingDaysScreen() {
   const { trainingDays, setTrainingDays } = useOnboarding();
 
@@ -53,30 +63,25 @@ export default function WeeklyTrainingDaysScreen() {
     });
   };
 
+  
   const handleCreateProgram = async () => {
     if (!isButtonEnabled) {
       return;
     }
 
     setIsCreating(true);
-    setSaveError("");
 
     try {
-      const result = await saveWeeklyTrainingDays(trainingDays);
-
-      if (!result.success) {
-        setSaveError(result.message);
-        return;
-      }
+      // Backend bağlantısı eklenene kadar geçici işlem.
+      await new Promise((resolve) => setTimeout(resolve, 900));
 
       // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
       router.replace("/(main)");
-    } catch {
-      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
     } finally {
       setIsCreating(false);
     }
   };
+
 
   return (
     <View style={styles.container}>

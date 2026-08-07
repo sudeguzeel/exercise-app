@@ -12,7 +12,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -153,13 +152,9 @@ export function ExerciseMedia({
 export function SetSelector({
   sets,
   activeSetId,
-  viewedSetId,
-  onSelect,
 }: {
   sets: WorkoutSetSnapshot[];
   activeSetId: string | null;
-  viewedSetId: string;
-  onSelect: (setId: string) => void;
 }) {
   return (
     <ScrollView
@@ -170,128 +165,41 @@ export function SetSelector({
       {sets.map((set) => {
         const completed = Boolean(set.completedAt);
         const active = set.id === activeSetId;
-        const selected = set.id === viewedSetId;
-        const disabled = !completed && !active;
         return (
-          <Pressable
+          <View
+            accessible
             accessibilityLabel={`Set ${set.setNumber}${completed ? ", tamamlandı" : active ? ", aktif" : ", bekliyor"}`}
-            accessibilityRole="button"
-            accessibilityState={{ disabled, selected }}
-            disabled={disabled}
+            accessibilityRole="text"
             key={set.id}
-            onPress={() => onSelect(set.id)}
-            style={({ pressed }) => [
+            style={[
               styles.setPill,
               completed && styles.completedSet,
               active && styles.activeSet,
-              selected && completed && styles.viewedCompletedSet,
-              disabled && styles.pendingSet,
-              pressed && styles.pressed,
+              !completed && !active && styles.pendingSet,
             ]}
           >
             <Text style={[styles.setText, active && styles.activeSetText]}>
               Set {set.setNumber}{completed ? " ✓" : ""}
             </Text>
-          </Pressable>
+          </View>
         );
       })}
     </ScrollView>
   );
 }
 
-export function RepetitionCounter({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: number;
-  disabled: boolean;
-  onChange: (value: number) => void;
-}) {
-  const decreaseDisabled = disabled || value <= 1;
-  const increaseDisabled = disabled || value >= 100;
+export function TargetRepetitionCard({ value }: { value: number }) {
   return (
-    <View style={styles.counterCard}>
-      <CounterButton
-        accessibilityLabel="Tekrar sayısını azalt"
-        disabled={decreaseDisabled}
-        icon="remove"
-        onPress={() => onChange(Math.max(1, value - 1))}
-      />
-      <View style={styles.counterValueWrap}>
-        <Text style={styles.counterValue}>{value}</Text>
-        <Text style={styles.counterUnit}>TEKRAR</Text>
-      </View>
-      <CounterButton
-        accessibilityLabel="Tekrar sayısını artır"
-        disabled={increaseDisabled}
-        icon="add"
-        onPress={() => onChange(Math.min(100, value + 1))}
-      />
-    </View>
-  );
-}
-
-function CounterButton({
-  accessibilityLabel,
-  disabled,
-  icon,
-  onPress,
-}: {
-  accessibilityLabel: string;
-  disabled: boolean;
-  icon: "add" | "remove";
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={accessibilityLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.counterButton,
-        disabled && styles.controlDisabled,
-        pressed && styles.pressed,
-      ]}
+    <View
+      accessibilityLabel={`Hedef tekrar: ${value}`}
+      accessible
+      style={styles.targetCard}
     >
-      <Ionicons name={icon} size={22} color={MainColors.text} />
-    </Pressable>
-  );
-}
-
-export function WeightInput({
-  value,
-  error,
-  disabled,
-  onChange,
-}: {
-  value: string;
-  error: string | null;
-  disabled: boolean;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <>
-      <View style={[styles.weightField, error && styles.weightFieldError]}>
-        <TextInput
-          accessibilityLabel="Kullandığın ağırlık"
-          editable={!disabled}
-          inputMode="decimal"
-          keyboardType="decimal-pad"
-          onChangeText={onChange}
-          placeholder="0"
-          placeholderTextColor={MainColors.mutedText}
-          style={styles.weightTextInput}
-          value={value}
-        />
-        <Text style={styles.weightUnit}>kg</Text>
-      </View>
-      <Text accessibilityLiveRegion="polite" style={styles.fieldError}>
-        {error ?? " "}
+      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.targetValue}>
+        {value}
       </Text>
-    </>
+      <Text style={styles.targetUnit}>TEKRAR</Text>
+    </View>
   );
 }
 
@@ -325,17 +233,16 @@ const styles = StyleSheet.create({
   exerciseTitle: { marginTop: 9, color: "#FFFFFF", fontSize: 24, lineHeight: 29, fontWeight: "900" },
   exerciseDetail: { marginTop: 7, color: "#B3B7B9", fontSize: 13, lineHeight: 18 },
   mediaCard: {
-    minHeight: 190,
     borderWidth: 1.5,
     borderColor: MainColors.border,
     borderRadius: 24,
     backgroundColor: MainColors.surface,
     overflow: "hidden",
   },
-  mediaFrame: { height: 154, backgroundColor: MainColors.paleGreen },
+  mediaFrame: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, backgroundColor: MainColors.paleGreen },
   mediaImage: { width: "100%", height: "100%" },
   mediaLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: MainColors.paleGreen },
-  mediaPlaceholder: { height: 154, alignItems: "center", justifyContent: "center", backgroundColor: MainColors.paleGreen },
+  mediaPlaceholder: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, alignItems: "center", justifyContent: "center", backgroundColor: MainColors.paleGreen },
   playButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
   playButtonDisabled: { backgroundColor: MainColors.border, opacity: 0.7 },
   mediaCaption: { paddingHorizontal: 14, paddingVertical: 12, color: MainColors.mutedText, fontSize: 12 },
@@ -343,19 +250,10 @@ const styles = StyleSheet.create({
   setPill: { minWidth: 78, minHeight: 42, paddingHorizontal: 14, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 14, backgroundColor: MainColors.surface, alignItems: "center", justifyContent: "center" },
   completedSet: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.paleGreen },
   activeSet: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.primaryBright },
-  viewedCompletedSet: { borderWidth: 2.5 },
   pendingSet: { opacity: 0.52 },
   setText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
   activeSetText: { color: MainColors.text, fontWeight: "900" },
-  counterCard: { minHeight: 82, paddingHorizontal: 14, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 22, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  counterButton: { width: 46, height: 46, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 15, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
-  controlDisabled: { opacity: 0.42 },
-  counterValueWrap: { alignItems: "center" },
-  counterValue: { color: MainColors.text, fontSize: 27, fontWeight: "900" },
-  counterUnit: { marginTop: 2, color: MainColors.mutedText, fontSize: 10, fontWeight: "700" },
-  weightField: { height: 54, paddingHorizontal: 14, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 17, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center" },
-  weightFieldError: { borderColor: "#D14343" },
-  weightTextInput: { flex: 1, height: "100%", paddingVertical: 0, color: MainColors.text, fontSize: 16 },
-  weightUnit: { color: MainColors.primary, fontSize: 14, fontWeight: "900" },
-  fieldError: { minHeight: 18, marginTop: 5, color: "#D14343", fontSize: 12, fontWeight: "600" },
+  targetCard: { minHeight: 78, paddingHorizontal: 20, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 22, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
+  targetValue: { color: MainColors.text, fontSize: 29, fontWeight: "900" },
+  targetUnit: { color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
 });

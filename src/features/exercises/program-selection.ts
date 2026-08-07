@@ -1,13 +1,8 @@
 import {
   validateCustomExerciseValues,
 } from "@/features/exercises/exercise-detail-validation";
-import type { TrainingDay } from "@/providers/OnboardingContext";
+import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 
-// Not: DB'deki exercises kataloğunda "önerilen set/tekrar/dinlenme" alanı
-// yok (bkz. exercise_taxonomy.ts / exerciseCatalogService.ts), bu yüzden
-// "recommended" değer kaynağı kavramı kaldırıldı — kullanıcı set/tekrar/
-// dinlenmeyi her zaman kendisi giriyor. reps de artık user_workout_program_
-// exercises.reps ile aynı tipte (smallint) bir sayı.
 export type ProgramSelectionPayload = {
   exerciseId: string;
   sets: number;
@@ -31,7 +26,12 @@ export function serializeProgramSelectionPayload(
     exerciseId: payload.exerciseId,
     sets: String(payload.sets),
     reps: String(payload.reps),
-    restSeconds: String(payload.restSeconds),
+    restSeconds: String(
+      resolveProgramExerciseRestSeconds({
+        customRestSeconds: payload.restSeconds,
+        recommendedRestSeconds: null,
+      }),
+    ),
   };
   if (initialTrainingDay) params.initialTrainingDay = initialTrainingDay;
   return params;
@@ -78,7 +78,10 @@ export function parseProgramSelectionParams(
     exerciseId,
     sets: validation.values.sets,
     reps: validation.values.reps,
-    restSeconds: validation.values.restSeconds,
+    restSeconds: resolveProgramExerciseRestSeconds({
+      customRestSeconds: validation.values.restSeconds,
+      recommendedRestSeconds: null,
+    }),
   };
 }
 

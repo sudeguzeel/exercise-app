@@ -6,6 +6,14 @@ export type WorkoutSessionStatus =
   | "completing"
   | "completed";
 
+export type WorkoutPhase = "active" | "rest" | "saving" | "completed";
+
+export type PendingWorkoutTarget = {
+  exerciseIndex: number;
+  setIndex: number;
+  setId: string;
+};
+
 export type WorkoutSetSnapshot = {
   id: string;
   setNumber: number;
@@ -39,6 +47,12 @@ export type WorkoutSession = {
   workoutDate: string;
   exercises: WorkoutExerciseSnapshot[];
   status: WorkoutSessionStatus;
+  phase: WorkoutPhase;
+  pendingTarget: PendingWorkoutTarget | null;
+  restStartedAt: string | null;
+  restEndsAt: string | null;
+  restDurationSeconds: number | null;
+  lastCompletedSetId: string | null;
   startedAt: string;
   lastResumedAt: string | null;
   accumulatedDurationMs: number;
@@ -52,6 +66,7 @@ export type WorkoutCompletion = {
   programId: string;
   programName: string;
   workoutDate: string;
+  completedDate: string;
   startedAt: string;
   completedAt: string;
   durationMs: number;
@@ -72,13 +87,12 @@ export type WorkoutSetPosition = {
 export type CompleteSetInput = {
   workoutSessionId: string;
   setId: string;
-  actualReps: number;
-  weightKg: number;
 };
 
 export type LocalCompletedExerciseRecord = {
   exerciseId: string;
   programExerciseId: string;
+  programId: string;
   workoutDate: string;
 };
 
@@ -90,14 +104,22 @@ export type WorkoutRepository = {
   getSession: (workoutSessionId: string) => Promise<WorkoutSession | null>;
   resumeSession: (workoutSessionId: string) => Promise<WorkoutSession>;
   pauseSession: (workoutSessionId: string) => Promise<WorkoutSession>;
-  updateSetDraft: (
-    workoutSessionId: string,
-    setId: string,
-    draft: { actualReps: number; weightInput: string },
-  ) => Promise<WorkoutSession>;
   completeSet: (input: CompleteSetInput) => Promise<WorkoutSession>;
+  extendRest: (
+    workoutSessionId: string,
+    seconds?: number,
+  ) => Promise<WorkoutSession>;
+  finishRest: (workoutSessionId: string) => Promise<WorkoutSession>;
   completeWorkout: (workoutSessionId: string) => Promise<WorkoutCompletion>;
   getCompletion: (workoutSessionId: string) => Promise<WorkoutCompletion | null>;
+  getCompletionForProgramDate: (
+    programId: string,
+    workoutDate: string,
+  ) => Promise<WorkoutCompletion | null>;
+  resetCompletedSession: (
+    programId: string,
+    workoutDate: string,
+  ) => Promise<void>;
   getLocalCompletedExerciseRecords: (
     fromDate?: string,
     toDate?: string,

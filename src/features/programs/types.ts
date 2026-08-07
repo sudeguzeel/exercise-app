@@ -8,6 +8,7 @@ export type PersistedProgramExercise = ProgramExercise & {
   id: string;
   name: string;
   orderIndex: number;
+  restSecondsOrigin?: "stored" | "fallback";
 };
 
 export type UserProgram = {

@@ -23,7 +23,6 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding/personal-info" />
           <Stack.Screen name="onboarding/fitness-experience" />
           <Stack.Screen name='onboarding/weekly-training-days' />
-          <Stack.Screen name='modal' options={{ presentation: 'modal' }} />
         </Stack>
 
         <StatusBar style="auto" />

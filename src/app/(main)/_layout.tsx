@@ -78,7 +78,6 @@ export default function MainLayout() {
       <Tabs.Screen name="profile-language" options={{ href: null }} />
       <Tabs.Screen name="profile-app-settings" options={{ href: null }} />
       <Tabs.Screen name="profile-privacy" options={{ href: null }} />
-      <Tabs.Screen name="explore" options={{ href: null }} />
     </Tabs>
   );
 }
