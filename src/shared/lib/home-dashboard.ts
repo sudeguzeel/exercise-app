@@ -54,6 +54,7 @@ export type HomeDashboard = {
   categoryTotals: CategoryTotal[];
   dailyTotals: DailyTotal[];
   targetDays: TargetDay[];
+  programExercisesByDay: Record<TrainingDay, TodayProgramExercise[]>;
   streakDays: number;
   todayProgram: TodayProgramExercise[];
   isRestDay: boolean;
@@ -187,24 +188,28 @@ export function buildHomeDashboard(
       return { ...day, status };
     });
 
+  const programExercisesByDay = Object.fromEntries(
+    dailyTotals.map((day) => [
+      day.id,
+      programsForDay(programs, day.id).flatMap((program) =>
+        program.exercises.map((exercise) => {
+          const lookup = exerciseLookup.get(exercise.exerciseId);
+          const isCompleted = completedKeySet.has(`${exercise.id}|${day.date}`);
+          return {
+            ...exercise,
+            programId: program.id,
+            programName: program.name,
+            exerciseName: lookup?.name ?? exercise.exerciseId,
+            icon: lookup?.icon ?? "fitness-outline",
+            status: isCompleted ? "completed" : "not_started",
+          } satisfies TodayProgramExercise;
+        }),
+      ),
+    ]),
+  ) as Record<TrainingDay, TodayProgramExercise[]>;
+
   const todayDayId = DAY_META[(new Date(referenceDate).getDay() + 6) % 7].id;
-  const todayProgramExercises: TodayProgramExercise[] = programsForDay(
-    programs,
-    todayDayId,
-  ).flatMap((program) =>
-    program.exercises.map((exercise) => {
-      const lookup = exerciseLookup.get(exercise.exerciseId);
-      const isCompleted = completedKeySet.has(`${exercise.id}|${today}`);
-      return {
-        ...exercise,
-        programId: program.id,
-        programName: program.name,
-        exerciseName: lookup?.name ?? exercise.exerciseId,
-        icon: lookup?.icon ?? "fitness-outline",
-        status: isCompleted ? "completed" : "not_started",
-      };
-    }),
-  );
+  const todayProgramExercises = programExercisesByDay[todayDayId];
 
   return {
     weekStart,
@@ -213,6 +218,7 @@ export function buildHomeDashboard(
     categoryTotals,
     dailyTotals,
     targetDays,
+    programExercisesByDay,
     streakDays: calculateStreakFromKeys(programs, completedKeySet, today),
     todayProgram: todayProgramExercises,
     isRestDay: todayProgramExercises.length === 0,

@@ -1,4 +1,5 @@
 import {
+  parseInitialTrainingDay,
   parseProgramSelectionParams,
   serializeProgramSelectionPayload,
   type ProgramSelectionSearchParams,
@@ -24,7 +25,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -45,6 +46,10 @@ export default function ProgramSelectionScreen() {
     useLocalSearchParams<ProgramSelectionSearchParams>();
   const selection = useMemo(
     () => parseProgramSelectionParams(searchParams),
+    [searchParams],
+  );
+  const initialTrainingDay = useMemo(
+    () => parseInitialTrainingDay(searchParams),
     [searchParams],
   );
   const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
@@ -83,6 +88,24 @@ export default function ProgramSelectionScreen() {
   const [resultModal, setResultModal] = useState<ResultModalState | null>(
     null,
   );
+  const hasRedirectedToNewProgram = useRef(false);
+
+  useEffect(() => {
+    if (
+      hasRedirectedToNewProgram.current ||
+      !selection ||
+      !exercise ||
+      !initialTrainingDay
+    ) {
+      return;
+    }
+
+    hasRedirectedToNewProgram.current = true;
+    router.replace({
+      pathname: "/new-program",
+      params: serializeProgramSelectionPayload(selection, initialTrainingDay),
+    });
+  }, [exercise, initialTrainingDay, selection]);
 
   const loadPrograms = useCallback(async () => {
     setListState("loading");
@@ -158,9 +181,9 @@ export default function ProgramSelectionScreen() {
     if (!selection || !exercise) return;
     router.push({
       pathname: "/new-program",
-      params: serializeProgramSelectionPayload(selection),
+      params: serializeProgramSelectionPayload(selection, initialTrainingDay),
     });
-  }, [exercise, selection]);
+  }, [exercise, initialTrainingDay, selection]);
 
   const handleResultConfirm = useCallback(() => {
     setResultModal(null);
@@ -173,6 +196,16 @@ export default function ProgramSelectionScreen() {
     listState === "success" &&
     selectedProgramIds.size > 0 &&
     !isSubmitting;
+
+  if (initialTrainingDay && isRouteValid) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.redirectState}>
+          <ActivityIndicator color={MainColors.primary} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -572,5 +605,10 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.72,
+  },
+  redirectState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

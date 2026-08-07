@@ -19,10 +19,6 @@ import {
   ProgramRepositoryError,
 } from "@/features/programs/program-repository";
 import { MainColors } from "@/shared/constants/theme";
-import {
-  getBodyParts,
-  type BodyPartOption,
-} from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -55,7 +51,6 @@ export default function ProgramEditScreen() {
   const programId = singleParam(params.programId)?.trim() ?? "";
   const selectedDate = singleParam(params.selectedDate);
   const [draft, setDraft] = useState<ProgramEditDraft | null>(null);
-  const [muscleGroups, setMuscleGroups] = useState<BodyPartOption[]>([]);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -73,23 +68,18 @@ export default function ProgramEditScreen() {
     if (existingDraft) {
       setDraft(existingDraft);
       setLoadState("success");
-      setMuscleGroups(await getBodyParts());
       return;
     }
 
     setLoadState("loading");
     try {
-      const [program, groups] = await Promise.all([
-        programRepository.getProgramById(programId),
-        getBodyParts(),
-      ]);
+      const program = await programRepository.getProgramById(programId);
       if (!program) {
         setLoadState("not-found");
         return;
       }
       const nextDraft = saveProgramEditDraft(createProgramEditDraft(program));
       setDraft(nextDraft);
-      setMuscleGroups(groups);
       setLoadState("success");
     } catch {
       setLoadState("error");
@@ -147,19 +137,6 @@ export default function ProgramEditScreen() {
       updateDraft({
         ...draft,
         trainingDays: [...toggleSelection(new Set(draft.trainingDays), day)],
-      });
-    },
-    [draft, updateDraft],
-  );
-
-  const handleMuscleToggle = useCallback(
-    (muscleGroupId: string) => {
-      if (!draft) return;
-      updateDraft({
-        ...draft,
-        muscleGroupIds: [
-          ...toggleSelection(new Set(draft.muscleGroupIds), muscleGroupId),
-        ],
       });
     },
     [draft, updateDraft],
@@ -340,25 +317,6 @@ export default function ProgramEditScreen() {
             <Text style={styles.validationText}>En az bir gün seçmelisiniz.</Text>
           ) : null}
 
-          <FormLabel>ODAKLANILAN KAS GRUPLARI</FormLabel>
-          {muscleGroups.length > 0 ? (
-            <View style={styles.chipWrap}>
-              {muscleGroups.map((muscle) => (
-                <ChoiceChip
-                  key={muscle.id}
-                  label={muscle.name}
-                  onPress={() => handleMuscleToggle(muscle.id)}
-                  selected={draft.muscleGroupIds.includes(muscle.id)}
-                />
-              ))}
-            </View>
-          ) : (
-            <Text style={styles.stateText}>Kas grupları yüklenemedi.</Text>
-          )}
-          {draft.muscleGroupIds.length === 0 ? (
-            <Text style={styles.validationText}>En az bir kas grubu seçmelisiniz.</Text>
-          ) : null}
-
           <FormLabel>EGZERSİZLER</FormLabel>
           <View style={styles.exerciseList}>
             {draft.exercises.map((exercise, index) => (
@@ -520,7 +478,6 @@ const styles = StyleSheet.create({
   validationText: { marginTop: 7, color: "#D14343", fontSize: 12, fontWeight: "600" },
   dayGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   dayChip: { width: "22.5%", minWidth: 70, flexGrow: 1 },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   choiceChip: {
     minHeight: 44,
     maxWidth: "100%",
