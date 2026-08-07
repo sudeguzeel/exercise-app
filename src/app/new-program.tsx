@@ -6,6 +6,7 @@ import {
 import { ProgramFlowHeader } from "@/features/programs/components/program-flow-header";
 import { ProgramResultModal } from "@/features/programs/components/program-result-modal";
 import { SelectionChip } from "@/features/programs/components/selection-chip";
+import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import {
   isProgramFormValid,
   toggleSelection,
@@ -44,9 +45,36 @@ type FormModalState = {
   success: boolean;
 } | null;
 
+const REMINDER_TIMES = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`,
+);
+
 export default function NewProgramScreen() {
   const searchParams =
-    useLocalSearchParams<ProgramSelectionSearchParams>();
+    useLocalSearchParams<
+      ProgramSelectionSearchParams & {
+        selectedDate?: string | string[];
+      }
+    >();
+  const selectedDateParam = Array.isArray(searchParams.selectedDate)
+    ? searchParams.selectedDate[0]
+    : searchParams.selectedDate;
+  const initialTrainingDay = useMemo(
+    () =>
+      getCurrentWeek().find((day) => day.dateKey === selectedDateParam)?.day,
+    [selectedDateParam],
+  );
+  const selectedDateLabel = useMemo(() => {
+    if (!selectedDateParam || !initialTrainingDay) return null;
+    const date = new Date(`${selectedDateParam}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("tr-TR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }, [initialTrainingDay, selectedDateParam]);
   const selection = useMemo(
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
@@ -74,13 +102,23 @@ export default function NewProgramScreen() {
 
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
-    new Set(),
+    () => new Set(initialTrainingDay ? [initialTrainingDay] : []),
   );
   const [selectedMuscleGroupIds, setSelectedMuscleGroupIds] = useState<
     Set<string>
   >(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<FormModalState>(null);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTimes, setReminderTimes] = useState(["18:00"]);
+  const [reminderListOpen, setReminderListOpen] = useState<number | null>(null);
+  const effectiveMuscleGroupIds = useMemo(
+    () =>
+      selectedDateParam && exercise?.bodyPartId
+        ? new Set([exercise.bodyPartId])
+        : selectedMuscleGroupIds,
+    [exercise?.bodyPartId, selectedDateParam, selectedMuscleGroupIds],
+  );
 
   const isRouteValid = Boolean(selection && exercise);
   const canSubmit =
@@ -88,7 +126,7 @@ export default function NewProgramScreen() {
     isProgramFormValid(
       programName,
       selectedDays,
-      selectedMuscleGroupIds,
+      effectiveMuscleGroupIds,
     ) &&
     !isSubmitting;
   const trimmedProgramName = programName.trim();
@@ -98,12 +136,22 @@ export default function NewProgramScreen() {
 
     setIsSubmitting(true);
     try {
-      await programRepository.createProgramWithExercise({
+      const createdProgram = await programRepository.createProgramWithExercise({
         name: programName,
         trainingDays: [...selectedDays],
-        muscleGroupIds: [...selectedMuscleGroupIds],
+        muscleGroupIds: [...effectiveMuscleGroupIds],
         exercise: selection,
       });
+      if (selectedDateParam) {
+        router.replace({
+          pathname: "/(main)/program",
+          params: {
+            selectedDate: selectedDateParam,
+            activeProgramId: createdProgram.id,
+          },
+        });
+        return;
+      }
       setModalState({
         title: "Program oluşturuldu",
         message:
@@ -137,7 +185,8 @@ export default function NewProgramScreen() {
     isSubmitting,
     programName,
     selectedDays,
-    selectedMuscleGroupIds,
+    effectiveMuscleGroupIds,
+    selectedDateParam,
     selection,
   ]);
 
@@ -145,9 +194,16 @@ export default function NewProgramScreen() {
     const shouldLeaveScreen = modalState?.success === true;
     setModalState(null);
     if (shouldLeaveScreen) {
-      router.replace("/exercise");
+      if (selectedDateParam) {
+        router.replace({
+          pathname: "/(main)/program",
+          params: { selectedDate: selectedDateParam },
+        });
+      } else {
+        router.replace("/exercise");
+      }
     }
-  }, [modalState?.success]);
+  }, [modalState?.success, selectedDateParam]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -192,56 +248,275 @@ export default function NewProgramScreen() {
                     />
                   </View>
 
-                  <View style={styles.section}>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.sectionLabel}
-                    >
-                      HANGİ GÜNLER YAPILACAK?
-                    </Text>
-                    <View style={styles.dayGrid}>
-                      {TRAINING_DAY_OPTIONS.map((day) => (
-                        <SelectionChip
-                          accessibilityLabel={day.label}
-                          compact
-                          key={day.id}
-                          label={day.shortLabel}
-                          onPress={() =>
-                            setSelectedDays((currentSelection) =>
-                              toggleSelection(currentSelection, day.id),
-                            )
-                          }
-                          selected={selectedDays.has(day.id)}
+                  {selectedDateLabel ? (
+                    <View style={styles.section}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.sectionLabel}
+                      >
+                        ANTRENMAN GÜNÜ
+                      </Text>
+                      <View style={styles.selectedDayCard}>
+                        <Ionicons
+                          name="calendar-outline"
+                          size={21}
+                          color={MainColors.primary}
                         />
-                      ))}
+                        <View style={styles.selectedDayContent}>
+                          <Text style={styles.selectedDayText}>
+                            {selectedDateLabel}
+                          </Text>
+                          <Text style={styles.selectedDayHint}>
+                            Antrenman seçtiğin güne eklenecek.
+                          </Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
+                  ) : (
+                    <View style={styles.section}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.sectionLabel}
+                      >
+                        HANGİ GÜNLER YAPILACAK?
+                      </Text>
+                      <View style={styles.dayGrid}>
+                        {TRAINING_DAY_OPTIONS.map((day) => (
+                          <SelectionChip
+                            accessibilityLabel={day.label}
+                            compact
+                            key={day.id}
+                            label={day.shortLabel}
+                            onPress={() =>
+                              setSelectedDays((currentSelection) =>
+                                toggleSelection(currentSelection, day.id),
+                              )
+                            }
+                            selected={selectedDays.has(day.id)}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  )}
 
-                  <View style={styles.section}>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.sectionLabel}
-                    >
-                      ODAKLANILAN KAS GRUPLARI
-                    </Text>
-                    <View style={styles.muscleGrid}>
-                      {muscleGroups.map((muscleGroup) => (
-                        <SelectionChip
-                          key={muscleGroup.id}
-                          label={muscleGroup.name}
-                          onPress={() =>
-                            setSelectedMuscleGroupIds((currentSelection) =>
-                              toggleSelection(
-                                currentSelection,
-                                muscleGroup.id,
-                              ),
-                            )
-                          }
-                          selected={selectedMuscleGroupIds.has(muscleGroup.id)}
+                  {selectedDateParam ? (
+                    <View style={styles.reminderCard}>
+                      <Pressable
+                        accessibilityLabel="Antrenman hatırlatıcısını aç veya kapat"
+                        accessibilityRole="switch"
+                        accessibilityState={{ checked: reminderEnabled }}
+                        onPress={() =>
+                          setReminderEnabled((enabled) => {
+                            if (enabled) setReminderListOpen(null);
+                            return !enabled;
+                          })
+                        }
+                        style={({ pressed }) => [
+                          styles.reminderHeader,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Ionicons
+                          name="notifications-outline"
+                          size={22}
+                          color={MainColors.primary}
                         />
-                      ))}
+                        <View style={styles.reminderTitleContent}>
+                          <Text style={styles.reminderTitle}>
+                            Antrenman Hatırlatıcısı
+                          </Text>
+                          <Text style={styles.reminderDescription}>
+                            Antrenman saatinde bildirim al.
+                          </Text>
+                        </View>
+                        <View style={styles.reminderToggleLabel}>
+                          <View
+                            style={[
+                              styles.reminderStatusDot,
+                              reminderEnabled && styles.reminderStatusDotActive,
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              styles.reminderToggleText,
+                              reminderEnabled && styles.reminderToggleTextActive,
+                            ]}
+                          >
+                            {reminderEnabled ? "Açık" : "Aç/Kapat"}
+                          </Text>
+                        </View>
+                      </Pressable>
+
+                      {reminderEnabled ? (
+                        <View style={styles.reminderExpanded}>
+                          <Text style={styles.reminderTimeLabel}>
+                            Hatırlatma saatleri
+                          </Text>
+                          {reminderTimes.map((reminderTime, index) => (
+                            <View key={`${index}-${reminderTime}`}>
+                              <View style={styles.reminderTimeRow}>
+                                <Pressable
+                                  accessibilityLabel={`Hatırlatma saati ${reminderTime}. Saat listesini aç`}
+                                  accessibilityRole="button"
+                                  accessibilityState={{
+                                    expanded: reminderListOpen === index,
+                                  }}
+                                  onPress={() =>
+                                    setReminderListOpen((openIndex) =>
+                                      openIndex === index ? null : index,
+                                    )
+                                  }
+                                  style={({ pressed }) => [
+                                    styles.selectedReminderTime,
+                                    pressed && styles.pressed,
+                                  ]}
+                                >
+                                  <Ionicons
+                                    name="time-outline"
+                                    size={21}
+                                    color={MainColors.primary}
+                                  />
+                                  <Text style={styles.selectedReminderTimeText}>
+                                    {reminderTime}
+                                  </Text>
+                                  <Ionicons
+                                    name={
+                                      reminderListOpen === index
+                                        ? "chevron-up"
+                                        : "chevron-down"
+                                    }
+                                    size={19}
+                                    color={MainColors.mutedText}
+                                  />
+                                </Pressable>
+                                {index > 0 ? (
+                                  <Pressable
+                                    accessibilityLabel={`${reminderTime} hatırlatmasını kaldır`}
+                                    accessibilityRole="button"
+                                    onPress={() => {
+                                      setReminderTimes((times) =>
+                                        times.filter((_, itemIndex) => itemIndex !== index),
+                                      );
+                                      setReminderListOpen(null);
+                                    }}
+                                    style={({ pressed }) => [
+                                      styles.removeReminderButton,
+                                      pressed && styles.pressed,
+                                    ]}
+                                  >
+                                    <Ionicons
+                                      name="close"
+                                      size={19}
+                                      color={MainColors.mutedText}
+                                    />
+                                  </Pressable>
+                                ) : null}
+                              </View>
+                              {reminderListOpen === index ? (
+                                <ScrollView
+                                  nestedScrollEnabled
+                                  showsVerticalScrollIndicator
+                                  style={styles.reminderTimes}
+                                >
+                                  {REMINDER_TIMES.filter(
+                                    (time) =>
+                                      time === reminderTime ||
+                                      !reminderTimes.includes(time),
+                                  ).map((time) => {
+                                    const selected = reminderTime === time;
+                                    return (
+                                      <Pressable
+                                        accessibilityRole="button"
+                                        accessibilityState={{ selected }}
+                                        key={time}
+                                        onPress={() => {
+                                          setReminderTimes((times) =>
+                                            times.map((currentTime, itemIndex) =>
+                                              itemIndex === index ? time : currentTime,
+                                            ),
+                                          );
+                                          setReminderListOpen(null);
+                                        }}
+                                        style={({ pressed }) => [
+                                          styles.reminderTimeOption,
+                                          selected && styles.reminderTimeOptionSelected,
+                                          pressed && styles.pressed,
+                                        ]}
+                                      >
+                                        <Text
+                                          style={[
+                                            styles.reminderTimeOptionText,
+                                            selected &&
+                                              styles.reminderTimeOptionTextSelected,
+                                          ]}
+                                        >
+                                          {time}
+                                        </Text>
+                                      </Pressable>
+                                    );
+                                  })}
+                                </ScrollView>
+                              ) : null}
+                            </View>
+                          ))}
+                          {reminderTimes.length < REMINDER_TIMES.length ? (
+                            <Pressable
+                              accessibilityRole="button"
+                              onPress={() => {
+                                const nextTime = REMINDER_TIMES.find(
+                                  (time) => !reminderTimes.includes(time),
+                                );
+                                if (!nextTime) return;
+                                setReminderTimes((times) => [...times, nextTime]);
+                                setReminderListOpen(reminderTimes.length);
+                              }}
+                              style={({ pressed }) => [
+                                styles.addReminderButton,
+                                pressed && styles.pressed,
+                              ]}
+                            >
+                              <Ionicons
+                                name="add"
+                                size={19}
+                                color={MainColors.primary}
+                              />
+                              <Text style={styles.addReminderButtonText}>
+                                Saat ekle
+                              </Text>
+                            </Pressable>
+                          ) : null}
+                        </View>
+                      ) : null}
                     </View>
-                  </View>
+                  ) : null}
+
+                  {!selectedDateParam ? (
+                    <View style={styles.section}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.sectionLabel}
+                      >
+                        ODAKLANILAN KAS GRUPLARI
+                      </Text>
+                      <View style={styles.muscleGrid}>
+                        {muscleGroups.map((muscleGroup) => (
+                          <SelectionChip
+                            key={muscleGroup.id}
+                            label={muscleGroup.name}
+                            onPress={() =>
+                              setSelectedMuscleGroupIds((currentSelection) =>
+                                toggleSelection(
+                                  currentSelection,
+                                  muscleGroup.id,
+                                ),
+                              )
+                            }
+                            selected={selectedMuscleGroupIds.has(muscleGroup.id)}
+                          />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
 
                   <View style={styles.summaryCard}>
                     <View style={styles.summaryHeader}>
@@ -399,6 +674,173 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+  },
+  selectedDayCard: {
+    minHeight: 64,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 20,
+    backgroundColor: MainColors.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  selectedDayContent: {
+    flex: 1,
+  },
+  selectedDayText: {
+    color: MainColors.text,
+    fontSize: 15,
+    fontWeight: "800",
+    textTransform: "capitalize",
+  },
+  selectedDayHint: {
+    marginTop: 3,
+    color: MainColors.mutedText,
+    fontSize: 13,
+  },
+  reminderCard: {
+    marginTop: 20,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 20,
+    backgroundColor: MainColors.surface,
+    overflow: "hidden",
+  },
+  reminderHeader: {
+    minHeight: 78,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  reminderTitleContent: {
+    flex: 1,
+  },
+  reminderTitle: {
+    color: MainColors.text,
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  reminderDescription: {
+    marginTop: 3,
+    color: MainColors.mutedText,
+    fontSize: 12,
+  },
+  reminderToggleLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  reminderStatusDot: {
+    width: 11,
+    height: 11,
+    borderWidth: 1.5,
+    borderColor: MainColors.mutedText,
+    borderRadius: 6,
+  },
+  reminderStatusDotActive: {
+    borderColor: MainColors.primary,
+    backgroundColor: MainColors.primary,
+  },
+  reminderToggleText: {
+    color: MainColors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  reminderToggleTextActive: {
+    color: MainColors.primary,
+  },
+  reminderExpanded: {
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    borderTopWidth: 1,
+    borderTopColor: MainColors.subtleBorder,
+  },
+  reminderTimeLabel: {
+    marginTop: 14,
+    color: MainColors.mutedText,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  reminderTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectedReminderTime: {
+    flex: 1,
+    minHeight: 48,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 9,
+  },
+  removeReminderButton: {
+    width: 38,
+    height: 38,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectedReminderTimeText: {
+    flex: 1,
+    color: MainColors.text,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  reminderChevron: {
+    color: MainColors.mutedText,
+    fontSize: 24,
+  },
+  reminderTimes: {
+    maxHeight: 240,
+    marginBottom: 2,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 14,
+  },
+  reminderTimeOption: {
+    width: "100%",
+    minHeight: 46,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: MainColors.subtleBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reminderTimeOptionSelected: {
+    backgroundColor: MainColors.primaryBright,
+  },
+  reminderTimeOptionText: {
+    color: MainColors.mutedText,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  reminderTimeOptionTextSelected: {
+    color: MainColors.text,
+    fontWeight: "900",
+  },
+  addReminderButton: {
+    minHeight: 44,
+    marginTop: 10,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: MainColors.border,
+    borderRadius: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  addReminderButtonText: {
+    color: MainColors.primary,
+    fontSize: 14,
+    fontWeight: "800",
   },
   muscleGrid: {
     flexDirection: "row",

@@ -256,6 +256,16 @@ export default function ProgramScreen() {
     }
   }, [activeProgram, selectedDateKey]);
 
+  const handleAddWorkout = useCallback(() => {
+    router.push({
+      pathname: "/exercise" as never,
+      params: {
+        selectionMode: "new-program",
+        selectedDate: selectedDateKey,
+      },
+    });
+  }, [selectedDateKey]);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -374,24 +384,33 @@ export default function ProgramScreen() {
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
-            disabled:
-              !activeProgram || navigationBusy || programState === "loading",
+            disabled: navigationBusy || programState === "loading",
           }}
-          disabled={!activeProgram || navigationBusy || programState === "loading"}
-          onPress={() => void handleStartWorkout()}
+          disabled={navigationBusy || programState === "loading"}
+          onPress={
+            activeProgram
+              ? () => void handleStartWorkout()
+              : handleAddWorkout
+          }
           style={({ pressed }) => [
             styles.startButton,
-            (!activeProgram || navigationBusy || programState === "loading") &&
+            (navigationBusy || programState === "loading") &&
               styles.startButtonDisabled,
-            pressed && activeProgram && styles.pressed,
+            pressed && programState !== "loading" && styles.pressed,
           ]}
         >
           {navigationBusy ? (
             <ActivityIndicator color={MainColors.text} />
           ) : (
             <>
-              <Ionicons name="play" size={18} color={MainColors.text} />
-              <Text style={styles.startButtonText}>Antrenmana başla</Text>
+              <Ionicons
+                name={activeProgram ? "play" : "add"}
+                size={18}
+                color={MainColors.text}
+              />
+              <Text style={styles.startButtonText}>
+                {activeProgram ? "Antrenmana başla" : "Antrenman ekle"}
+              </Text>
             </>
           )}
         </Pressable>

@@ -52,6 +52,7 @@ export default function ExerciseScreen() {
     : params.selectedDate;
   const isProgramEditSelection =
     selectionMode === "program-edit" && Boolean(editProgramId);
+  const isNewProgramSelection = selectionMode === "new-program";
   const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -135,11 +136,13 @@ export default function ExerciseScreen() {
           exerciseId: exercise.id,
           ...(isProgramEditSelection
             ? { selectionMode: "program-edit", editProgramId, selectedDate }
-            : {}),
+            : isNewProgramSelection
+              ? { selectionMode: "new-program", selectedDate }
+              : {}),
         },
       });
     },
-    [editProgramId, isProgramEditSelection, selectedDate],
+    [editProgramId, isNewProgramSelection, isProgramEditSelection, selectedDate],
   );
 
   const handleEndReached = useCallback(() => {

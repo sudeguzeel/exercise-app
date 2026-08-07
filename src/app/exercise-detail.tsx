@@ -340,6 +340,19 @@ export default function ExerciseDetailScreen() {
       return;
     }
 
+    if (normalizedSelectionMode === "new-program") {
+      router.push({
+        pathname: "/new-program",
+        params: {
+          ...serializeProgramSelectionPayload(payload),
+          ...(normalizedSelectedDate
+            ? { selectedDate: normalizedSelectedDate }
+            : {}),
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: "/program-selection",
       params: serializeProgramSelectionPayload(payload),
