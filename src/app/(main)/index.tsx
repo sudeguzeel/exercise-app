@@ -1,6 +1,8 @@
 import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashboard";
 import { toDateKey } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
@@ -26,11 +28,13 @@ const CHART_HEIGHT = 120;
 
 export default function HomeScreen() {
   const { trainingDays } = useOnboarding();
+  const { isOffline } = useConnectivity();
   const scrollRef = useRef<ScrollView>(null);
   const [dashboard, setDashboard] = useState<HomeDashboard | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "success" | "error">(
     "loading",
   );
+  const [isRetrying, setIsRetrying] = useState(false);
   const [selectedDay, setSelectedDay] = useState<TrainingDay>(() => {
     const dayIndex = (new Date().getDay() + 6) % 7;
     const days: TrainingDay[] = [
@@ -65,6 +69,16 @@ export default function HomeScreen() {
   );
   useScrollToTop(scrollRef);
 
+  const retryDashboard = useCallback(async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      await loadDashboard();
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [isRetrying, loadDashboard]);
+
   const displayedTargetDays = useMemo(() => {
     if (!dashboard) return [];
     const today = toDateKey(new Date());
@@ -97,7 +111,7 @@ export default function HomeScreen() {
   );
   const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
 
-  if (loadState === "loading" || !dashboard) {
+  if (loadState === "loading" && !dashboard && !isRetrying) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centerState}>
@@ -107,22 +121,26 @@ export default function HomeScreen() {
     );
   }
 
-  if (loadState === "error") {
+  if (loadState === "error" || isRetrying || !dashboard) {
+    const variant = isOffline ? "offline" : "service";
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={32} color={MUTED} />
-          <Text style={styles.errorText}>
-            Bilgiler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void loadDashboard()}
-            style={styles.retryButton}
-          >
-            <Text style={styles.retryButtonText}>Yeniden dene</Text>
-          </Pressable>
-        </View>
+        <DataErrorState
+          errorCode="FIT-SERVICE-HOME"
+          onRetry={() => void retryDashboard()}
+          onSecondaryAction={
+            variant === "offline"
+              ? dashboard
+                ? () => setLoadState("success")
+                : undefined
+              : () => router.replace("/(main)")
+          }
+          secondaryActionDisabled={
+            isRetrying || (variant === "offline" && !dashboard)
+          }
+          retrying={isRetrying}
+          variant={variant}
+        />
       </SafeAreaView>
     );
   }

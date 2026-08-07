@@ -157,7 +157,7 @@ export async function searchExercises({
   const { data, error, count } = await query;
 
   if (error || !data) {
-    return { items: [], hasMore: false };
+    throw error ?? new Error("Egzersizler alınamadı.");
   }
 
   const rows = data as unknown as ExerciseListRow[];
