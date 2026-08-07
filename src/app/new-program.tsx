@@ -1,5 +1,6 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import {
+  parseInitialTrainingDay,
   parseProgramSelectionParams,
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
@@ -15,16 +16,15 @@ import {
   ProgramRepositoryError,
   programRepository,
 } from "@/features/programs/program-repository";
+import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import { MainColors } from "@/shared/constants/theme";
 import {
-  getBodyParts,
   getExerciseSummary,
-  type BodyPartOption,
   type ExerciseSummary,
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -51,8 +51,11 @@ export default function NewProgramScreen() {
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
   );
+  const initialTrainingDay = useMemo(
+    () => parseInitialTrainingDay(searchParams),
+    [searchParams],
+  );
   const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
-  const [muscleGroups, setMuscleGroups] = useState<BodyPartOption[]>([]);
 
   useEffect(() => {
     if (!selection) {
@@ -68,27 +71,37 @@ export default function NewProgramScreen() {
     };
   }, [selection]);
 
-  useEffect(() => {
-    void getBodyParts().then(setMuscleGroups);
-  }, []);
-
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
-    new Set(),
+    () => new Set(initialTrainingDay ? [initialTrainingDay] : []),
   );
-  const [selectedMuscleGroupIds, setSelectedMuscleGroupIds] = useState<
-    Set<string>
-  >(new Set());
+  const lastAppliedInitialTrainingDay = useRef(initialTrainingDay);
+
+  useEffect(() => {
+    if (
+      initialTrainingDay &&
+      initialTrainingDay !== lastAppliedInitialTrainingDay.current
+    ) {
+      setSelectedDays(new Set([initialTrainingDay]));
+    }
+    lastAppliedInitialTrainingDay.current = initialTrainingDay;
+  }, [initialTrainingDay]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<FormModalState>(null);
+  const [createdProgramId, setCreatedProgramId] = useState<string | null>(null);
 
   const isRouteValid = Boolean(selection && exercise);
+  const muscleGroupIds = useMemo(
+    () => new Set(exercise?.bodyPartId ? [exercise.bodyPartId] : []),
+    [exercise?.bodyPartId],
+  );
   const canSubmit =
     isRouteValid &&
     isProgramFormValid(
       programName,
       selectedDays,
-      selectedMuscleGroupIds,
+      muscleGroupIds,
     ) &&
     !isSubmitting;
   const trimmedProgramName = programName.trim();
@@ -98,12 +111,13 @@ export default function NewProgramScreen() {
 
     setIsSubmitting(true);
     try {
-      await programRepository.createProgramWithExercise({
+      const createdProgram = await programRepository.createProgramWithExercise({
         name: programName,
         trainingDays: [...selectedDays],
-        muscleGroupIds: [...selectedMuscleGroupIds],
+        muscleGroupIds: [...muscleGroupIds],
         exercise: selection,
       });
+      setCreatedProgramId(createdProgram.id);
       setModalState({
         title: "Program oluşturuldu",
         message:
@@ -137,7 +151,7 @@ export default function NewProgramScreen() {
     isSubmitting,
     programName,
     selectedDays,
-    selectedMuscleGroupIds,
+    muscleGroupIds,
     selection,
   ]);
 
@@ -145,9 +159,19 @@ export default function NewProgramScreen() {
     const shouldLeaveScreen = modalState?.success === true;
     setModalState(null);
     if (shouldLeaveScreen) {
-      router.replace("/exercise");
+      const selectedDate = initialTrainingDay
+        ? getCurrentWeek().find((day) => day.day === initialTrainingDay)?.dateKey
+        : undefined;
+      if (selectedDate && createdProgramId) {
+        router.replace({
+          pathname: "/(main)/program",
+          params: { selectedDate, activeProgramId: createdProgramId },
+        });
+        return;
+      }
+      router.replace("/(main)");
     }
-  }, [modalState?.success]);
+  }, [createdProgramId, initialTrainingDay, modalState?.success]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -212,32 +236,6 @@ export default function NewProgramScreen() {
                             )
                           }
                           selected={selectedDays.has(day.id)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.section}>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.sectionLabel}
-                    >
-                      ODAKLANILAN KAS GRUPLARI
-                    </Text>
-                    <View style={styles.muscleGrid}>
-                      {muscleGroups.map((muscleGroup) => (
-                        <SelectionChip
-                          key={muscleGroup.id}
-                          label={muscleGroup.name}
-                          onPress={() =>
-                            setSelectedMuscleGroupIds((currentSelection) =>
-                              toggleSelection(
-                                currentSelection,
-                                muscleGroup.id,
-                              ),
-                            )
-                          }
-                          selected={selectedMuscleGroupIds.has(muscleGroup.id)}
                         />
                       ))}
                     </View>
@@ -396,11 +394,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   dayGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  muscleGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,

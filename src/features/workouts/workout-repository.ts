@@ -148,6 +148,35 @@ async function requireUserId() {
   return user.id;
 }
 
+// user_completed_exercises satırlarını (set değil, egzersiz+tarih bazında)
+// backend'e yazan yardımcı — tablo set seviyesinde tutmuyor, "bu egzersizin
+// tüm setleri şu tarihte tamamlandı" bilgisini tutuyor (dashboard/seri
+// hesaplarının zaten okuduğu tablo, bkz. getCurrentStreak). RLS
+// (auth.uid() = user_id) sayesinde kullanıcı sadece kendi kaydını
+// oluşturabilir. `onConflict` ile idempotent: aynı egzersiz aynı tarihte
+// tekrar tamamlanmaya çalışılırsa (retry, çift tıklama) yeni satır açmaz.
+async function upsertCompletedExercise(
+  userId: string,
+  record: { programExerciseId: string; exerciseId: string; workoutDate: string },
+) {
+  const { error } = await supabase.from("user_completed_exercises").upsert(
+    {
+      user_id: userId,
+      program_exercise_id: record.programExerciseId,
+      exercise_id: record.exerciseId,
+      workout_date: record.workoutDate,
+    },
+    { onConflict: "user_id,program_exercise_id,workout_date", ignoreDuplicates: true },
+  );
+
+  if (error) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Tamamlanma bilgisi sunucuya kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+    );
+  }
+}
+
 function sessionsKey(userId: string) {
   return `${STORAGE_PREFIX}:${userId}:sessions`;
 }
@@ -587,10 +616,68 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         return saveSession(userId, reconciled);
       }
 
+      const [sessions, completions] = await Promise.all([
+        readSessions(userId),
+        readList<WorkoutCompletion>(completionsKey(userId)),
+      ]);
+      const candidates = sessions
+        .filter(
+          (session) =>
+            session.programId === programId && session.workoutDate === workoutDate,
+        )
+        .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+      const resumable = candidates.find((session) => session.status !== "completed");
+      const completed = candidates.find((session) => session.status === "completed");
+      const completedProgramExerciseIds = new Set(
+        completions
+          .filter(
+            (completion) =>
+              completion.programId === programId &&
+              completion.workoutDate === workoutDate,
+          )
+          .flatMap((completion) =>
+            completion.exercises
+              .filter((exercise) =>
+                exercise.sets.every((set) => Boolean(set.completedAt)),
+              )
+              .map((exercise) => exercise.programExerciseId),
+          ),
+      );
+      const pendingExercises = program.exercises.filter(
+        (exercise) => !completedProgramExerciseIds.has(exercise.id),
+      );
+
+      if (pendingExercises.length === 0 && completed) {
+        return clone(completed);
+      }
+
+      if (resumable) {
+        const existingSnapshots = new Map(
+          resumable.exercises.map((exercise) => [
+            exercise.programExerciseId,
+            exercise,
+          ]),
+        );
+        resumable.exercises = await Promise.all(
+          pendingExercises.map(
+            async (exercise) =>
+              existingSnapshots.get(exercise.id) ??
+              buildExerciseSnapshot(exercise),
+          ),
+        );
+        resumable.programName = program.name;
+        resumable.programTrainingDays = [...program.trainingDays];
+        if (resumable.status === "paused") {
+          resumable.status = "active";
+          resumable.lastResumedAt = new Date().toISOString();
+        }
+        return saveSession(userId, resumable);
+      }
+
       const now = new Date().toISOString();
       const workoutSessionId = `ws-${Date.now().toString(36)}-${program.id}-${workoutDate}`;
       const exercises = await Promise.all(
-        [...program.exercises]
+        [...pendingExercises]
           .sort((left, right) => left.orderIndex - right.orderIndex)
           .map((exercise) =>
             buildExerciseSnapshot(exercise, workoutSessionId),
@@ -717,6 +804,20 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         session.restEndsAt = null;
         session.restDurationSeconds = null;
       }
+
+      if (isWorkoutExerciseCompleted(position.exercise)) {
+        // Egzersizin son seti tamamlandı — bu, backend'e (Supabase)
+        // yazılması gereken an. Yazma başarısız olursa burada throw
+        // edip fonksiyondan çıkıyoruz; `saveSession` hiç çağrılmadığı
+        // için set yerel olarak da "tamamlandı" kaydedilmiyor — ekran
+        // gerçek durumu yanlış yansıtmıyor, kullanıcı tekrar deneyebilir.
+        await upsertCompletedExercise(userId, {
+          programExerciseId: position.exercise.programExerciseId,
+          exerciseId: position.exercise.exerciseId,
+          workoutDate: session.workoutDate,
+        });
+      }
+
       return saveSession(userId, session);
     } finally {
       setCompletionLocks.delete(lockKey);
@@ -945,6 +1046,72 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     const program = await programRepository.getProgramById(session.programId);
     if (!program || !isSessionAlignedWithProgram(session, program)) return null;
     return clone(completion);
+  }
+
+  async getCompletionForProgramDate(programId: string, workoutDate: string) {
+    const userId = await requireUserId();
+    const completions = await readCompletions(userId);
+    const completion = completions.find(
+      (item) => item.programId === programId && item.workoutDate === workoutDate,
+    );
+    return completion ? clone(completion) : null;
+  }
+
+  async resetCompletedSession(programId: string, workoutDate: string) {
+    const userId = await requireUserId();
+    const completions = await readCompletions(userId);
+    const matchingCompletions = completions.filter(
+      (completion) =>
+        completion.programId === programId && completion.workoutDate === workoutDate,
+    );
+    const programExerciseIds = [
+      ...new Set(
+        matchingCompletions.flatMap((completion) =>
+          completion.exercises.map((exercise) => exercise.programExerciseId),
+        ),
+      ),
+    ];
+
+    // Egzersiz check-mark'ları ve seri hesabı `user_completed_exercises`
+    // (Supabase) tablosundan besleniyor — sadece local kaydı silmek
+    // sıfırlamayı görünmez kılar (liste hâlâ tamamlanmış görünür). Bu
+    // yüzden önce sunucudaki satırlar siliniyor; başarısız olursa local
+    // durum bozulmadan hata fırlatılıyor.
+    if (programExerciseIds.length > 0) {
+      const { error } = await supabase
+        .from("user_completed_exercises")
+        .delete()
+        .eq("user_id", userId)
+        .eq("workout_date", workoutDate)
+        .in("program_exercise_id", programExerciseIds);
+      if (error) {
+        throw new WorkoutRepositoryError(
+          "STORAGE_FAILED",
+          "Tamamlanma bilgisi sunucudan silinemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+        );
+      }
+    }
+
+    const sessions = await readSessions(userId);
+    await writeList(
+      sessionsKey(userId),
+      sessions.filter(
+        (session) =>
+          !(
+            session.programId === programId &&
+            session.workoutDate === workoutDate &&
+            session.status === "completed"
+          ),
+      ),
+    );
+
+    await writeList(
+      completionsKey(userId),
+      completions.filter(
+        (completion) =>
+          !(completion.programId === programId && completion.workoutDate === workoutDate),
+      ),
+    );
   }
 
   async getLocalCompletedExerciseRecords(fromDate?: string, toDate?: string) {

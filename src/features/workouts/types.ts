@@ -112,6 +112,14 @@ export type WorkoutRepository = {
   finishRest: (workoutSessionId: string) => Promise<WorkoutSession>;
   completeWorkout: (workoutSessionId: string) => Promise<WorkoutCompletion>;
   getCompletion: (workoutSessionId: string) => Promise<WorkoutCompletion | null>;
+  getCompletionForProgramDate: (
+    programId: string,
+    workoutDate: string,
+  ) => Promise<WorkoutCompletion | null>;
+  resetCompletedSession: (
+    programId: string,
+    workoutDate: string,
+  ) => Promise<void>;
   getLocalCompletedExerciseRecords: (
     fromDate?: string,
     toDate?: string,

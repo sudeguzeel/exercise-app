@@ -32,6 +32,8 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -43,7 +45,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type LoadState = "loading" | "success" | "error";
 
 function singleParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+  return Array.isArray(value) ? value[value.length - 1] : value;
 }
 
 export default function ProgramScreen() {
@@ -70,7 +72,26 @@ export default function ProgramScreen() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [navigationBusy, setNavigationBusy] = useState(false);
+  const [isTodayCompleted, setIsTodayCompleted] = useState(false);
   const navigationLock = useRef(false);
+  const lastAppliedDateParam = useRef(requestedDate);
+  const requestedProgramId = singleParam(params.activeProgramId) ?? null;
+  const lastAppliedProgramParam = useRef(requestedProgramId);
+
+  useEffect(() => {
+    if (
+      requestedDate !== lastAppliedDateParam.current &&
+      week.some((day) => day.dateKey === requestedDate)
+    ) {
+      setSelectedDateKey(requestedDate!);
+    }
+    lastAppliedDateParam.current = requestedDate;
+
+    if (requestedProgramId !== lastAppliedProgramParam.current) {
+      setActiveProgramId(requestedProgramId);
+    }
+    lastAppliedProgramParam.current = requestedProgramId;
+  }, [requestedDate, requestedProgramId, week]);
 
   const loadPrograms = useCallback(async () => {
     setProgramState("loading");
@@ -127,13 +148,71 @@ export default function ProgramScreen() {
   );
 
   useEffect(() => {
+    if (programState !== "success") return;
     setActiveProgramId((current) =>
       resolveActiveProgramId(dailyPrograms, current),
     );
-  }, [dailyPrograms]);
+  }, [dailyPrograms, programState]);
 
   const activeProgram =
     dailyPrograms.find((program) => program.id === activeProgramId) ?? null;
+
+  useEffect(() => {
+    if (!activeProgram) {
+      setIsTodayCompleted(false);
+      return;
+    }
+    let mounted = true;
+    void workoutRepository
+      .getCompletionForProgramDate(activeProgram.id, selectedDateKey)
+      .then((completion) => {
+        if (mounted) setIsTodayCompleted(Boolean(completion));
+      })
+      .catch(() => {
+        if (mounted) setIsTodayCompleted(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activeProgram, selectedDateKey]);
+
+  const handleResetToday = useCallback(() => {
+    if (!activeProgram) return;
+    const program = activeProgram;
+    const performReset = () => {
+      void workoutRepository
+        .resetCompletedSession(program.id, selectedDateKey)
+        .then(() => {
+          setIsTodayCompleted(false);
+          void loadChart();
+        })
+        .catch(() => {
+          const message = "Antrenman kaydı sıfırlanamadı. Lütfen tekrar deneyin.";
+          if (Platform.OS === "web") {
+            window.alert(message);
+          } else {
+            Alert.alert("Sıfırlanamadı", message);
+          }
+        });
+    };
+
+    const confirmMessage =
+      "Bugün için tamamlanan bu antrenman kaydı silinecek ve baştan başlatabileceksin. Emin misin?";
+
+    // react-native-web'de Alert.alert no-op — butonlu bir dialog hiç
+    // görünmüyor, onPress asla tetiklenmiyor. Web'de window.confirm'e
+    // düşülüyor, native'de normal Alert.alert kullanılıyor.
+    if (Platform.OS === "web") {
+      if (window.confirm(confirmMessage)) performReset();
+      return;
+    }
+
+    Alert.alert("Antrenmanı sıfırla", confirmMessage, [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Sıfırla", style: "destructive", onPress: performReset },
+    ]);
+  }, [activeProgram, loadChart, selectedDateKey]);
+
   const currentCompletionRecords = useMemo(
     () => completionRecords ?? [],
     [completionRecords],
@@ -297,6 +376,16 @@ export default function ProgramScreen() {
             )
           ) : null}
         </View>
+
+        {activeProgram && isTodayCompleted ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleResetToday}
+            style={({ pressed }) => [styles.resetLink, pressed && styles.pressed]}
+          >
+            <Text style={styles.resetLinkText}>Bugünkü antrenmanı sıfırla</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       <View style={styles.fixedFooter}>
@@ -398,6 +487,8 @@ const styles = StyleSheet.create({
   sectionTitle: { marginTop: 2, color: MainColors.mutedText, fontSize: 15, fontWeight: "700" },
   inlineEmpty: { color: MainColors.mutedText, fontSize: 14 },
   exerciseList: { gap: 10 },
+  resetLink: { alignSelf: "center", padding: 8 },
+  resetLinkText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
   stateCard: {
     minHeight: 118,
     padding: 18,

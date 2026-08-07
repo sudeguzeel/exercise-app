@@ -15,12 +15,14 @@ export type ProgramSelectionSearchParams = {
   sets?: string | string[];
   reps?: string | string[];
   restSeconds?: string | string[];
+  initialTrainingDay?: string | string[];
 };
 
 export function serializeProgramSelectionPayload(
   payload: ProgramSelectionPayload,
-): Record<keyof ProgramSelectionPayload, string> {
-  return {
+  initialTrainingDay?: TrainingDay | null,
+): Record<string, string> {
+  const params: Record<string, string> = {
     exerciseId: payload.exerciseId,
     sets: String(payload.sets),
     reps: String(payload.reps),
@@ -31,6 +33,30 @@ export function serializeProgramSelectionPayload(
       }),
     ),
   };
+  if (initialTrainingDay) params.initialTrainingDay = initialTrainingDay;
+  return params;
+}
+
+const TRAINING_DAYS: TrainingDay[] = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+export function parseInitialTrainingDay(
+  params: Pick<ProgramSelectionSearchParams, "initialTrainingDay">,
+): TrainingDay | null {
+  const rawValue = params.initialTrainingDay;
+  const value = (Array.isArray(rawValue)
+    ? rawValue[rawValue.length - 1]
+    : rawValue)?.trim() as
+    | TrainingDay
+    | undefined;
+  return value && TRAINING_DAYS.includes(value) ? value : null;
 }
 
 export function parseProgramSelectionParams(
