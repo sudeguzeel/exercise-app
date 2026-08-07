@@ -1,57 +1,79 @@
-import { Redirect } from "expo-router";
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
 
-import { AuthColors } from "@/shared/constants/theme";
+import { SplashScreen } from "@/shared/components/SplashScreen";
 import { supabase } from "@/shared/lib/supabase";
 
 type Destination = "/login" | "/(main)" | "/onboarding/personal-info";
 
+const MINIMUM_SPLASH_DURATION = 2200;
+const EXIT_ANIMATION_DURATION = 700;
+
 export default function Index() {
-  const [destination, setDestination] = useState<Destination | null>(null);
+  const [isLeavingSplash, setIsLeavingSplash] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    let exitTimeout: ReturnType<typeof setTimeout> | undefined;
 
-    supabase.auth.getSession().then(({ data }) => {
+    async function checkSession() {
+      const startedAt = Date.now();
+
+      const { data } = await supabase.auth.getSession();
+
       if (!mounted) {
         return;
       }
 
       const session = data.session;
 
+      let destination: Destination;
+
       if (!session) {
-        setDestination("/login");
+        destination = "/login";
+      } else {
+        const onboardingCompleted =
+          session.user.user_metadata?.onboarding_completed === true;
+
+        destination = onboardingCompleted
+          ? "/(main)"
+          : "/onboarding/personal-info";
+      }
+
+      const elapsed = Date.now() - startedAt;
+
+      const remaining = Math.max(
+        MINIMUM_SPLASH_DURATION - elapsed,
+        0,
+      );
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, remaining),
+      );
+
+      if (!mounted) {
         return;
       }
 
-      const onboardingCompleted =
-        session.user.user_metadata?.onboarding_completed === true;
+      setIsLeavingSplash(true);
 
-      setDestination(onboardingCompleted ? "/(main)" : "/onboarding/personal-info");
-    });
+      exitTimeout = setTimeout(() => {
+        if (mounted) {
+          router.replace(destination);
+        }
+      }, EXIT_ANIMATION_DURATION);
+    }
+
+    void checkSession();
 
     return () => {
       mounted = false;
+
+      if (exitTimeout) {
+        clearTimeout(exitTimeout);
+      }
     };
   }, []);
 
-  if (!destination) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator color={AuthColors.primaryDark} size="large" />
-      </View>
-    );
-  }
-
-  return <Redirect href={destination} />;
+  return <SplashScreen isLeaving={isLeavingSplash} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: AuthColors.background,
-  },
-});
