@@ -9,6 +9,16 @@ import type {
   PersistedProgramExercise,
   UserProgram,
 } from "@/features/programs/types";
+import type {
+  CompleteSetInput,
+  LocalCompletedExerciseRecord,
+  PendingWorkoutTarget,
+  WorkoutCompletion,
+  WorkoutExerciseSnapshot,
+  WorkoutPhase,
+  WorkoutRepository,
+  WorkoutSession,
+} from "@/features/workouts/types";
 import {
   areAllSetsCompleted,
   createWorkoutOccurrenceKey,
@@ -25,16 +35,6 @@ import {
   resolveRestDurationSeconds,
   toPendingWorkoutTarget,
 } from "@/features/workouts/workout-domain";
-import type {
-  CompleteSetInput,
-  LocalCompletedExerciseRecord,
-  PendingWorkoutTarget,
-  WorkoutCompletion,
-  WorkoutExerciseSnapshot,
-  WorkoutPhase,
-  WorkoutRepository,
-  WorkoutSession,
-} from "@/features/workouts/types";
 import {
   calculateStreakDays,
   type CompletedExerciseRecord,
@@ -616,18 +616,29 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         return saveSession(userId, reconciled);
       }
 
-      const [sessions, completions] = await Promise.all([
+            const [allSessions, completions] = await Promise.all([
         readSessions(userId),
         readList<WorkoutCompletion>(completionsKey(userId)),
       ]);
-      const candidates = sessions
+
+      const programCandidates = allSessions
         .filter(
           (session) =>
-            session.programId === programId && session.workoutDate === workoutDate,
+            session.programId === programId &&
+            session.workoutDate === workoutDate,
         )
-        .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
-      const resumable = candidates.find((session) => session.status !== "completed");
-      const completed = candidates.find((session) => session.status === "completed");
+        .sort((left, right) =>
+          right.startedAt.localeCompare(left.startedAt),
+        );
+
+      const programResumable = programCandidates.find(
+        (session) => session.status !== "completed",
+      );
+
+      const programCompleted = programCandidates.find(
+        (session) => session.status === "completed",
+      );
+
       const completedProgramExerciseIds = new Set(
         completions
           .filter(
@@ -643,37 +654,41 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
               .map((exercise) => exercise.programExerciseId),
           ),
       );
+
       const pendingExercises = program.exercises.filter(
         (exercise) => !completedProgramExerciseIds.has(exercise.id),
       );
 
-      if (pendingExercises.length === 0 && completed) {
-        return clone(completed);
+      if (pendingExercises.length === 0 && programCompleted) {
+        return clone(programCompleted);
       }
 
-      if (resumable) {
+      if (programResumable) {
         const existingSnapshots = new Map(
-          resumable.exercises.map((exercise) => [
+          programResumable.exercises.map((exercise) => [
             exercise.programExerciseId,
             exercise,
           ]),
         );
-        resumable.exercises = await Promise.all(
+
+        programResumable.exercises = await Promise.all(
           pendingExercises.map(
             async (exercise) =>
               existingSnapshots.get(exercise.id) ??
-              buildExerciseSnapshot(exercise),
+             buildExerciseSnapshot(exercise, programResumable.id)
           ),
         );
-        resumable.programName = program.name;
-        resumable.programTrainingDays = [...program.trainingDays];
-        if (resumable.status === "paused") {
-          resumable.status = "active";
-          resumable.lastResumedAt = new Date().toISOString();
-        }
-        return saveSession(userId, resumable);
-      }
 
+        programResumable.programName = program.name;
+        programResumable.programTrainingDays = [...program.trainingDays];
+
+        if (programResumable.status === "paused") {
+          programResumable.status = "active";
+          programResumable.lastResumedAt = new Date().toISOString();
+        }
+
+        return saveSession(userId, programResumable);
+      }
       const now = new Date().toISOString();
       const workoutSessionId = `ws-${Date.now().toString(36)}-${program.id}-${workoutDate}`;
       const exercises = await Promise.all(
