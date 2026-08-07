@@ -26,6 +26,8 @@ import {
   WorkoutRepositoryError,
 } from "@/features/workouts/workout-repository";
 import { MainColors } from "@/shared/constants/theme";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -49,6 +51,7 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function ProgramScreen() {
+  const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<{
     selectedDate?: string | string[];
     activeProgramId?: string | string[];
@@ -73,7 +76,10 @@ export default function ProgramScreen() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [isTodayCompleted, setIsTodayCompleted] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const navigationLock = useRef(false);
+  const hasSuccessfulProgramsRef = useRef(false);
+  const hasSuccessfulChartRef = useRef(false);
   const lastAppliedDateParam = useRef(requestedDate);
   const requestedProgramId = singleParam(params.activeProgramId) ?? null;
   const lastAppliedProgramParam = useRef(requestedProgramId);
@@ -97,6 +103,7 @@ export default function ProgramScreen() {
     setProgramState("loading");
     try {
       setPrograms(await programRepository.listPrograms());
+      hasSuccessfulProgramsRef.current = true;
       setProgramState("success");
     } catch {
       setProgramState("error");
@@ -112,9 +119,9 @@ export default function ProgramScreen() {
           week[week.length - 1].dateKey,
         ),
       );
+      hasSuccessfulChartRef.current = true;
       setChartState("success");
     } catch {
-      setCompletionRecords(null);
       setChartState("error");
     }
   }, [week]);
@@ -232,6 +239,38 @@ export default function ProgramScreen() {
     () => getWeeklyCompletionValues(week, currentCompletionRecords),
     [currentCompletionRecords, week],
   );
+  const errorVariant = isOffline ? "offline" : "service";
+  const hasProgramLoadError = programState === "error";
+  const hasChartLoadError = chartState === "error";
+  const hasLoadError = hasProgramLoadError || hasChartLoadError;
+  const canContinueOffline =
+    (!hasProgramLoadError || hasSuccessfulProgramsRef.current) &&
+    (!hasChartLoadError || hasSuccessfulChartRef.current);
+
+  const retryFailedLoads = useCallback(async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      const retries: Promise<void>[] = [];
+      if (hasProgramLoadError) retries.push(loadPrograms());
+      if (hasChartLoadError) retries.push(loadChart());
+      await Promise.all(retries);
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [
+    hasChartLoadError,
+    hasProgramLoadError,
+    isRetrying,
+    loadChart,
+    loadPrograms,
+  ]);
+
+  const continueOffline = useCallback(() => {
+    if (!canContinueOffline) return;
+    if (hasProgramLoadError) setProgramState("success");
+    if (hasChartLoadError) setChartState("success");
+  }, [canContinueOffline, hasChartLoadError, hasProgramLoadError]);
 
   const handleEdit = useCallback(
     (programId: string) => {
@@ -275,6 +314,29 @@ export default function ProgramScreen() {
     }
   }, [activeProgram, selectedDateKey]);
 
+  if (hasLoadError || isRetrying) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <DataErrorState
+          errorCode="FIT-SERVICE-PROGRAM"
+          onRetry={() => void retryFailedLoads()}
+          onSecondaryAction={
+            errorVariant === "offline"
+              ? canContinueOffline
+                ? continueOffline
+                : undefined
+              : () => router.replace("/(main)")
+          }
+          secondaryActionDisabled={
+            isRetrying || (errorVariant === "offline" && !canContinueOffline)
+          }
+          retrying={isRetrying}
+          variant={errorVariant}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -313,13 +375,8 @@ export default function ProgramScreen() {
           />
         </View>
 
-        {programState === "loading" ? (
+        {programState === "loading" && !hasSuccessfulProgramsRef.current ? (
           <SectionState loading text="Programlar yükleniyor…" />
-        ) : programState === "error" ? (
-          <SectionState
-            onRetry={() => void loadPrograms()}
-            text="Programlar alınamadı. Lütfen tekrar deneyin."
-          />
         ) : dailyPrograms.length > 0 ? (
           <View style={styles.programCards}>
             {dailyPrograms.map((program) => (
@@ -350,13 +407,8 @@ export default function ProgramScreen() {
           <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
         )}
 
-        {chartState === "loading" ? (
+        {chartState === "loading" && !hasSuccessfulChartRef.current ? (
           <SectionState loading text="Haftalık grafik yükleniyor…" />
-        ) : chartState === "error" ? (
-          <SectionState
-            onRetry={() => void loadChart()}
-            text="Haftalık grafik alınamadı."
-          />
         ) : (
           <WeeklyTrainingChart values={chartValues} />
         )}

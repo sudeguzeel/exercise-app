@@ -8,6 +8,8 @@ import {
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
 import { MainColors } from "@/shared/constants/theme";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import {
   EXERCISE_PAGE_SIZE,
   getBodyParts,
@@ -41,6 +43,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
+  const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
     editProgramId?: string | string[];
@@ -74,7 +77,9 @@ export default function ExerciseScreen() {
   );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
+  const [offlineErrorDismissed, setOfflineErrorDismissed] = useState(false);
   const requestIdRef = useRef(0);
+  const hasSuccessfulDataRef = useRef(false);
 
   useScrollToTop(listRef);
 
@@ -121,6 +126,7 @@ export default function ExerciseScreen() {
           append ? [...current, ...result.items] : result.items,
         );
         setHasMore(result.hasMore);
+        hasSuccessfulDataRef.current = true;
         setListState("success");
       } catch {
         if (requestIdRef.current === requestId) {
@@ -138,6 +144,16 @@ export default function ExerciseScreen() {
   useEffect(() => {
     void loadExercises(0, false);
   }, [loadExercises]);
+
+  useEffect(() => {
+    if (!isOffline) {
+      setOfflineErrorDismissed(false);
+      return;
+    }
+    if (!offlineErrorDismissed) {
+      setListState("error");
+    }
+  }, [isOffline, offlineErrorDismissed]);
 
   const handleExercisePress = useCallback(
     (exercise: ExerciseListItem) => {
@@ -168,6 +184,33 @@ export default function ExerciseScreen() {
     ),
     [handleExercisePress],
   );
+  const errorVariant = isOffline ? "offline" : "service";
+  const dismissOfflineError = hasSuccessfulDataRef.current
+    ? () => {
+        setOfflineErrorDismissed(true);
+        setListState("success");
+      }
+    : undefined;
+
+  if (listState === "error") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <DataErrorState
+          errorCode="FIT-SERVICE-EXERCISE"
+          onRetry={() => void loadExercises(0, false)}
+          onSecondaryAction={
+            errorVariant === "offline"
+              ? dismissOfflineError
+              : () => router.replace("/(main)")
+          }
+          secondaryActionDisabled={
+            errorVariant === "offline" && !hasSuccessfulDataRef.current
+          }
+          variant={errorVariant}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -267,24 +310,13 @@ export default function ExerciseScreen() {
                 );
               })}
             </ScrollView>
+
           </View>
         }
         ListEmptyComponent={
           listState === "loading" ? (
             <View style={styles.emptyState}>
               <ActivityIndicator color={MainColors.primary} size="large" />
-            </View>
-          ) : listState === "error" ? (
-            <View style={styles.emptyState}>
-              <Ionicons
-                name="alert-circle-outline"
-                size={28}
-                color={MainColors.mutedText}
-              />
-              <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
-                Egzersizler yüklenemedi. Bağlantınızı kontrol edip tekrar
-                deneyin.
-              </Text>
             </View>
           ) : (
             <View style={styles.emptyState}>
