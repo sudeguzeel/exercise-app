@@ -15,12 +15,41 @@ export default function RootLayout() {
 
   return (
     <OnboardingProvider>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <ThemeProvider
+        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+      >
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(main)" />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding/personal-info" />
+          <Stack.Screen
+            name="index"
+            options={{
+              animation: "none",
+            }}
+          />
+
+          <Stack.Screen
+            name="(auth)"
+            options={{
+              animation: "fade",
+              animationDuration: 650,
+            }}
+          />
+
+          <Stack.Screen
+            name="(main)"
+            options={{
+              animation: "fade",
+              animationDuration: 650,
+            }}
+          />
+
+          <Stack.Screen
+            name="onboarding/personal-info"
+            options={{
+              animation: "fade",
+              animationDuration: 650,
+            }}
+          />
+
           <Stack.Screen name="onboarding/fitness-experience" />
           <Stack.Screen name='onboarding/weekly-training-days' />
         </Stack>

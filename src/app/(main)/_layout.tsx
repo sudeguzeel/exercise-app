@@ -15,6 +15,7 @@ export default function MainLayout() {
         },
         tabBarStyle: {
           height: 74,
+          marginBottom: 8,
           paddingTop: 8,
           paddingBottom: 10,
           borderTopWidth: 1,

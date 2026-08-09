@@ -1,9 +1,13 @@
 import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashboard";
+import { toDateKey } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import { useConnectivity } from "@/shared/hooks/use-connectivity";
+import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -20,13 +24,25 @@ const TEXT = "#171A18";
 const MUTED = "#747774";
 const BORDER = "#E1E3DF";
 const MAX_CHART_VALUE = 20;
-const CHART_HEIGHT = 150;
+const CHART_HEIGHT = 120;
 
 export default function HomeScreen() {
+  const { trainingDays } = useOnboarding();
+  const { isOffline } = useConnectivity();
+  const scrollRef = useRef<ScrollView>(null);
   const [dashboard, setDashboard] = useState<HomeDashboard | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "success" | "error">(
     "loading",
   );
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<TrainingDay>(() => {
+    const dayIndex = (new Date().getDay() + 6) % 7;
+    const days: TrainingDay[] = [
+      "monday", "tuesday", "wednesday", "thursday",
+      "friday", "saturday", "sunday",
+    ];
+    return days[dayIndex];
+  });
 
   const loadDashboard = useCallback(async () => {
     setLoadState("loading");
@@ -51,8 +67,51 @@ export default function HomeScreen() {
       void loadDashboard();
     }, [loadDashboard]),
   );
+  useScrollToTop(scrollRef);
 
-  if (loadState === "loading" || !dashboard) {
+  const retryDashboard = useCallback(async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      await loadDashboard();
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [isRetrying, loadDashboard]);
+
+  const displayedTargetDays = useMemo(() => {
+    if (!dashboard) return [];
+    const today = toDateKey(new Date());
+    const realTargets = new Map(dashboard.targetDays.map((day) => [day.id, day]));
+
+    return dashboard.dailyTotals.map((day) => {
+      const realTarget = realTargets.get(day.id);
+      if (realTarget) {
+        return realTarget;
+      }
+
+      const isOnboardingTarget = trainingDays.includes(day.id);
+      if (!isOnboardingTarget) {
+        return { ...day, status: "rest" as const };
+      }
+
+      const status =
+        day.date > today
+          ? ("upcoming" as const)
+          : day.date < today
+            ? ("missed" as const)
+            : ("today" as const);
+      return { ...day, status };
+    });
+  }, [dashboard, trainingDays]);
+
+  const selectedDayProgram = dashboard?.programExercisesByDay[selectedDay] ?? [];
+  const selectedDayDetails = displayedTargetDays.find(
+    (day) => day.id === selectedDay,
+  );
+  const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
+
+  if (loadState === "loading" && !dashboard && !isRetrying) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centerState}>
@@ -62,22 +121,26 @@ export default function HomeScreen() {
     );
   }
 
-  if (loadState === "error") {
+  if (loadState === "error" || isRetrying || !dashboard) {
+    const variant = isOffline ? "offline" : "service";
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
-        <View style={styles.centerState}>
-          <Ionicons name="alert-circle-outline" size={32} color={MUTED} />
-          <Text style={styles.errorText}>
-            Bilgiler yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => void loadDashboard()}
-            style={styles.retryButton}
-          >
-            <Text style={styles.retryButtonText}>Yeniden dene</Text>
-          </Pressable>
-        </View>
+        <DataErrorState
+          errorCode="FIT-SERVICE-HOME"
+          onRetry={() => void retryDashboard()}
+          onSecondaryAction={
+            variant === "offline"
+              ? dashboard
+                ? () => setLoadState("success")
+                : undefined
+              : () => router.replace("/(main)")
+          }
+          secondaryActionDisabled={
+            isRetrying || (variant === "offline" && !dashboard)
+          }
+          retrying={isRetrying}
+          variant={variant}
+        />
       </SafeAreaView>
     );
   }
@@ -85,6 +148,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -128,7 +192,7 @@ export default function HomeScreen() {
             {dashboard.categoryTotals.map((area) => (
               <View key={area.id} style={styles.bodyAreaItem}>
                 <View style={styles.bodyAreaIcon}>
-                  <Ionicons name={area.icon} size={27} color={TEXT} />
+                  <Ionicons name={area.icon} size={22} color={TEXT} />
                 </View>
                 <Text style={styles.bodyAreaLabel}>{area.name}</Text>
                 <Text style={styles.bodyAreaValue}>{area.value}</Text>
@@ -140,15 +204,21 @@ export default function HomeScreen() {
         )}
 
         <SectionTitle>BU HAFTAKİ HEDEF</SectionTitle>
-        {dashboard.targetDays.length > 0 ? (
-          <View style={styles.targetDaysRow}>
-            {dashboard.targetDays.map((day) => (
-              <View
+        {displayedTargetDays.length > 0 ? (
+        <ScrollView
+          horizontal
+          contentContainerStyle={styles.targetDaysRow}
+          showsHorizontalScrollIndicator={false}
+        >
+            {displayedTargetDays.map((day) => (
+              <Pressable
                 key={day.id}
+                onPress={() => setSelectedDay(day.id)}
                 style={[
-                  styles.targetDay,
+                  styles.weekDayCard,
                   day.status === "completed" && styles.targetDayCompleted,
                   day.status === "missed" && styles.targetDayMissed,
+                  day.id === selectedDay && styles.targetDaySelected,
                 ]}
               >
                 <Text
@@ -172,9 +242,9 @@ export default function HomeScreen() {
                     {day.status === "rest" ? "Dinlenme" : "Bekliyor"}
                   </Text>
                 )}
-              </View>
+              </Pressable>
             ))}
-          </View>
+          </ScrollView>
         ) : (
           <View style={styles.emptyTargetCard}>
             <Text style={styles.emptyTargetText}>
@@ -224,23 +294,44 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <SectionTitle>BUGÜNKÜ PROGRAM</SectionTitle>
+        <SectionTitle>{`${selectedDayLabel} PROGRAMI`}</SectionTitle>
         <View style={styles.programCard}>
-          {dashboard.isRestDay ? (
-            <Text style={styles.restDayText}>Bugün dinlenme günü</Text>
+          {selectedDayProgram.length === 0 ? (
+            <View style={styles.createProgramState}>
+              <Text style={styles.restDayText}>Bu gün için program bulunmuyor.</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: "/exercise",
+                    params: { initialTrainingDay: selectedDay },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.createProgramButton,
+                  pressed && styles.exerciseRowPressed,
+                ]}
+              >
+                <Ionicons name="add-circle-outline" size={21} color="#111111" />
+                <Text style={styles.createProgramButtonText}>Program Oluştur</Text>
+              </Pressable>
+            </View>
           ) : (
-            dashboard.todayProgram.map((plannedExercise, index) => (
+            selectedDayProgram.map((plannedExercise, index) => (
               <Pressable
                 key={plannedExercise.id}
                 onPress={() =>
                   router.push({
-                    pathname: "/exercise-detail",
-                    params: { exerciseId: plannedExercise.exerciseId },
+                    pathname: "/(main)/program",
+                    params: {
+                      selectedDate: selectedDayDetails?.date,
+                      activeProgramId: plannedExercise.programId,
+                    },
                   })
                 }
                 style={({ pressed }) => [
                   styles.exerciseRow,
-                  index < dashboard.todayProgram.length - 1 &&
+                  index < selectedDayProgram.length - 1 &&
                     styles.exerciseRowDivider,
                   pressed && styles.exerciseRowPressed,
                 ]}
@@ -379,8 +470,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   bodyAreasCard: {
-    paddingHorizontal: 8,
-    paddingVertical: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 22,
@@ -389,39 +480,42 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   bodyAreaItem: {
-    width: "25%",
+    width: "50%",
+    minHeight: 44,
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
+    paddingHorizontal: 5,
+    paddingVertical: 4,
   },
   bodyAreaIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#F2F3EA",
   },
   bodyAreaLabel: {
-    minHeight: 34,
-    marginTop: 7,
+    flex: 1,
+    marginLeft: 8,
     color: TEXT,
     fontSize: 12,
-    lineHeight: 16,
-    textAlign: "center",
+    lineHeight: 15,
   },
   bodyAreaValue: {
+    marginLeft: 5,
+    marginRight: 4,
     color: GREEN,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "800",
   },
   targetDaysRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 10,
+    paddingRight: 6,
   },
-  targetDay: {
-    minWidth: 96,
-    flexGrow: 1,
+  weekDayCard: {
+    width: 112,
     minHeight: 82,
     paddingHorizontal: 16,
     borderWidth: 1,
@@ -437,6 +531,10 @@ const styles = StyleSheet.create({
   targetDayMissed: {
     borderColor: "#D94A4A",
     backgroundColor: "#D94A4A",
+  },
+  targetDaySelected: {
+    borderWidth: 2,
+    borderColor: TEXT,
   },
   targetDayLabel: {
     color: MUTED,
@@ -475,15 +573,15 @@ const styles = StyleSheet.create({
   },
   chartCard: {
     paddingHorizontal: 10,
-    paddingTop: 18,
-    paddingBottom: 14,
+    paddingTop: 14,
+    paddingBottom: 10,
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 22,
     backgroundColor: "#FFFFFF",
   },
   chart: {
-    height: 205,
+    height: 170,
     position: "relative",
     paddingLeft: 30,
   },
@@ -559,11 +657,30 @@ const styles = StyleSheet.create({
     opacity: 0.65,
   },
   restDayText: {
-    paddingVertical: 26,
     color: MUTED,
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
+  },
+  createProgramState: {
+    paddingVertical: 22,
+    alignItems: "center",
+  },
+  createProgramButton: {
+    minHeight: 48,
+    marginTop: 14,
+    paddingHorizontal: 22,
+    borderRadius: 17,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: GREEN,
+  },
+  createProgramButtonText: {
+    color: "#111111",
+    fontSize: 15,
+    fontWeight: "900",
   },
   exerciseTextColumn: {
     flex: 1,
