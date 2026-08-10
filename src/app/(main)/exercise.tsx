@@ -167,7 +167,11 @@ export default function ExerciseScreen() {
           ...(isProgramEditSelection
             ? { selectionMode: "program-edit", editProgramId, selectedDate }
             : isNewProgramSelection
-              ? { selectionMode: "new-program", selectedDate }
+              ? {
+                  selectionMode: "new-program",
+                  selectedDate,
+                  ...(initialTrainingDay ? { initialTrainingDay } : {}),
+                }
               : {}),
         },
       });
@@ -232,7 +236,39 @@ export default function ExerciseScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
           <View style={styles.profileRow}>
-  {isProgramEditSelection ? (
+  {isNewProgramSelection ? (
+    <View style={styles.programActionRow}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Programlara geri dön"
+        onPress={() =>
+          router.replace({
+            pathname: "/(main)/program" as never,
+            params: selectedDate ? { selectedDate } : {},
+          })
+        }
+        style={styles.profileButton}
+      >
+        <Ionicons
+          name="chevron-back"
+          size={25}
+          color={MainColors.text}
+        />
+      </Pressable>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Favorileri aç"
+        onPress={() => router.push("/(main)/favorites" as never)}
+        style={styles.profileButton}
+      >
+        <Ionicons
+          name="heart-outline"
+          size={25}
+          color={MainColors.text}
+        />
+      </Pressable>
+    </View>
+  ) : isProgramEditSelection ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Program düzenlemeye geri dön"
@@ -245,7 +281,7 @@ export default function ExerciseScreen() {
           },
         })
       }
-      style={styles.profileButton}
+      style={[styles.profileButton, styles.programEditBackButton]}
     >
       <Ionicons
         name="chevron-back"
@@ -410,6 +446,15 @@ const styles = StyleSheet.create({
     backgroundColor: MainColors.surface,
     alignItems: "center",
     justifyContent: "center",
+  },
+  programActionRow: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  programEditBackButton: {
+    alignSelf: "flex-start",
   },
   title: {
     marginTop: 36,

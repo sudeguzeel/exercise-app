@@ -352,7 +352,7 @@ export default function ExerciseDetailScreen() {
       router.push({
         pathname: "/new-program",
         params: {
-          ...serializeProgramSelectionPayload(payload),
+          ...serializeProgramSelectionPayload(payload, initialTrainingDay),
           ...(normalizedSelectedDate
             ? { selectedDate: normalizedSelectedDate }
             : {}),

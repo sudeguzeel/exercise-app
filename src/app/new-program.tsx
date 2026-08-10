@@ -235,20 +235,33 @@ export default function NewProgramScreen() {
                       HANGİ GÜNLER YAPILACAK?
                     </Text>
                     <View style={styles.dayGrid}>
-                      {TRAINING_DAY_OPTIONS.map((day) => (
-                        <SelectionChip
-                          accessibilityLabel={day.label}
-                          compact
-                          key={day.id}
-                          label={day.shortLabel}
-                          onPress={() =>
-                            setSelectedDays((currentSelection) =>
-                              toggleSelection(currentSelection, day.id),
-                            )
-                          }
-                          selected={selectedDays.has(day.id)}
-                        />
-                      ))}
+                      {initialTrainingDay
+                        ? TRAINING_DAY_OPTIONS.filter(
+                            (day) => day.id === initialTrainingDay,
+                          ).map((day) => (
+                            <View
+                              accessibilityLabel={`${day.label}, seçili gün`}
+                              accessible
+                              key={day.id}
+                              style={styles.fixedDayChip}
+                            >
+                              <Text style={styles.fixedDayText}>{day.shortLabel}</Text>
+                            </View>
+                          ))
+                        : TRAINING_DAY_OPTIONS.map((day) => (
+                            <SelectionChip
+                              accessibilityLabel={day.label}
+                              compact
+                              key={day.id}
+                              label={day.shortLabel}
+                              onPress={() =>
+                                setSelectedDays((currentSelection) =>
+                                  toggleSelection(currentSelection, day.id),
+                                )
+                              }
+                              selected={selectedDays.has(day.id)}
+                            />
+                          ))}
                     </View>
                   </View>
 
@@ -597,6 +610,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
+  },
+  fixedDayChip: {
+    minWidth: 92,
+    minHeight: 46,
+    paddingHorizontal: 20,
+    borderWidth: 1.5,
+    borderColor: MainColors.primaryBright,
+    borderRadius: 18,
+    backgroundColor: MainColors.primaryBright,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fixedDayText: {
+    color: MainColors.text,
+    fontSize: 15,
+    fontWeight: "800",
   },
   selectedDayCard: {
     minHeight: 64,
