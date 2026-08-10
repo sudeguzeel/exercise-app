@@ -14,6 +14,7 @@ import {
 import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
 import { MainColors } from "@/shared/constants/theme";
+import { useFavorites } from "@/providers/FavoritesContext";
 import {
   getExerciseDetail,
   type ExerciseDetail,
@@ -121,6 +122,7 @@ function MetricCard({
 }
 
 export default function ExerciseDetailScreen() {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const searchParams = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
     editProgramId?: string | string[];
@@ -405,17 +407,37 @@ export default function ExerciseDetailScreen() {
               </Pressable>
 
               <Pressable
-                accessibilityHint="Profil ekranı henüz mevcut değil"
-                accessibilityLabel="Profil"
+                accessibilityLabel={
+                  exercise && isFavorite(exercise.id)
+                    ? "Favorilerden çıkar"
+                    : "Favorilere ekle"
+                }
                 accessibilityRole="button"
-                accessibilityState={{ disabled: true }}
-                disabled
-                style={styles.roundButton}
+                accessibilityState={{
+                  disabled: !exercise,
+                  selected: exercise ? isFavorite(exercise.id) : false,
+                }}
+                disabled={!exercise}
+                onPress={() => {
+                  if (exercise) toggleFavorite(exercise);
+                }}
+                style={({ pressed }) => [
+                  styles.roundButton,
+                  pressed && styles.buttonPressed,
+                ]}
               >
                 <Ionicons
-                  name="person-outline"
+                  name={
+                    exercise && isFavorite(exercise.id)
+                      ? "heart"
+                      : "heart-outline"
+                  }
                   size={25}
-                  color={MainColors.text}
+                  color={
+                    exercise && isFavorite(exercise.id)
+                      ? MainColors.primary
+                      : MainColors.text
+                  }
                 />
               </Pressable>
             </View>

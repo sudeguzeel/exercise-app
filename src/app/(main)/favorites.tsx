@@ -2,6 +2,7 @@ import { ExerciseCard } from "@/features/exercises/components/exercise-card";
 import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import { DataErrorState } from "@/shared/components/data-error-state";
 import { MainColors } from "@/shared/constants/theme";
+import { useFavorites } from "@/providers/FavoritesContext";
 import { searchExercises } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -20,11 +21,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type FavoritesState = "loading" | "success" | "error";
 
 export default function FavoritesScreen() {
-  const [favorites, setFavorites] = useState<ExerciseListItem[]>([]);
+  const {
+    favorites,
+    initializeFavorites,
+    isInitialized,
+    toggleFavorite,
+  } = useFavorites();
   const [state, setState] = useState<FavoritesState>("loading");
   const [retrying, setRetrying] = useState(false);
 
   const loadFavoritesPreview = useCallback(async (retry = false) => {
+    if (isInitialized) {
+      setState("success");
+      return;
+    }
+
     if (retry) setRetrying(true);
     else setState("loading");
 
@@ -32,14 +43,14 @@ export default function FavoritesScreen() {
       // Favori servisi hazır olana kadar katalogdan gelen bu kayıtlar yalnızca
       // ekran tasarımını göstermek için kullanılan geçici önizleme verisidir.
       const result = await searchExercises({ offset: 0, limit: 5 });
-      setFavorites(result.items);
+      initializeFavorites(result.items);
       setState("success");
     } catch {
       setState("error");
     } finally {
       setRetrying(false);
     }
-  }, []);
+  }, [initializeFavorites, isInitialized]);
 
   useEffect(() => {
     void loadFavoritesPreview();
@@ -52,22 +63,16 @@ export default function FavoritesScreen() {
     });
   }, []);
 
-  const removeFavorite = useCallback((exercise: ExerciseListItem) => {
-    setFavorites((current) =>
-      current.filter((favorite) => favorite.id !== exercise.id),
-    );
-  }, []);
-
   const renderFavorite = useCallback<ListRenderItem<ExerciseListItem>>(
     ({ item }) => (
       <ExerciseCard
         exercise={item}
         favorited
-        onFavoritePress={removeFavorite}
+        onFavoritePress={toggleFavorite}
         onPress={openExercise}
       />
     ),
-    [openExercise, removeFavorite],
+    [openExercise, toggleFavorite],
   );
 
   if (state === "error") {
@@ -113,18 +118,6 @@ export default function FavoritesScreen() {
           renderItem={renderFavorite}
           keyExtractor={(exercise) => exercise.id}
           ItemSeparatorComponent={Separator}
-          ListHeaderComponent={
-            favorites.length ? (
-              <View style={styles.intro}>
-                <Text style={styles.introText}>
-                  Favori egzersizlerini görüntüle ve dilediğin zaman detaylarına göz at.
-                </Text>
-                <Text style={styles.previewNote}>
-                  Bu liste favori altyapısı tamamlanana kadar geçici önizleme verisi gösterir.
-                </Text>
-              </View>
-            ) : null
-          }
           ListEmptyComponent={<EmptyFavorites />}
           contentContainerStyle={[
             styles.listContent,
@@ -200,22 +193,6 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   emptyListContent: { flexGrow: 1 },
-  intro: { paddingTop: 4, paddingBottom: 22, alignItems: "center" },
-  introText: {
-    maxWidth: 440,
-    color: MainColors.mutedText,
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-  },
-  previewNote: {
-    marginTop: 8,
-    color: MainColors.primary,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "700",
-    textAlign: "center",
-  },
   separator: { height: 14 },
   emptyState: {
     flex: 1,
