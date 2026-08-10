@@ -41,6 +41,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 type LoadState = "loading" | "success" | "not-found" | "error";
 
+const REMINDER_TIMES = Array.from(
+  { length: 24 },
+  (_, hour) => `${String(hour).padStart(2, "0")}:00`,
+);
+
 function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -67,6 +72,9 @@ export default function ProgramEditScreen() {
   const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
   const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTimes, setReminderTimes] = useState(["18:00"]);
+  const [reminderListOpen, setReminderListOpen] = useState<number | null>(null);
   const mutationLock = useRef(false);
   const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -351,6 +359,105 @@ export default function ProgramEditScreen() {
             <Text style={styles.validationText}>En az bir gün seçmelisiniz.</Text>
           ) : null}
 
+          <View style={styles.reminderCard}>
+            <Pressable
+              accessibilityLabel="Antrenman hatırlatıcısını aç veya kapat"
+              accessibilityRole="switch"
+              accessibilityState={{ checked: reminderEnabled }}
+              onPress={() =>
+                setReminderEnabled((enabled) => {
+                  if (enabled) setReminderListOpen(null);
+                  return !enabled;
+                })
+              }
+              style={({ pressed }) => [styles.reminderHeader, pressed && styles.pressed]}
+            >
+              <Ionicons name="notifications-outline" size={22} color={MainColors.primary} />
+              <View style={styles.reminderTitleContent}>
+                <Text style={styles.reminderTitle}>Antrenman Hatırlatıcısı</Text>
+                <Text style={styles.reminderDescription}>Antrenman saatinde bildirim al.</Text>
+              </View>
+              <View style={styles.reminderToggleLabel}>
+                <View style={[styles.reminderStatusDot, reminderEnabled && styles.reminderStatusDotActive]} />
+                <Text style={[styles.reminderToggleText, reminderEnabled && styles.reminderToggleTextActive]}>
+                  {reminderEnabled ? "Açık" : "Aç/Kapat"}
+                </Text>
+              </View>
+            </Pressable>
+
+            {reminderEnabled ? (
+              <View style={styles.reminderExpanded}>
+                <Text style={styles.reminderTimeLabel}>Hatırlatma saatleri</Text>
+                {reminderTimes.map((reminderTime, index) => (
+                  <View key={`${index}-${reminderTime}`}>
+                    <View style={styles.reminderTimeRow}>
+                      <Pressable
+                        accessibilityLabel={`Hatırlatma saati ${reminderTime}. Saat listesini aç`}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: reminderListOpen === index }}
+                        onPress={() => setReminderListOpen((openIndex) => openIndex === index ? null : index)}
+                        style={({ pressed }) => [styles.selectedReminderTime, pressed && styles.pressed]}
+                      >
+                        <Ionicons name="time-outline" size={21} color={MainColors.primary} />
+                        <Text style={styles.selectedReminderTimeText}>{reminderTime}</Text>
+                        <Ionicons name={reminderListOpen === index ? "chevron-up" : "chevron-down"} size={19} color={MainColors.mutedText} />
+                      </Pressable>
+                      {index > 0 ? (
+                        <Pressable
+                          accessibilityLabel={`${reminderTime} hatırlatmasını kaldır`}
+                          accessibilityRole="button"
+                          onPress={() => {
+                            setReminderTimes((times) => times.filter((_, itemIndex) => itemIndex !== index));
+                            setReminderListOpen(null);
+                          }}
+                          style={({ pressed }) => [styles.removeReminderButton, pressed && styles.pressed]}
+                        >
+                          <Ionicons name="close" size={19} color={MainColors.mutedText} />
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    {reminderListOpen === index ? (
+                      <ScrollView nestedScrollEnabled showsVerticalScrollIndicator style={styles.reminderTimes}>
+                        {REMINDER_TIMES.filter((time) => time === reminderTime || !reminderTimes.includes(time)).map((time) => {
+                          const selected = reminderTime === time;
+                          return (
+                            <Pressable
+                              accessibilityRole="button"
+                              accessibilityState={{ selected }}
+                              key={time}
+                              onPress={() => {
+                                setReminderTimes((times) => times.map((currentTime, itemIndex) => itemIndex === index ? time : currentTime));
+                                setReminderListOpen(null);
+                              }}
+                              style={({ pressed }) => [styles.reminderTimeOption, selected && styles.reminderTimeOptionSelected, pressed && styles.pressed]}
+                            >
+                              <Text style={[styles.reminderTimeOptionText, selected && styles.reminderTimeOptionTextSelected]}>{time}</Text>
+                            </Pressable>
+                          );
+                        })}
+                      </ScrollView>
+                    ) : null}
+                  </View>
+                ))}
+                {reminderTimes.length < REMINDER_TIMES.length ? (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      const nextTime = REMINDER_TIMES.find((time) => !reminderTimes.includes(time));
+                      if (!nextTime) return;
+                      setReminderTimes((times) => [...times, nextTime]);
+                      setReminderListOpen(reminderTimes.length);
+                    }}
+                    style={({ pressed }) => [styles.addReminderButton, pressed && styles.pressed]}
+                  >
+                    <Ionicons name="add" size={19} color={MainColors.primary} />
+                    <Text style={styles.addReminderButtonText}>Saat ekle</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : null}
+          </View>
+
           <FormLabel>EGZERSİZLER</FormLabel>
           <View style={styles.exerciseList}>
             {draft.exercises.map((exercise, index) => (
@@ -524,6 +631,29 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   fixedDayText: { color: MainColors.text, fontSize: 15, fontWeight: "700" },
+  reminderCard: { marginTop: 20, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 20, backgroundColor: MainColors.surface, overflow: "hidden" },
+  reminderHeader: { minHeight: 78, paddingHorizontal: 18, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+  reminderTitleContent: { flex: 1 },
+  reminderTitle: { color: MainColors.text, fontSize: 15, fontWeight: "800" },
+  reminderDescription: { marginTop: 3, color: MainColors.mutedText, fontSize: 12 },
+  reminderToggleLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
+  reminderStatusDot: { width: 11, height: 11, borderWidth: 1.5, borderColor: MainColors.mutedText, borderRadius: 6 },
+  reminderStatusDotActive: { borderColor: MainColors.primary, backgroundColor: MainColors.primary },
+  reminderToggleText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
+  reminderToggleTextActive: { color: MainColors.primary },
+  reminderExpanded: { paddingHorizontal: 18, paddingBottom: 16, borderTopWidth: 1, borderTopColor: MainColors.subtleBorder },
+  reminderTimeLabel: { marginTop: 14, color: MainColors.mutedText, fontSize: 13, fontWeight: "800" },
+  reminderTimeRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  selectedReminderTime: { flex: 1, minHeight: 48, flexDirection: "row", alignItems: "center", gap: 9 },
+  selectedReminderTimeText: { flex: 1, color: MainColors.text, fontSize: 16, fontWeight: "800" },
+  removeReminderButton: { width: 38, height: 38, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  reminderTimes: { maxHeight: 240, marginBottom: 2, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 14 },
+  reminderTimeOption: { width: "100%", minHeight: 46, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: MainColors.subtleBorder, alignItems: "center", justifyContent: "center" },
+  reminderTimeOptionSelected: { backgroundColor: MainColors.primaryBright },
+  reminderTimeOptionText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
+  reminderTimeOptionTextSelected: { color: MainColors.text, fontWeight: "900" },
+  addReminderButton: { minHeight: 44, marginTop: 10, borderWidth: 1.5, borderStyle: "dashed", borderColor: MainColors.border, borderRadius: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
+  addReminderButtonText: { color: MainColors.primary, fontSize: 14, fontWeight: "800" },
   choiceChip: {
     minHeight: 44,
     maxWidth: "100%",
