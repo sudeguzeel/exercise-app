@@ -7,8 +7,8 @@ import {
   parseInitialTrainingDay,
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
-import { MainColors } from "@/shared/constants/theme";
 import { DataErrorState } from "@/shared/components/data-error-state";
+import { MainColors } from "@/shared/constants/theme";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import {
   EXERCISE_PAGE_SIZE,
@@ -65,6 +65,7 @@ export default function ExerciseScreen() {
   const isProgramEditSelection =
     selectionMode === "program-edit" && Boolean(editProgramId);
   const listRef = useRef<FlatList<ExerciseListItem>>(null);
+  const isNewProgramSelection = selectionMode === "new-program";
   const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -163,12 +164,13 @@ export default function ExerciseScreen() {
           exerciseId: exercise.id,
           ...(isProgramEditSelection
             ? { selectionMode: "program-edit", editProgramId, selectedDate }
-            : {}),
-          ...(initialTrainingDay ? { initialTrainingDay } : {}),
+            : isNewProgramSelection
+              ? { selectionMode: "new-program", selectedDate }
+              : {}),
         },
       });
     },
-    [editProgramId, initialTrainingDay, isProgramEditSelection, selectedDate],
+    [editProgramId, initialTrainingDay, isNewProgramSelection, isProgramEditSelection, selectedDate],
   );
 
   const handleEndReached = useCallback(() => {

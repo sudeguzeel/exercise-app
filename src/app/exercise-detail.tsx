@@ -346,6 +346,19 @@ export default function ExerciseDetailScreen() {
       return;
     }
 
+    if (normalizedSelectionMode === "new-program") {
+      router.push({
+        pathname: "/new-program",
+        params: {
+          ...serializeProgramSelectionPayload(payload),
+          ...(normalizedSelectedDate
+            ? { selectedDate: normalizedSelectedDate }
+            : {}),
+        },
+      });
+      return;
+    }
+
     router.push({
       pathname: "/program-selection",
       params: serializeProgramSelectionPayload(payload, initialTrainingDay),
@@ -796,7 +809,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   mediaCard: {
-    height: 240,
     marginTop: 28,
     borderWidth: 1.5,
     borderColor: MainColors.border,
@@ -826,23 +838,25 @@ const styles = StyleSheet.create({
   },
   mediaImage: {
     width: "100%",
-    height: "100%",
+    height: 240,
   },
   mediaPlaceholder: {
-    flex: 1,
+    height: 240,
     alignItems: "center",
     justifyContent: "center",
   },
   mediaMuscleInfo: {
-    position: "absolute",
-    right: 18,
-    bottom: 18,
-    zIndex: 2,
-    width: "27%",
-    paddingLeft: 10,
+    width: "100%",
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 18,
+    flexDirection: "row",
     gap: 12,
   },
   mediaMuscleInfoRow: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: "center",
     gap: 3,
   },
   mediaMuscleInfoLabel: {
@@ -851,18 +865,21 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: "600",
     letterSpacing: 0.15,
+    textAlign: "center",
   },
   mediaMuscleInfoPrimaryValue: {
     color: MainColors.primary,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "900",
+    textAlign: "center",
   },
   mediaMuscleInfoValue: {
     color: MainColors.text,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "800",
+    textAlign: "center",
   },
   title: {
     marginTop: 26,
@@ -934,7 +951,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 4,
   },
   metricControlButton: {
     width: 26,
@@ -946,7 +963,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   metricValue: {
-    width: 42,
+    width: 32,
     color: MainColors.text,
     fontSize: 20,
     fontWeight: "900",
@@ -1012,7 +1029,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 4,
     overflow: "hidden",
   },
   customControlButton: {
@@ -1025,7 +1042,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   customInput: {
-    width: 42,
+    width: 32,
     minWidth: 0,
     height: "100%",
     paddingHorizontal: 0,
