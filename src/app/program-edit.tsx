@@ -1,4 +1,5 @@
 import { EditableExerciseRow } from "@/features/programs/components/editable-exercise-row";
+import { ProgramEditFeedbackDialog } from "@/features/programs/components/program-edit-feedback-dialog";
 import {
   clearProgramEditDraft,
   createProgramEditDraft,
@@ -13,6 +14,7 @@ import {
   toggleSelection,
   TRAINING_DAY_OPTIONS,
 } from "@/features/programs/program-domain";
+import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import {
   isValidProgramId,
   programRepository,
@@ -22,7 +24,7 @@ import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -50,13 +52,30 @@ export default function ProgramEditScreen() {
   }>();
   const programId = singleParam(params.programId)?.trim() ?? "";
   const selectedDate = singleParam(params.selectedDate);
+  const selectedTrainingDay = useMemo(
+    () =>
+      selectedDate
+        ? (getCurrentWeek().find((day) => day.dateKey === selectedDate)?.day ?? null)
+        : null,
+    [selectedDate],
+  );
   const [draft, setDraft] = useState<ProgramEditDraft | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [deleteDialogVisible, setDeleteDialogVisible] = useState(false);
+  const [saveSuccessVisible, setSaveSuccessVisible] = useState(false);
   const [nameTouched, setNameTouched] = useState(false);
   const mutationLock = useRef(false);
+  const navigationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (navigationTimerRef.current) clearTimeout(navigationTimerRef.current);
+    },
+    [],
+  );
 
   const loadProgram = useCallback(async () => {
     if (!isValidProgramId(programId)) {
@@ -183,9 +202,11 @@ export default function ProgramEditScreen() {
         exercises: draft.exercises,
       });
       clearProgramEditDraft(draft.programId);
-      Alert.alert("Değişiklikler kaydedildi", "Programınız başarıyla güncellendi.", [
-        { text: "Tamam", onPress: () => returnToPrograms(updated.id) },
-      ]);
+      setSaveSuccessVisible(true);
+      navigationTimerRef.current = setTimeout(
+        () => returnToPrograms(updated.id),
+        1600,
+      );
     } catch (error) {
       Alert.alert(
         "Program güncellenemedi",
@@ -201,39 +222,30 @@ export default function ProgramEditScreen() {
 
   const confirmDelete = useCallback(() => {
     if (!draft || isSaving || isDeleting) return;
-    Alert.alert(
-      "Programı sil",
-      `“${draft.name.trim() || "Bu program"}” kalıcı olarak silinsin mi?`,
-      [
-        { text: "İptal", style: "cancel" },
-        {
-          text: "Programı sil",
-          style: "destructive",
-          onPress: () => {
-            if (mutationLock.current) return;
-            mutationLock.current = true;
-            setIsDeleting(true);
-            void programRepository
-              .deleteProgram(draft.programId)
-              .then(() => {
-                clearProgramEditDraft(draft.programId);
-                returnToPrograms();
-              })
-              .catch((error: unknown) => {
-                Alert.alert(
-                  "Program silinemedi",
-                  error instanceof ProgramRepositoryError
-                    ? error.message
-                    : "Bağlantınızı kontrol edip tekrar deneyin.",
-                );
-                mutationLock.current = false;
-              })
-              .finally(() => setIsDeleting(false));
-          },
-        },
-      ],
-    );
-  }, [draft, isDeleting, isSaving, returnToPrograms]);
+    setDeleteDialogVisible(true);
+  }, [draft, isDeleting, isSaving]);
+
+  const deleteProgram = useCallback(async () => {
+    if (!draft || mutationLock.current) return;
+    mutationLock.current = true;
+    setIsDeleting(true);
+    try {
+      await programRepository.deleteProgram(draft.programId);
+      clearProgramEditDraft(draft.programId);
+      setDeleteDialogVisible(false);
+      returnToPrograms();
+    } catch (error) {
+      Alert.alert(
+        "Program silinemedi",
+        error instanceof ProgramRepositoryError
+          ? error.message
+          : "Bağlantınızı kontrol edip tekrar deneyin.",
+      );
+      mutationLock.current = false;
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [draft, returnToPrograms]);
 
   if (loadState !== "success" || !draft) {
     return (
@@ -267,6 +279,15 @@ export default function ProgramEditScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ProgramEditFeedbackDialog
+        busy={isDeleting}
+        mode="delete"
+        onCancel={() => setDeleteDialogVisible(false)}
+        onConfirm={() => void deleteProgram()}
+        programName={draft.name.trim()}
+        visible={deleteDialogVisible}
+      />
+      <ProgramEditFeedbackDialog mode="saved" visible={saveSuccessVisible} />
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -300,18 +321,31 @@ export default function ProgramEditScreen() {
 
           <FormLabel>HANGİ GÜNLER YAPILACAK?</FormLabel>
           <View style={styles.dayGrid}>
-            {TRAINING_DAY_OPTIONS.map((day) => {
-              const selected = draft.trainingDays.includes(day.id);
-              return (
-                <ChoiceChip
-                  key={day.id}
-                  label={day.shortLabel}
-                  onPress={() => handleDayToggle(day.id)}
-                  selected={selected}
-                  style={styles.dayChip}
-                />
-              );
-            })}
+            {selectedTrainingDay
+              ? TRAINING_DAY_OPTIONS.filter(
+                  (day) => day.id === selectedTrainingDay,
+                ).map((day) => (
+                  <View
+                    accessibilityLabel={`${day.label}, seçili gün`}
+                    accessible
+                    key={day.id}
+                    style={styles.fixedDayChip}
+                  >
+                    <Text style={styles.fixedDayText}>{day.shortLabel}</Text>
+                  </View>
+                ))
+              : TRAINING_DAY_OPTIONS.map((day) => {
+                  const selected = draft.trainingDays.includes(day.id);
+                  return (
+                    <ChoiceChip
+                      key={day.id}
+                      label={day.shortLabel}
+                      onPress={() => handleDayToggle(day.id)}
+                      selected={selected}
+                      style={styles.dayChip}
+                    />
+                  );
+                })}
           </View>
           {draft.trainingDays.length === 0 ? (
             <Text style={styles.validationText}>En az bir gün seçmelisiniz.</Text>
@@ -478,6 +512,18 @@ const styles = StyleSheet.create({
   validationText: { marginTop: 7, color: "#D14343", fontSize: 12, fontWeight: "600" },
   dayGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   dayChip: { width: "22.5%", minWidth: 70, flexGrow: 1 },
+  fixedDayChip: {
+    minWidth: 92,
+    minHeight: 44,
+    paddingHorizontal: 18,
+    borderWidth: 1.5,
+    borderColor: MainColors.primaryBright,
+    borderRadius: 22,
+    backgroundColor: MainColors.primaryBright,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fixedDayText: { color: MainColors.text, fontSize: 15, fontWeight: "700" },
   choiceChip: {
     minHeight: 44,
     maxWidth: "100%",
