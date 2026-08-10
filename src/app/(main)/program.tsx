@@ -3,13 +3,11 @@ import {
   ProgramPills,
   ProgramSummaryCard,
   WeekDaySelector,
-  WeeklyTrainingChart,
 } from "@/features/programs/components/program-dashboard-components";
 import {
   getCompletedExerciseIds,
   getCurrentWeek,
   getProgramCompletion,
-  getWeeklyCompletionValues,
   programsForDate,
   resolveActiveProgramId,
   toLocalDateKey,
@@ -68,7 +66,6 @@ export default function ProgramScreen() {
   const [completionRecords, setCompletionRecords] = useState<
     ProgramCompletionRecord[] | null
   >(null);
-  const [chartState, setChartState] = useState<LoadState>("loading");
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [navigationBusy, setNavigationBusy] = useState(false);
@@ -102,22 +99,18 @@ export default function ProgramScreen() {
       setProgramState("error");
     }
   }, []);
-
-  const loadChart = useCallback(async () => {
-    setChartState("loading");
-    try {
-      setCompletionRecords(
-        await getProgramCompletionRecords(
-          week[0].dateKey,
-          week[week.length - 1].dateKey,
-        ),
-      );
-      setChartState("success");
-    } catch {
-      setCompletionRecords(null);
-      setChartState("error");
-    }
-  }, [week]);
+const loadChart = useCallback(async () => {
+  try {
+    setCompletionRecords(
+      await getProgramCompletionRecords(
+        week[0].dateKey,
+        week[week.length - 1].dateKey,
+      ),
+    );
+  } catch {
+    setCompletionRecords(null);
+  }
+}, [week]);
 
   useEffect(() => {
     let mounted = true;
@@ -228,11 +221,7 @@ export default function ProgramScreen() {
         : new Set<string>(),
     [activeProgram, currentCompletionRecords, selectedDateKey],
   );
-  const chartValues = useMemo(
-    () => getWeeklyCompletionValues(week, currentCompletionRecords),
-    [currentCompletionRecords, week],
-  );
-
+ 
   const handleEdit = useCallback(
     (programId: string) => {
       router.push({
@@ -350,16 +339,7 @@ export default function ProgramScreen() {
           <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
         )}
 
-        {chartState === "loading" ? (
-          <SectionState loading text="Haftalık grafik yükleniyor…" />
-        ) : chartState === "error" ? (
-          <SectionState
-            onRetry={() => void loadChart()}
-            text="Haftalık grafik alınamadı."
-          />
-        ) : (
-          <WeeklyTrainingChart values={chartValues} />
-        )}
+        
 
         <View style={styles.exerciseList}>
           {activeProgram && completionRecords !== null ? (
