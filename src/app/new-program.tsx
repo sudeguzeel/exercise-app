@@ -6,7 +6,6 @@ import {
 import { ProgramFlowHeader } from "@/features/programs/components/program-flow-header";
 import { ProgramResultModal } from "@/features/programs/components/program-result-modal";
 import { SelectionChip } from "@/features/programs/components/selection-chip";
-import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import {
   isProgramFormValid,
   toggleSelection,
@@ -59,11 +58,7 @@ export default function NewProgramScreen() {
   const selectedDateParam = Array.isArray(searchParams.selectedDate)
     ? searchParams.selectedDate[0]
     : searchParams.selectedDate;
-  const initialTrainingDay = useMemo(
-    () =>
-      getCurrentWeek().find((day) => day.dateKey === selectedDateParam)?.day,
-    [selectedDateParam],
-  );
+ 
   const selectedDateLabel = useMemo(() => {
     if (!selectedDateParam || !initialTrainingDay) return null;
     const date = new Date(`${selectedDateParam}T12:00:00`);
