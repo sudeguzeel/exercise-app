@@ -18,6 +18,7 @@ import {
 } from "@/features/workouts/workout-repository";
 import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
+import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -151,11 +152,27 @@ export default function WorkoutRestScreen() {
     return () => clearInterval(timer);
   }, [session]);
 
-  const requestExit = useWorkoutExit({
+  const { requestExit, exitDialogVisible, cancelExit, confirmExit } = useWorkoutExit({
     sessionRef,
     workoutSessionId,
     transitionInProgressRef,
   });
+
+  const goBackOneStep = useCallback(async () => {
+    if (transitionInProgressRef.current) return;
+    transitionInProgressRef.current = true;
+    setIsTransitioning(true);
+    setActionError(null);
+    try {
+      await workoutRepository.revertLastCompletedSet(workoutSessionId);
+      replaceWithWorkout();
+    } catch {
+      setActionError("Önceki sete dönülemedi. Lütfen yeniden dene.");
+    } finally {
+      transitionInProgressRef.current = false;
+      if (mountedRef.current) setIsTransitioning(false);
+    }
+  }, [replaceWithWorkout, workoutSessionId]);
 
   const remainingSeconds = session
     ? getRestRemainingSeconds(session.restEndsAt, now)
@@ -274,11 +291,20 @@ export default function WorkoutRestScreen() {
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
       <Stack.Screen options={{ gestureEnabled: false }} />
+      <WorkoutExitDialog
+        onCancel={cancelExit}
+        onConfirm={confirmExit}
+        visible={exitDialogVisible}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <WorkoutTopBar elapsed={elapsed} onExit={requestExit} />
+        <WorkoutTopBar
+          elapsed={elapsed}
+          onBack={() => void goBackOneStep()}
+          onExit={requestExit}
+        />
         <RestHeaderCard completedSetNumber={completedPosition.set.setNumber} />
         <RestProgressRing
           durationSeconds={durationSeconds}

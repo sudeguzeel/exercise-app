@@ -4,7 +4,7 @@ import {
 } from "@/features/workouts/workout-repository";
 import type { WorkoutSession } from "@/features/workouts/types";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, BackHandler } from "react-native";
 
 type MutableSessionRef = { current: WorkoutSession | null };
@@ -21,6 +21,7 @@ export function useWorkoutExit({
 }) {
   const promptOpenRef = useRef(false);
   const leavingRef = useRef(false);
+  const [exitDialogVisible, setExitDialogVisible] = useState(false);
 
   const leaveWorkout = useCallback(async () => {
     if (leavingRef.current || transitionInProgressRef.current) return;
@@ -55,34 +56,19 @@ export function useWorkoutExit({
     }
 
     promptOpenRef.current = true;
-    Alert.alert(
-      "Antrenmandan çıkmak istiyor musun?",
-      "Tamamladığın setler korunacak ancak antrenman tamamlanmış sayılmayacak.",
-      [
-        {
-          text: "Antrenmana devam et",
-          style: "cancel",
-          onPress: () => {
-            promptOpenRef.current = false;
-          },
-        },
-        {
-          text: "Antrenmandan çık",
-          style: "destructive",
-          onPress: () => {
-            promptOpenRef.current = false;
-            void leaveWorkout();
-          },
-        },
-      ],
-      {
-        cancelable: true,
-        onDismiss: () => {
-          promptOpenRef.current = false;
-        },
-      },
-    );
-  }, [leaveWorkout, sessionRef, transitionInProgressRef]);
+    setExitDialogVisible(true);
+  }, [sessionRef, transitionInProgressRef]);
+
+  const cancelExit = useCallback(() => {
+    promptOpenRef.current = false;
+    setExitDialogVisible(false);
+  }, []);
+
+  const confirmExit = useCallback(() => {
+    promptOpenRef.current = false;
+    setExitDialogVisible(false);
+    void leaveWorkout();
+  }, [leaveWorkout]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener(
@@ -95,5 +81,5 @@ export function useWorkoutExit({
     return () => subscription.remove();
   }, [requestExit]);
 
-  return requestExit;
+  return { requestExit, exitDialogVisible, cancelExit, confirmExit };
 }

@@ -17,9 +17,11 @@ import {
 
 export function WorkoutTopBar({
   elapsed,
+  onBack,
   onExit,
 }: {
   elapsed: string;
+  onBack: () => void;
   onExit: () => void;
 }) {
   return (
@@ -27,7 +29,8 @@ export function WorkoutTopBar({
       <Pressable
         accessibilityLabel="Geri dön"
         accessibilityRole="button"
-        onPress={onExit}
+        hitSlop={6}
+        onPress={onBack}
         style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
       >
         <Ionicons name="chevron-back" size={22} color={MainColors.text} />
@@ -42,6 +45,7 @@ export function WorkoutTopBar({
       <Pressable
         accessibilityLabel="Antrenmanı kapat"
         accessibilityRole="button"
+        hitSlop={6}
         onPress={onExit}
         style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
       >

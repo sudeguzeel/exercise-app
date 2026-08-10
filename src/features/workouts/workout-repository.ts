@@ -45,6 +45,7 @@ import { supabase } from "@/shared/lib/supabase";
 const STORAGE_PREFIX = "@exercise-app/workouts/v1";
 const startLocks = new Set<string>();
 const setCompletionLocks = new Set<string>();
+const setRevertLocks = new Set<string>();
 const restMutationLocks = new Set<string>();
 const workoutCompletionLocks = new Set<string>();
 
@@ -761,6 +762,64 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       return saveSession(userId, session);
     }
     return clone(session);
+  }
+
+  async revertLastCompletedSet(workoutSessionId: string) {
+    if (setRevertLocks.has(workoutSessionId)) {
+      throw new WorkoutRepositoryError("IN_PROGRESS", "Önceki sete dönülüyor.");
+    }
+    setRevertLocks.add(workoutSessionId);
+    try {
+      const userId = await requireUserId();
+      const session = await getSessionForUser(userId, workoutSessionId);
+      if (!session) {
+        throw new WorkoutRepositoryError("NOT_FOUND", "Antrenman oturumu bulunamadı.");
+      }
+      if (session.status !== "active") {
+        throw new WorkoutRepositoryError(
+          "OUT_OF_ORDER",
+          "Önceki sete yalnızca aktif antrenmanda dönülebilir.",
+        );
+      }
+
+      const completedSets = session.exercises.flatMap((exercise) =>
+        exercise.sets
+          .filter((set) => Boolean(set.completedAt))
+          .map((set) => ({ exercise, set })),
+      );
+      const previous = completedSets.at(-1);
+      if (!previous) return clone(session);
+
+      const exerciseWasCompleted = isWorkoutExerciseCompleted(previous.exercise);
+      if (exerciseWasCompleted) {
+        const { error } = await supabase
+          .from("user_completed_exercises")
+          .delete()
+          .eq("user_id", userId)
+          .eq("program_exercise_id", previous.exercise.programExerciseId)
+          .eq("workout_date", session.workoutDate);
+        if (error) {
+          throw new WorkoutRepositoryError(
+            "STORAGE_FAILED",
+            "Önceki sete dönme bilgisi kaydedilemedi.",
+          );
+        }
+      }
+
+      previous.set.completedAt = null;
+      previous.set.actualReps = previous.set.targetReps;
+      previous.set.weightKg = null;
+      previous.set.weightInput = "";
+      session.phase = "active";
+      session.pendingTarget = null;
+      session.restStartedAt = null;
+      session.restEndsAt = null;
+      session.restDurationSeconds = null;
+      session.lastCompletedSetId = completedSets.at(-2)?.set.id ?? null;
+      return saveSession(userId, session);
+    } finally {
+      setRevertLocks.delete(workoutSessionId);
+    }
   }
 
   async completeSet(input: CompleteSetInput) {
