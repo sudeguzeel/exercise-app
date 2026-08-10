@@ -176,11 +176,11 @@ export function ProgramExerciseRow({
       accessible
       style={styles.exerciseRow}
     >
-      <View style={[styles.statusCircle, completed && styles.statusCircleCompleted]}>
-        {completed ? (
+      {completed ? (
+        <View style={[styles.statusCircle, styles.statusCircleCompleted]}>
           <Ionicons name="checkmark" size={17} color={MainColors.text} />
-        ) : null}
-      </View>
+        </View>
+      ) : null}
       <Text
         numberOfLines={2}
         style={[styles.exerciseName, completed && styles.completedExerciseName]}
