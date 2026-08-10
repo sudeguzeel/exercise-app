@@ -254,46 +254,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <SectionTitle>HAFTALIK ANTRENMAN GRAFİĞİ</SectionTitle>
-        <View style={styles.chartCard}>
-          <View style={styles.chart}>
-            {[20, 15, 10, 5, 0].map((tick) => (
-              <View
-                key={tick}
-                style={[
-                  styles.gridLine,
-                  { bottom: (tick / MAX_CHART_VALUE) * CHART_HEIGHT },
-                ]}
-              >
-                <Text style={styles.gridLabel}>{tick}</Text>
-                <View style={styles.gridRule} />
-              </View>
-            ))}
-
-            <View style={styles.barsRow}>
-              {dashboard.dailyTotals.map((day) => {
-                const barHeight =
-                  (day.value / MAX_CHART_VALUE) * CHART_HEIGHT;
-
-                return (
-                  <View key={day.id} style={styles.barColumn}>
-                    <View style={styles.barValueArea}>
-                      <Text style={styles.barValue}>{day.value}</Text>
-                      <View
-                        style={[
-                          styles.bar,
-                          { height: Math.max(barHeight, 2) },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.barLabel}>{day.label}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        </View>
-
         <SectionTitle>{`${selectedDayLabel} PROGRAMI`}</SectionTitle>
         <View style={styles.programCard}>
           {selectedDayProgram.length === 0 ? (
@@ -352,6 +312,78 @@ export default function HomeScreen() {
               </Pressable>
             ))
           )}
+        </View>
+
+        <SectionTitle>HAFTALIK ANTRENMAN GRAFİĞİ</SectionTitle>
+        <View style={styles.chartCard}>
+          <View style={styles.chart}>
+            <View style={styles.yAxis}>
+              <View style={styles.yAxisPlot}>
+                {[20, 15, 10, 5, 0].map((tick) => (
+                  <Text
+                    key={tick}
+                    style={[
+                      styles.gridLabel,
+                      { bottom: (tick / MAX_CHART_VALUE) * CHART_HEIGHT },
+                    ]}
+                  >
+                    {tick}
+                  </Text>
+                ))}
+              </View>
+              <View style={styles.yAxisLabelSpacer} />
+            </View>
+
+            <View style={styles.plotColumn}>
+              <View style={styles.plotArea}>
+                {[20, 15, 10, 5, 0].map((tick) => (
+                  <View
+                    key={tick}
+                    style={[
+                      styles.gridLine,
+                      { bottom: (tick / MAX_CHART_VALUE) * CHART_HEIGHT },
+                    ]}
+                  >
+                    <View style={styles.gridRule} />
+                  </View>
+                ))}
+
+                <View style={styles.barsRow}>
+                  {dashboard.dailyTotals.map((day) => {
+                    const barHeight =
+                      (day.value / MAX_CHART_VALUE) * CHART_HEIGHT;
+
+                    return (
+                      <View key={day.id} style={styles.barColumn}>
+                        <Text
+                          style={[
+                            styles.barValue,
+                            { bottom: Math.max(barHeight, 2) + 4 },
+                          ]}
+                        >
+                          {day.value}
+                        </Text>
+                        <View
+                          style={[
+                            styles.bar,
+                            { height: Math.max(barHeight, 2) },
+                          ]}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.labelsRow}>
+                {dashboard.dailyTotals.map((day) => (
+                  <View key={day.id} style={styles.labelColumn}>
+                    <Text style={styles.barLabel}>{day.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -581,45 +613,72 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   chart: {
-    height: 170,
+    height: 166,
+    flexDirection: "row",
+  },
+  yAxis: {
+    width: 28,
+    flexShrink: 0,
+  },
+  yAxisPlot: {
+    height: CHART_HEIGHT + 18,
     position: "relative",
-    paddingLeft: 30,
+  },
+  yAxisLabelSpacer: {
+    height: 28,
+  },
+  plotColumn: {
+    flex: 1,
+    minWidth: 0,
+  },
+  plotArea: {
+    height: CHART_HEIGHT + 18,
+    position: "relative",
   },
   gridLine: {
     position: "absolute",
     left: 0,
     right: 0,
     height: 1,
-    flexDirection: "row",
-    alignItems: "center",
   },
   gridLabel: {
-    width: 28,
+    position: "absolute",
+    right: 5,
+    transform: [{ translateY: 7 }],
     color: MUTED,
     fontSize: 11,
   },
   gridRule: {
-    flex: 1,
+    width: "100%",
     borderTopWidth: 1,
     borderStyle: "dashed",
     borderColor: "#E1E3DF",
   },
   barsRow: {
-    height: CHART_HEIGHT + 28,
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    left: 0,
+    height: CHART_HEIGHT,
     flexDirection: "row",
-    alignItems: "flex-end",
   },
   barColumn: {
     flex: 1,
-    alignItems: "center",
-  },
-  barValueArea: {
     height: CHART_HEIGHT,
+    position: "relative",
     alignItems: "center",
     justifyContent: "flex-end",
   },
+  labelsRow: {
+    height: 28,
+    flexDirection: "row",
+  },
+  labelColumn: {
+    flex: 1,
+    alignItems: "center",
+  },
   barValue: {
-    marginBottom: 4,
+    position: "absolute",
     color: TEXT,
     fontSize: 12,
     fontWeight: "700",
