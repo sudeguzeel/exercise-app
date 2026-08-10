@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { OnboardingProvider } from "@/providers/OnboardingContext";
+import { FavoritesProvider } from "@/providers/FavoritesContext";
 import { useColorScheme } from "@/shared/hooks/use-color-scheme";
 
 export default function RootLayout() {
@@ -15,47 +16,49 @@ export default function RootLayout() {
 
   return (
     <OnboardingProvider>
-      <ThemeProvider
-        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-      >
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen
-            name="index"
-            options={{
-              animation: "none",
-            }}
-          />
+      <FavoritesProvider>
+        <ThemeProvider
+          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+        >
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+              name="index"
+              options={{
+                animation: "none",
+              }}
+            />
 
-          <Stack.Screen
-            name="(auth)"
-            options={{
-              animation: "fade",
-              animationDuration: 650,
-            }}
-          />
+            <Stack.Screen
+              name="(auth)"
+              options={{
+                animation: "fade",
+                animationDuration: 650,
+              }}
+            />
 
-          <Stack.Screen
-            name="(main)"
-            options={{
-              animation: "fade",
-              animationDuration: 650,
-            }}
-          />
+            <Stack.Screen
+              name="(main)"
+              options={{
+                animation: "fade",
+                animationDuration: 650,
+              }}
+            />
 
-          <Stack.Screen
-            name="onboarding/personal-info"
-            options={{
-              animation: "fade",
-              animationDuration: 650,
-            }}
-          />
+            <Stack.Screen
+              name="onboarding/personal-info"
+              options={{
+                animation: "fade",
+                animationDuration: 650,
+              }}
+            />
 
-          <Stack.Screen name="onboarding/fitness-experience" />
-          <Stack.Screen name='onboarding/weekly-training-days' />
-        </Stack>
+            <Stack.Screen name="onboarding/fitness-experience" />
+            <Stack.Screen name="onboarding/weekly-training-days" />
+          </Stack>
 
-        <StatusBar style="auto" />
-      </ThemeProvider>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </FavoritesProvider>
     </OnboardingProvider>
   );
 }

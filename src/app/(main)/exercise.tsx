@@ -9,6 +9,7 @@ import {
 } from "@/features/exercises/program-selection";
 import { DataErrorState } from "@/shared/components/data-error-state";
 import { MainColors } from "@/shared/constants/theme";
+import { useFavorites } from "@/providers/FavoritesContext";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import {
   EXERCISE_PAGE_SIZE,
@@ -43,6 +44,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
+  const { isFavorite, toggleFavorite } = useFavorites();
   const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
@@ -182,9 +184,14 @@ export default function ExerciseScreen() {
 
   const renderExercise = useCallback<ListRenderItem<ExerciseListItem>>(
     ({ item }) => (
-      <ExerciseCard exercise={item} onPress={handleExercisePress} />
+      <ExerciseCard
+        exercise={item}
+        favorited={isFavorite(item.id)}
+        onFavoritePress={toggleFavorite}
+        onPress={handleExercisePress}
+      />
     ),
-    [handleExercisePress],
+    [handleExercisePress, isFavorite, toggleFavorite],
   );
   const errorVariant = isOffline ? "offline" : "service";
   const dismissOfflineError = hasSuccessfulDataRef.current
