@@ -247,7 +247,18 @@ export default function ExerciseScreen() {
       />
     </Pressable>
   ) : (
-    <View style={{ width: 50, height: 50 }} />
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Favorileri aç"
+      onPress={() => router.push("/(main)/favorites" as never)}
+      style={styles.profileButton}
+    >
+      <Ionicons
+        name="heart-outline"
+        size={25}
+        color={MainColors.text}
+      />
+    </Pressable>
   )}
 </View>
 
