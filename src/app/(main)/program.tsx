@@ -23,7 +23,9 @@ import {
   workoutRepository,
   WorkoutRepositoryError,
 } from "@/features/workouts/workout-repository";
+import { DataErrorState } from "@/shared/components/data-error-state";
 import { MainColors } from "@/shared/constants/theme";
+import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -47,6 +49,7 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function ProgramScreen() {
+  const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<{
     selectedDate?: string | string[];
     activeProgramId?: string | string[];
@@ -66,11 +69,15 @@ export default function ProgramScreen() {
   const [completionRecords, setCompletionRecords] = useState<
     ProgramCompletionRecord[] | null
   >(null);
+  const [chartState, setChartState] = useState<LoadState>("loading");
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [navigationBusy, setNavigationBusy] = useState(false);
   const [isTodayCompleted, setIsTodayCompleted] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const navigationLock = useRef(false);
+  const hasSuccessfulProgramsRef = useRef(false);
+  const hasSuccessfulChartRef = useRef(false);
   const lastAppliedDateParam = useRef(requestedDate);
   const requestedProgramId = singleParam(params.activeProgramId) ?? null;
   const lastAppliedProgramParam = useRef(requestedProgramId);
@@ -94,23 +101,28 @@ export default function ProgramScreen() {
     setProgramState("loading");
     try {
       setPrograms(await programRepository.listPrograms());
+      hasSuccessfulProgramsRef.current = true;
       setProgramState("success");
     } catch {
       setProgramState("error");
     }
   }, []);
-const loadChart = useCallback(async () => {
-  try {
-    setCompletionRecords(
-      await getProgramCompletionRecords(
-        week[0].dateKey,
-        week[week.length - 1].dateKey,
-      ),
-    );
-  } catch {
-    setCompletionRecords(null);
-  }
-}, [week]);
+
+  const loadChart = useCallback(async () => {
+    setChartState("loading");
+    try {
+      setCompletionRecords(
+        await getProgramCompletionRecords(
+          week[0].dateKey,
+          week[week.length - 1].dateKey,
+        ),
+      );
+      hasSuccessfulChartRef.current = true;
+      setChartState("success");
+    } catch {
+      setChartState("error");
+    }
+  }, [week]);
 
   useEffect(() => {
     let mounted = true;
@@ -221,7 +233,39 @@ const loadChart = useCallback(async () => {
         : new Set<string>(),
     [activeProgram, currentCompletionRecords, selectedDateKey],
   );
- 
+  const errorVariant = isOffline ? "offline" : "service";
+  const hasProgramLoadError = programState === "error";
+  const hasChartLoadError = chartState === "error";
+  const hasLoadError = hasProgramLoadError || hasChartLoadError;
+  const canContinueOffline =
+    (!hasProgramLoadError || hasSuccessfulProgramsRef.current) &&
+    (!hasChartLoadError || hasSuccessfulChartRef.current);
+
+  const retryFailedLoads = useCallback(async () => {
+    if (isRetrying) return;
+    setIsRetrying(true);
+    try {
+      const retries: Promise<void>[] = [];
+      if (hasProgramLoadError) retries.push(loadPrograms());
+      if (hasChartLoadError) retries.push(loadChart());
+      await Promise.all(retries);
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [
+    hasChartLoadError,
+    hasProgramLoadError,
+    isRetrying,
+    loadChart,
+    loadPrograms,
+  ]);
+
+  const continueOffline = useCallback(() => {
+    if (!canContinueOffline) return;
+    if (hasProgramLoadError) setProgramState("success");
+    if (hasChartLoadError) setChartState("success");
+  }, [canContinueOffline, hasChartLoadError, hasProgramLoadError]);
+
   const handleEdit = useCallback(
     (programId: string) => {
       router.push({
@@ -264,6 +308,39 @@ const loadChart = useCallback(async () => {
     }
   }, [activeProgram, selectedDateKey]);
 
+  const handleAddWorkout = useCallback(() => {
+    router.push({
+      pathname: "/exercise" as never,
+      params: {
+        selectionMode: "new-program",
+        selectedDate: selectedDateKey,
+      },
+    });
+  }, [selectedDateKey]);
+
+  if (hasLoadError || isRetrying) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+        <DataErrorState
+          errorCode="FIT-SERVICE-PROGRAM"
+          onRetry={() => void retryFailedLoads()}
+          onSecondaryAction={
+            errorVariant === "offline"
+              ? canContinueOffline
+                ? continueOffline
+                : undefined
+              : () => router.replace("/(main)")
+          }
+          secondaryActionDisabled={
+            isRetrying || (errorVariant === "offline" && !canContinueOffline)
+          }
+          retrying={isRetrying}
+          variant={errorVariant}
+        />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -302,13 +379,8 @@ const loadChart = useCallback(async () => {
           />
         </View>
 
-        {programState === "loading" ? (
+        {programState === "loading" && !hasSuccessfulProgramsRef.current ? (
           <SectionState loading text="Programlar yükleniyor…" />
-        ) : programState === "error" ? (
-          <SectionState
-            onRetry={() => void loadPrograms()}
-            text="Programlar alınamadı. Lütfen tekrar deneyin."
-          />
         ) : dailyPrograms.length > 0 ? (
           <View style={styles.programCards}>
             {dailyPrograms.map((program) => (
@@ -338,8 +410,6 @@ const loadChart = useCallback(async () => {
         ) : (
           <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
         )}
-
-        
 
         <View style={styles.exerciseList}>
           {activeProgram && completionRecords !== null ? (
@@ -373,24 +443,33 @@ const loadChart = useCallback(async () => {
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
-            disabled:
-              !activeProgram || navigationBusy || programState === "loading",
+            disabled: navigationBusy || programState === "loading",
           }}
-          disabled={!activeProgram || navigationBusy || programState === "loading"}
-          onPress={() => void handleStartWorkout()}
+          disabled={navigationBusy || programState === "loading"}
+          onPress={
+            activeProgram
+              ? () => void handleStartWorkout()
+              : handleAddWorkout
+          }
           style={({ pressed }) => [
             styles.startButton,
-            (!activeProgram || navigationBusy || programState === "loading") &&
+            (navigationBusy || programState === "loading") &&
               styles.startButtonDisabled,
-            pressed && activeProgram && styles.pressed,
+            pressed && programState !== "loading" && styles.pressed,
           ]}
         >
           {navigationBusy ? (
             <ActivityIndicator color={MainColors.text} />
           ) : (
             <>
-              <Ionicons name="play" size={18} color={MainColors.text} />
-              <Text style={styles.startButtonText}>Antrenmana başla</Text>
+              <Ionicons
+                name={activeProgram ? "play" : "add"}
+                size={18}
+                color={MainColors.text}
+              />
+              <Text style={styles.startButtonText}>
+                {activeProgram ? "Antrenmana başla" : "Antrenman ekle"}
+              </Text>
             </>
           )}
         </Pressable>
