@@ -66,7 +66,7 @@ export function WorkoutExitDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.exitText}>Antrenmanı Bırak</Text>
+              <Text style={styles.exitText}>Antrenmandan Çık</Text>
             </Pressable>
           </View>
         </View>
