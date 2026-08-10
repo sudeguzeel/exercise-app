@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +26,9 @@ export default function ResetPasswordScreen() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
 
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
@@ -181,10 +185,15 @@ export default function ResetPasswordScreen() {
                 }}
                 placeholder="••••••••"
                 placeholderTextColor="#7A7F78"
-                secureTextEntry
+                secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
                 returnKeyType="next"
+              />
+              <PasswordVisibilityButton
+                disabled={loading}
+                onPress={() => setIsPasswordVisible((current) => !current)}
+                visible={isPasswordVisible}
               />
             </View>
 
@@ -213,11 +222,18 @@ export default function ResetPasswordScreen() {
                 }}
                 placeholder="••••••••"
                 placeholderTextColor="#7A7F78"
-                secureTextEntry
+                secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
                 style={styles.input}
                 returnKeyType="done"
                 onSubmitEditing={handleResetPassword}
+              />
+              <PasswordVisibilityButton
+                disabled={loading}
+                onPress={() =>
+                  setIsConfirmPasswordVisible((current) => !current)
+                }
+                visible={isConfirmPasswordVisible}
               />
             </View>
 

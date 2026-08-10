@@ -1,4 +1,5 @@
 import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
+import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
 import { supabase } from "@/shared/lib/supabase";
 import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +24,7 @@ import {
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -327,11 +329,16 @@ const handleGoogleLogin = async () => {
                 }}
                 placeholder="••••••••"
                 placeholderTextColor="#9A9E99"
-                secureTextEntry
+                secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
                 returnKeyType="done"
                 onSubmitEditing={handleLogin}
+              />
+              <PasswordVisibilityButton
+                disabled={loading}
+                onPress={() => setIsPasswordVisible((current) => !current)}
+                visible={isPasswordVisible}
               />
             </View>
 

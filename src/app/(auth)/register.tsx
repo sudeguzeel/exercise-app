@@ -1,4 +1,5 @@
 import { useOnboarding } from "@/providers/OnboardingContext";
+import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
 import {
   getEmailVerificationRedirectUrl,
   rememberPendingVerificationEmail,
@@ -28,6 +29,9 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
@@ -213,10 +217,15 @@ export default function RegisterScreen() {
                 }}
                 placeholder="••••••••"
                 placeholderTextColor="#9A9E99"
-                secureTextEntry
+                secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
                 returnKeyType="next"
+              />
+              <PasswordVisibilityButton
+                disabled={loading}
+                onPress={() => setIsPasswordVisible((current) => !current)}
+                visible={isPasswordVisible}
               />
             </View>
 
@@ -244,11 +253,18 @@ export default function RegisterScreen() {
                 }}
                 placeholder="••••••••"
                 placeholderTextColor="#9A9E99"
-                secureTextEntry
+                secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
                 style={styles.input}
                 returnKeyType="done"
                 onSubmitEditing={handleRegister}
+              />
+              <PasswordVisibilityButton
+                disabled={loading}
+                onPress={() =>
+                  setIsConfirmPasswordVisible((current) => !current)
+                }
+                visible={isConfirmPasswordVisible}
               />
             </View>
 
