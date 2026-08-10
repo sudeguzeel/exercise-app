@@ -17,6 +17,7 @@ import {
 } from "@/features/workouts/workout-repository";
 import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
+import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
@@ -160,11 +161,37 @@ export default function WorkoutScreen() {
     return () => clearInterval(timer);
   }, [session]);
 
-  const requestExit = useWorkoutExit({
+  const { requestExit, exitDialogVisible, cancelExit, confirmExit } = useWorkoutExit({
     sessionRef,
     workoutSessionId,
     transitionInProgressRef,
   });
+
+  const goBackOneStep = useCallback(async () => {
+    if (transitionInProgressRef.current) return;
+    const current = sessionRef.current;
+    const hasCompletedSet = current?.exercises.some((exercise) =>
+      exercise.sets.some((item) => Boolean(item.completedAt)),
+    );
+    if (!current || !hasCompletedSet) {
+      requestExit();
+      return;
+    }
+
+    transitionInProgressRef.current = true;
+    setIsTransitioning(true);
+    setActionError(null);
+    try {
+      const updated = await workoutRepository.revertLastCompletedSet(workoutSessionId);
+      sessionRef.current = updated;
+      if (mountedRef.current) setSession(updated);
+    } catch {
+      setActionError("Önceki sete dönülemedi. Lütfen yeniden dene.");
+    } finally {
+      transitionInProgressRef.current = false;
+      if (mountedRef.current) setIsTransitioning(false);
+    }
+  }, [requestExit, workoutSessionId]);
 
   const activePosition = useMemo(
     () => (session ? findFirstIncompleteSet(session) : null),
@@ -303,11 +330,20 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
       <Stack.Screen options={{ gestureEnabled: false }} />
+      <WorkoutExitDialog
+        onCancel={cancelExit}
+        onConfirm={confirmExit}
+        visible={exitDialogVisible}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <WorkoutTopBar elapsed={elapsed} onExit={requestExit} />
+        <WorkoutTopBar
+          elapsed={elapsed}
+          onBack={() => void goBackOneStep()}
+          onExit={requestExit}
+        />
         <ExerciseInfoCard
           exercise={exercise}
           exerciseIndex={activePosition.exerciseIndex}

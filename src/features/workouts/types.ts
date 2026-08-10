@@ -104,6 +104,7 @@ export type WorkoutRepository = {
   getSession: (workoutSessionId: string) => Promise<WorkoutSession | null>;
   resumeSession: (workoutSessionId: string) => Promise<WorkoutSession>;
   pauseSession: (workoutSessionId: string) => Promise<WorkoutSession>;
+  revertLastCompletedSet: (workoutSessionId: string) => Promise<WorkoutSession>;
   completeSet: (input: CompleteSetInput) => Promise<WorkoutSession>;
   extendRest: (
     workoutSessionId: string,
