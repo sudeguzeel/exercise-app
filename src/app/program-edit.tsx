@@ -20,6 +20,7 @@ import {
   programRepository,
   ProgramRepositoryError,
 } from "@/features/programs/program-repository";
+import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import { MainColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -201,7 +202,29 @@ export default function ProgramEditScreen() {
         muscleGroupIds: draft.muscleGroupIds,
         exercises: draft.exercises,
       });
+      const initialWeightExercises = draft.exercises.filter(
+        (exercise) => exercise.weightKg !== undefined,
+      );
+      const weightSaveResults = await Promise.allSettled(
+        initialWeightExercises.map((exercise) =>
+          saveInitialProgramExerciseWeight(
+            updated,
+            exercise.exerciseId,
+            exercise.weightKg,
+          ),
+        ),
+      );
       clearProgramEditDraft(draft.programId);
+      if (
+        weightSaveResults.some((result) => result.status === "rejected")
+      ) {
+        Alert.alert(
+          "Kilo kaydı tamamlanamadı",
+          "Program güncellendi ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
+          [{ text: "Tamam", onPress: () => returnToPrograms(updated.id) }],
+        );
+        return;
+      }
       setSaveSuccessVisible(true);
       navigationTimerRef.current = setTimeout(
         () => returnToPrograms(updated.id),

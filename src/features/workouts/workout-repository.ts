@@ -39,6 +39,7 @@ import {
   calculateStreakDays,
   type CompletedExerciseRecord,
 } from "@/shared/lib/home-dashboard";
+import { getWorkingWeight } from "@/features/progress/progress-storage";
 import { getExerciseDetail } from "@/shared/lib/services/exerciseCatalogService";
 import { supabase } from "@/shared/lib/supabase";
 
@@ -256,6 +257,7 @@ async function getSessionForUser(userId: string, workoutSessionId: string) {
 async function buildExerciseSnapshot(
   exercise: PersistedProgramExercise,
   workoutSessionId: string,
+  userId: string,
 ): Promise<WorkoutExerciseSnapshot> {
   let muscleGroupName: string | null = null;
   let mediaUrl: string | null = null;
@@ -268,6 +270,9 @@ async function buildExerciseSnapshot(
   } catch {
     // Medya/meta verisi antrenmanın başlamasını engellemez.
   }
+  const workingWeight = await getWorkingWeight(exercise.id, userId).catch(
+    () => null,
+  );
 
   return {
     programExerciseId: exercise.id,
@@ -291,8 +296,8 @@ async function buildExerciseSnapshot(
       setNumber: index + 1,
       targetReps: exercise.reps,
       actualReps: exercise.reps,
-      weightInput: "",
-      weightKg: null,
+      weightInput: workingWeight ? String(workingWeight.weightKg) : "",
+      weightKg: workingWeight?.weightKg ?? null,
       completedAt: null,
     })),
   };
@@ -325,6 +330,7 @@ function isSessionAlignedWithProgram(
 async function reconcileSessionWithProgram(
   session: WorkoutSession,
   program: UserProgram,
+  userId: string,
 ) {
   const existingById = new Map(
     session.exercises.map((exercise) => [exercise.programExerciseId, exercise]),
@@ -334,7 +340,7 @@ async function reconcileSessionWithProgram(
       .sort((left, right) => left.orderIndex - right.orderIndex)
       .map(async (exercise) => {
         const existing = existingById.get(exercise.id);
-        if (!existing) return buildExerciseSnapshot(exercise, session.id);
+        if (!existing) return buildExerciseSnapshot(exercise, session.id, userId);
 
         const existingSetsByNumber = new Map(
           existing.sets.map((set) => [set.setNumber, set]),
@@ -574,7 +580,11 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       const existing = resumable ?? completed;
 
       if (existing) {
-        const reconciled = await reconcileSessionWithProgram(existing, program);
+        const reconciled = await reconcileSessionWithProgram(
+          existing,
+          program,
+          userId,
+        );
         const storedCompletions = await readCompletions(userId);
         const storedCompletion = storedCompletions.find(
           (completion) => completion.workoutSessionId === reconciled.id,
@@ -676,7 +686,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           pendingExercises.map(
             async (exercise) =>
               existingSnapshots.get(exercise.id) ??
-             buildExerciseSnapshot(exercise, programResumable.id)
+              buildExerciseSnapshot(exercise, programResumable.id, userId),
           ),
         );
 
@@ -696,7 +706,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         [...pendingExercises]
           .sort((left, right) => left.orderIndex - right.orderIndex)
           .map((exercise) =>
-            buildExerciseSnapshot(exercise, workoutSessionId),
+            buildExerciseSnapshot(exercise, workoutSessionId, userId),
           ),
       );
       const session: WorkoutSession = {
@@ -808,8 +818,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
 
       previous.set.completedAt = null;
       previous.set.actualReps = previous.set.targetReps;
-      previous.set.weightKg = null;
-      previous.set.weightInput = "";
       session.phase = "active";
       session.pendingTarget = null;
       session.restStartedAt = null;
@@ -823,6 +831,20 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
   }
 
   async completeSet(input: CompleteSetInput) {
+    if (
+      !Number.isInteger(input.actualReps) ||
+      input.actualReps < 1 ||
+      input.actualReps > 100 ||
+      (input.weightKg !== null &&
+        (!Number.isFinite(input.weightKg) ||
+          input.weightKg < 0 ||
+          input.weightKg > 500))
+    ) {
+      throw new WorkoutRepositoryError(
+        "INVALID_INPUT",
+        "Set tekrar veya kilo bilgisi geçersiz.",
+      );
+    }
     const lockKey = `${input.workoutSessionId}:${input.setId}`;
     if (setCompletionLocks.has(lockKey)) {
       throw new WorkoutRepositoryError("IN_PROGRESS", "Set kaydediliyor.");
@@ -853,9 +875,10 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         );
       }
       const completedAt = new Date().toISOString();
-      position.set.actualReps = position.set.targetReps;
-      position.set.weightKg = null;
-      position.set.weightInput = "";
+      position.set.actualReps = input.actualReps;
+      position.set.weightKg = input.weightKg;
+      position.set.weightInput =
+        input.weightKg === null ? "" : String(input.weightKg);
       position.set.completedAt = completedAt;
       session.lastCompletedSetId = position.set.id;
 
@@ -1117,9 +1140,40 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     if (!completion || !isCompletionConsistentWithSession(completion, session)) {
       return null;
     }
-    const program = await programRepository.getProgramById(session.programId);
-    if (!program || !isSessionAlignedWithProgram(session, program)) return null;
     return clone(completion);
+  }
+
+  async listCompletions() {
+    const userId = await requireUserId();
+    const [completions, sessions] = await Promise.all([
+      readCompletions(userId),
+      readSessions(userId),
+    ]);
+    const completedSessionsById = new Map(
+      sessions
+        .filter(
+          (session) =>
+            session.userId === userId &&
+            session.status === "completed" &&
+            session.phase === "completed",
+        )
+        .map((session) => [session.id, session]),
+    );
+    const unique = new Map<string, WorkoutCompletion>();
+    for (const completion of completions) {
+      const session = completedSessionsById.get(completion.workoutSessionId);
+      if (
+        completion.userId !== userId ||
+        !session ||
+        !isCompletionConsistentWithSession(completion, session)
+      ) {
+        continue;
+      }
+      unique.set(completion.id, completion);
+    }
+    return [...unique.values()]
+      .sort((left, right) => right.completedAt.localeCompare(left.completedAt))
+      .map(clone);
   }
 
   async getCompletionForProgramDate(programId: string, workoutDate: string) {

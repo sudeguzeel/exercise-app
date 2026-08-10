@@ -1,6 +1,7 @@
 import {
   ExerciseInfoCard,
   ExerciseMedia,
+  SetPerformanceInputs,
   SetSelector,
   TargetRepetitionCard,
   WorkoutTopBar,
@@ -53,6 +54,8 @@ export default function WorkoutScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [actualRepsInput, setActualRepsInput] = useState("");
+  const [weightInput, setWeightInput] = useState("");
   const mountedRef = useRef(true);
   const sessionRef = useRef<WorkoutSession | null>(null);
   const transitionInProgressRef = useRef(false);
@@ -198,6 +201,17 @@ export default function WorkoutScreen() {
     [session],
   );
 
+  useEffect(() => {
+    if (!activePosition) return;
+    setActualRepsInput(String(activePosition.set.actualReps));
+    setWeightInput(
+      activePosition.set.weightInput ||
+        (activePosition.set.weightKg === null
+          ? ""
+          : String(activePosition.set.weightKg)),
+    );
+  }, [activePosition]);
+
   const finishWorkout = useCallback(async () => {
     if (transitionInProgressRef.current) return;
     transitionInProgressRef.current = true;
@@ -225,6 +239,21 @@ export default function WorkoutScreen() {
     const active = current ? findFirstIncompleteSet(current) : null;
     if (!current || current.phase !== "active" || !active) return;
 
+    const actualReps = Number(actualRepsInput);
+    if (!Number.isInteger(actualReps) || actualReps < 1 || actualReps > 100) {
+      setActionError("Gerçek tekrar sayısı 1 ile 100 arasında olmalıdır.");
+      return;
+    }
+    const normalizedWeight = weightInput.trim().replace(",", ".");
+    const weightKg = normalizedWeight === "" ? null : Number(normalizedWeight);
+    if (
+      weightKg !== null &&
+      (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 500)
+    ) {
+      setActionError("Kullanılan kilo 0 ile 500 kg arasında olmalıdır.");
+      return;
+    }
+
     transitionInProgressRef.current = true;
     setIsTransitioning(true);
     setActionError(null);
@@ -233,6 +262,8 @@ export default function WorkoutScreen() {
       const updated = await workoutRepository.completeSet({
         workoutSessionId,
         setId: active.set.id,
+        actualReps,
+        weightKg,
       });
       sessionRef.current = updated;
       if (mountedRef.current) setSession(updated);
@@ -262,7 +293,13 @@ export default function WorkoutScreen() {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [replaceWithCompletion, replaceWithRest, workoutSessionId]);
+  }, [
+    actualRepsInput,
+    replaceWithCompletion,
+    replaceWithRest,
+    weightInput,
+    workoutSessionId,
+  ]);
 
   if (session === undefined && !loadError) {
     return (
@@ -355,6 +392,13 @@ export default function WorkoutScreen() {
           <Text style={styles.fieldLabel}>HEDEF TEKRAR</Text>
           <TargetRepetitionCard value={set.targetReps} />
         </View>
+        <SetPerformanceInputs
+          actualReps={actualRepsInput}
+          disabled={isTransitioning}
+          onActualRepsChange={setActualRepsInput}
+          onWeightChange={setWeightInput}
+          weight={weightInput}
+        />
       </ScrollView>
 
       <View

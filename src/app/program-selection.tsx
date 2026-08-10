@@ -15,6 +15,7 @@ import {
 } from "@/features/programs/program-domain";
 import { programRepository } from "@/features/programs/program-repository";
 import type { UserProgram } from "@/features/programs/types";
+import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import { MainColors } from "@/shared/constants/theme";
 import {
   getBodyParts,
@@ -152,10 +153,40 @@ export default function ProgramSelectionScreen() {
         [...selectedProgramIds],
         selection,
       );
-      const presentation = buildAddResultPresentation(result);
+      let weightSaveFailed = false;
+      if (selection.weightKg !== undefined) {
+        const addedProgramIds = result.results
+          .filter((item) => item.status === "added")
+          .map((item) => item.programId);
+        const saveResults = await Promise.allSettled(
+          addedProgramIds.map(async (programId) => {
+            const program = await programRepository.getProgramById(programId);
+            if (!program) throw new Error("Program yeniden yüklenemedi.");
+            await saveInitialProgramExerciseWeight(
+              program,
+              selection.exerciseId,
+              selection.weightKg,
+            );
+          }),
+        );
+        weightSaveFailed = saveResults.some(
+          (saveResult) => saveResult.status === "rejected",
+        );
+      }
+      const basePresentation = buildAddResultPresentation(result);
+      const presentation = weightSaveFailed
+        ? {
+            ...basePresentation,
+            title: "Kilo kaydı tamamlanamadı",
+            message:
+              "Egzersiz programa eklendi ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
+          }
+        : basePresentation;
       setResultModal({
         presentation,
-        success: result.results.some((item) => item.status === "added"),
+        success:
+          result.results.some((item) => item.status === "added") &&
+          !weightSaveFailed,
       });
     } catch {
       setResultModal({

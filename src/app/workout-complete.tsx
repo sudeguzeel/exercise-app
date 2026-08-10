@@ -10,7 +10,6 @@ import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   BackHandler,
   Pressable,
   ScrollView,
@@ -50,6 +49,10 @@ export default function WorkoutCompleteScreen() {
 
   const goHome = useCallback(() => {
     router.replace("/(main)");
+  }, []);
+
+  const goToProgress = useCallback(() => {
+    router.replace("/(main)/progress");
   }, []);
 
   const loadCompletion = useCallback(async () => {
@@ -118,14 +121,9 @@ export default function WorkoutCompleteScreen() {
           </View>
 
           <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() =>
-                Alert.alert(
-                  "İlerlemem",
-                  "İlerlemem ekranı henüz hazır değil. Antrenman verilerin kaydedildi.",
-                )
-              }
+        <Pressable
+          accessibilityRole="button"
+          onPress={goToProgress}
               style={({ pressed }) => [
                 styles.primaryButton,
                 pressed && styles.pressed,
