@@ -3,13 +3,11 @@ import {
   ProgramPills,
   ProgramSummaryCard,
   WeekDaySelector,
-  WeeklyTrainingChart,
 } from "@/features/programs/components/program-dashboard-components";
 import {
   getCompletedExerciseIds,
   getCurrentWeek,
   getProgramCompletion,
-  getWeeklyCompletionValues,
   programsForDate,
   resolveActiveProgramId,
   toLocalDateKey,
@@ -235,10 +233,6 @@ export default function ProgramScreen() {
         : new Set<string>(),
     [activeProgram, currentCompletionRecords, selectedDateKey],
   );
-  const chartValues = useMemo(
-    () => getWeeklyCompletionValues(week, currentCompletionRecords),
-    [currentCompletionRecords, week],
-  );
   const errorVariant = isOffline ? "offline" : "service";
   const hasProgramLoadError = programState === "error";
   const hasChartLoadError = chartState === "error";
@@ -415,12 +409,6 @@ export default function ProgramScreen() {
           />
         ) : (
           <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
-        )}
-
-        {chartState === "loading" && !hasSuccessfulChartRef.current ? (
-          <SectionState loading text="Haftalık grafik yükleniyor…" />
-        ) : (
-          <WeeklyTrainingChart values={chartValues} />
         )}
 
         <View style={styles.exerciseList}>
