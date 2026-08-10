@@ -1,4 +1,10 @@
 import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
+import {
+  addFavoriteExercise,
+  listFavoriteExercises,
+  removeFavoriteExercise,
+} from "@/shared/lib/services/favoriteExerciseService";
+import { supabase } from "@/shared/lib/supabase";
 import { MainColors } from "@/shared/constants/theme";
 import {
   createContext,
@@ -12,12 +18,14 @@ import {
 } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+export type FavoritesStatus = "loading" | "success" | "error";
+
 type FavoritesContextValue = {
   favorites: ExerciseListItem[];
-  isInitialized: boolean;
-  initializeFavorites: (exercises: ExerciseListItem[]) => void;
+  status: FavoritesStatus;
   isFavorite: (exerciseId: string) => boolean;
   toggleFavorite: (exercise: ExerciseListItem) => void;
+  refetchFavorites: () => Promise<void>;
 };
 
 const FavoritesContext = createContext<FavoritesContextValue | undefined>(
@@ -28,10 +36,9 @@ const SNACKBAR_DURATION_MS = 2200;
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<ExerciseListItem[]>([]);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [status, setStatus] = useState<FavoritesStatus>("loading");
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const favoritesRef = useRef<ExerciseListItem[]>([]);
-  const initializedRef = useRef(false);
   const snackbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -54,18 +61,42 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     }, SNACKBAR_DURATION_MS);
   }, []);
 
-  const initializeFavorites = useCallback((exercises: ExerciseListItem[]) => {
-    if (initializedRef.current) return;
-
-    const uniqueExercises = exercises.filter(
-      (exercise, index, all) =>
-        all.findIndex((candidate) => candidate.id === exercise.id) === index,
-    );
-    initializedRef.current = true;
-    favoritesRef.current = uniqueExercises;
-    setFavorites(uniqueExercises);
-    setIsInitialized(true);
+  const loadFavorites = useCallback(async () => {
+    setStatus("loading");
+    try {
+      const items = await listFavoriteExercises();
+      favoritesRef.current = items;
+      setFavorites(items);
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
   }, []);
+
+  useEffect(() => {
+    void loadFavorites();
+
+    // Uygulama açılışında/oturum değişikliklerinde (giriş, çıkış, token
+    // yenileme) favori listesini güncel tutar. FavoritesProvider tüm
+    // navigasyon ağacının üzerinde tek sefer mount olduğu için (bkz.
+    // src/app/_layout.tsx), login/logout sonrası yeniden yüklemenin tek
+    // yolu bu event'i dinlemek.
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (event) => {
+        if (event === "SIGNED_OUT") {
+          favoritesRef.current = [];
+          setFavorites([]);
+          setStatus("success");
+          return;
+        }
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
+          void loadFavorites();
+        }
+      },
+    );
+
+    return () => subscription.subscription.unsubscribe();
+  }, [loadFavorites]);
 
   const isFavorite = useCallback(
     (exerciseId: string) =>
@@ -75,27 +106,36 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
   const toggleFavorite = useCallback(
     (exercise: ExerciseListItem) => {
-      const alreadyFavorite = favoritesRef.current.some(
+      const previousFavorites = favoritesRef.current;
+      const alreadyFavorite = previousFavorites.some(
         (favorite) => favorite.id === exercise.id,
       );
       const nextFavorites = alreadyFavorite
-        ? favoritesRef.current.filter(
-            (favorite) => favorite.id !== exercise.id,
-          )
+        ? previousFavorites.filter((favorite) => favorite.id !== exercise.id)
         : [
             exercise,
-            ...favoritesRef.current.filter(
+            ...previousFavorites.filter(
               (favorite) => favorite.id !== exercise.id,
             ),
           ];
 
-      initializedRef.current = true;
+      // Optimistic update: sunucu yanıtını beklemeden UI'ı güncelle, istek
+      // başarısız olursa önceki listeye geri dön.
       favoritesRef.current = nextFavorites;
-      setIsInitialized(true);
       setFavorites(nextFavorites);
       showSnackbar(
         alreadyFavorite ? "Favorilerden çıkarıldı" : "Favorilere eklendi",
       );
+
+      const persist = alreadyFavorite
+        ? removeFavoriteExercise(exercise.id)
+        : addFavoriteExercise(exercise.id);
+
+      persist.catch(() => {
+        favoritesRef.current = previousFavorites;
+        setFavorites(previousFavorites);
+        showSnackbar("Bir hata oluştu, tekrar deneyin");
+      });
     },
     [showSnackbar],
   );
@@ -103,12 +143,12 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       favorites,
-      isInitialized,
-      initializeFavorites,
+      status,
       isFavorite,
       toggleFavorite,
+      refetchFavorites: loadFavorites,
     }),
-    [favorites, initializeFavorites, isFavorite, isInitialized, toggleFavorite],
+    [favorites, isFavorite, loadFavorites, status, toggleFavorite],
   );
 
   return (

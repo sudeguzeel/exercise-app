@@ -3,10 +3,9 @@ import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import { DataErrorState } from "@/shared/components/data-error-state";
 import { MainColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
-import { searchExercises } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,43 +17,16 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type FavoritesState = "loading" | "success" | "error";
-
 export default function FavoritesScreen() {
-  const {
-    favorites,
-    initializeFavorites,
-    isInitialized,
-    toggleFavorite,
-  } = useFavorites();
-  const [state, setState] = useState<FavoritesState>("loading");
+  const { favorites, status, refetchFavorites, toggleFavorite } =
+    useFavorites();
   const [retrying, setRetrying] = useState(false);
 
-  const loadFavoritesPreview = useCallback(async (retry = false) => {
-    if (isInitialized) {
-      setState("success");
-      return;
-    }
-
-    if (retry) setRetrying(true);
-    else setState("loading");
-
-    try {
-      // Favori servisi hazır olana kadar katalogdan gelen bu kayıtlar yalnızca
-      // ekran tasarımını göstermek için kullanılan geçici önizleme verisidir.
-      const result = await searchExercises({ offset: 0, limit: 5 });
-      initializeFavorites(result.items);
-      setState("success");
-    } catch {
-      setState("error");
-    } finally {
-      setRetrying(false);
-    }
-  }, [initializeFavorites, isInitialized]);
-
-  useEffect(() => {
-    void loadFavoritesPreview();
-  }, [loadFavoritesPreview]);
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    await refetchFavorites();
+    setRetrying(false);
+  }, [refetchFavorites]);
 
   const openExercise = useCallback((exercise: ExerciseListItem) => {
     router.push({
@@ -75,14 +47,14 @@ export default function FavoritesScreen() {
     [openExercise, toggleFavorite],
   );
 
-  if (state === "error") {
+  if (status === "error") {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <DataErrorState
           variant="service"
           description="Favorilerin yüklenirken bir hata oluştu. Lütfen daha sonra tekrar dene."
           errorCode="FIT-SERVICE-FAVORITES"
-          onRetry={() => void loadFavoritesPreview(true)}
+          onRetry={() => void handleRetry()}
           retrying={retrying}
         />
       </SafeAreaView>
@@ -107,7 +79,7 @@ export default function FavoritesScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {state === "loading" ? (
+      {status === "loading" ? (
         <View style={styles.centered}>
           <ActivityIndicator color={MainColors.primary} size="large" />
           <Text style={styles.loadingText}>Yükleniyor...</Text>

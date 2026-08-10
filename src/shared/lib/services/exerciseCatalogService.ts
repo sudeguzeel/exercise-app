@@ -30,7 +30,7 @@ export type BodyPartOption = {
 const EXERCISE_MEDIA_BASE_URL =
   "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/";
 
-function buildMediaUrl(relativePath: string | null | undefined): string | null {
+export function buildMediaUrl(relativePath: string | null | undefined): string | null {
   if (!relativePath) return null;
   return `${EXERCISE_MEDIA_BASE_URL}${relativePath}`;
 }

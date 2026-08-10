@@ -28,6 +28,7 @@ export default function LoginScreen() {
 
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
 
   // Web'de Google girişi tam sayfa yönlendirmesiyle çalışıyor (bkz.
@@ -122,7 +123,13 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (loading || !validateForm()) {
+    if (loading) {
+      return;
+    }
+
+    setAuthError("");
+
+    if (!validateForm()) {
       return;
     }
 
@@ -134,8 +141,28 @@ export default function LoginScreen() {
         password,
       });
 
-      if (error || !data.session) {
-        Alert.alert("Giriş yapılamadı", "E-posta adresi veya şifre hatalı.");
+      if (error) {
+        if (error.code === "invalid_credentials") {
+          setAuthError("E-posta veya şifre hatalı.");
+        } else if (error.name === "AuthRetryableFetchError") {
+          Alert.alert(
+            "Bağlantı hatası",
+            "İnternet bağlantını kontrol edip tekrar dene.",
+          );
+        } else {
+          Alert.alert(
+            "Giriş yapılamadı",
+            "Şu anda giriş yapılamıyor. Lütfen daha sonra tekrar dene.",
+          );
+        }
+        return;
+      }
+
+      if (!data.session) {
+        Alert.alert(
+          "Giriş yapılamadı",
+          "Şu anda giriş yapılamıyor. Lütfen daha sonra tekrar dene.",
+        );
         return;
       }
 
@@ -288,6 +315,7 @@ const handleGoogleLogin = async () => {
                 value={email}
                 onChangeText={(value) => {
                   setEmail(value);
+                  setAuthError("");
 
                   if (emailError) {
                     setEmailError("");
@@ -322,6 +350,7 @@ const handleGoogleLogin = async () => {
                 value={password}
                 onChangeText={(value) => {
                   setPassword(value);
+                  setAuthError("");
 
                   if (passwordError) {
                     setPasswordError("");
@@ -344,6 +373,12 @@ const handleGoogleLogin = async () => {
 
             {passwordError ? (
               <Text style={styles.errorText}>{passwordError}</Text>
+            ) : null}
+
+            {authError ? (
+              <Text accessibilityRole="alert" style={styles.authErrorText}>
+                {authError}
+              </Text>
             ) : null}
 
             <Pressable
@@ -480,6 +515,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
     color: "#FF5A5A",
     fontSize: 12,
+  },
+  authErrorText: {
+    marginTop: 8,
+    marginHorizontal: 2,
+    color: "#D14343",
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: "700",
   },
   forgotPasswordButton: {
     alignSelf: "flex-end",
