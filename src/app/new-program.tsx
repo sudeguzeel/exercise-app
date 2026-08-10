@@ -51,29 +51,7 @@ const REMINDER_TIMES = Array.from(
 
 export default function NewProgramScreen() {
   const searchParams =
-    useLocalSearchParams<
-      ProgramSelectionSearchParams & {
-        selectedDate?: string | string[];
-      }
-    >();
-  const selectedDateParam = Array.isArray(searchParams.selectedDate)
-    ? searchParams.selectedDate[0]
-    : searchParams.selectedDate;
-  const initialTrainingDay = useMemo(
-    () =>
-      getCurrentWeek().find((day) => day.dateKey === selectedDateParam)?.day,
-    [selectedDateParam],
-  );
-  const selectedDateLabel = useMemo(() => {
-    if (!selectedDateParam || !initialTrainingDay) return null;
-    const date = new Date(`${selectedDateParam}T12:00:00`);
-    if (Number.isNaN(date.getTime())) return null;
-    return date.toLocaleDateString("tr-TR", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    });
-  }, [initialTrainingDay, selectedDateParam]);
+    useLocalSearchParams<ProgramSelectionSearchParams>();
   const selection = useMemo(
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
@@ -101,7 +79,6 @@ export default function NewProgramScreen() {
   const [programName, setProgramName] = useState("");
   const [selectedDays, setSelectedDays] = useState<Set<TrainingDay>>(
     () => new Set(initialTrainingDay ? [initialTrainingDay] : []),
-    () => new Set(initialTrainingDay ? [initialTrainingDay] : []),
   );
   const lastAppliedInitialTrainingDay = useRef(initialTrainingDay);
 
@@ -117,16 +94,12 @@ export default function NewProgramScreen() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalState, setModalState] = useState<FormModalState>(null);
+  const [createdProgramId, setCreatedProgramId] = useState<string | null>(
+    null,
+  );
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTimes, setReminderTimes] = useState(["18:00"]);
   const [reminderListOpen, setReminderListOpen] = useState<number | null>(null);
-  const effectiveMuscleGroupIds = useMemo(
-    () =>
-      selectedDateParam && exercise?.bodyPartId
-        ? new Set([exercise.bodyPartId])
-        : selectedMuscleGroupIds,
-    [exercise?.bodyPartId, selectedDateParam, selectedMuscleGroupIds],
-  );
 
   const isRouteValid = Boolean(selection && exercise);
   const muscleGroupIds = useMemo(
@@ -138,7 +111,7 @@ export default function NewProgramScreen() {
     isProgramFormValid(
       programName,
       selectedDays,
-      effectiveMuscleGroupIds,
+      muscleGroupIds,
     ) &&
     !isSubmitting;
   const trimmedProgramName = programName.trim();
@@ -151,19 +124,10 @@ export default function NewProgramScreen() {
       const createdProgram = await programRepository.createProgramWithExercise({
         name: programName,
         trainingDays: [...selectedDays],
-        muscleGroupIds: [...effectiveMuscleGroupIds],
+        muscleGroupIds: [...muscleGroupIds],
         exercise: selection,
       });
-      if (selectedDateParam) {
-        router.replace({
-          pathname: "/(main)/program",
-          params: {
-            selectedDate: selectedDateParam,
-            activeProgramId: createdProgram.id,
-          },
-        });
-        return;
-      }
+      setCreatedProgramId(createdProgram.id);
       setModalState({
         title: "Program oluşturuldu",
         message:
@@ -197,8 +161,7 @@ export default function NewProgramScreen() {
     isSubmitting,
     programName,
     selectedDays,
-    effectiveMuscleGroupIds,
-    selectedDateParam,
+    muscleGroupIds,
     selection,
   ]);
 
@@ -206,16 +169,20 @@ export default function NewProgramScreen() {
     const shouldLeaveScreen = modalState?.success === true;
     setModalState(null);
     if (shouldLeaveScreen) {
-      if (selectedDateParam) {
+      const selectedDate = initialTrainingDay
+        ? getCurrentWeek().find((day) => day.day === initialTrainingDay)
+            ?.dateKey
+        : undefined;
+      if (selectedDate && createdProgramId) {
         router.replace({
           pathname: "/(main)/program",
-          params: { selectedDate: selectedDateParam },
+          params: { selectedDate, activeProgramId: createdProgramId },
         });
-      } else {
-        router.replace("/exercise");
+        return;
       }
+      router.replace("/(main)");
     }
-  }, [createdProgramId, initialTrainingDay, modalState?.success, selectedDateParam]);
+  }, [createdProgramId, initialTrainingDay, modalState?.success]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
@@ -260,59 +227,32 @@ export default function NewProgramScreen() {
                     />
                   </View>
 
-                  {selectedDateLabel ? (
-                    <View style={styles.section}>
-                      <Text
-                        maxFontSizeMultiplier={1.3}
-                        style={styles.sectionLabel}
-                      >
-                        ANTRENMAN GÜNÜ
-                      </Text>
-                      <View style={styles.selectedDayCard}>
-                        <Ionicons
-                          name="calendar-outline"
-                          size={21}
-                          color={MainColors.primary}
+                  <View style={styles.section}>
+                    <Text
+                      maxFontSizeMultiplier={1.3}
+                      style={styles.sectionLabel}
+                    >
+                      HANGİ GÜNLER YAPILACAK?
+                    </Text>
+                    <View style={styles.dayGrid}>
+                      {TRAINING_DAY_OPTIONS.map((day) => (
+                        <SelectionChip
+                          accessibilityLabel={day.label}
+                          compact
+                          key={day.id}
+                          label={day.shortLabel}
+                          onPress={() =>
+                            setSelectedDays((currentSelection) =>
+                              toggleSelection(currentSelection, day.id),
+                            )
+                          }
+                          selected={selectedDays.has(day.id)}
                         />
-                        <View style={styles.selectedDayContent}>
-                          <Text style={styles.selectedDayText}>
-                            {selectedDateLabel}
-                          </Text>
-                          <Text style={styles.selectedDayHint}>
-                            Antrenman seçtiğin güne eklenecek.
-                          </Text>
-                        </View>
-                      </View>
+                      ))}
                     </View>
-                  ) : (
-                    <View style={styles.section}>
-                      <Text
-                        maxFontSizeMultiplier={1.3}
-                        style={styles.sectionLabel}
-                      >
-                        HANGİ GÜNLER YAPILACAK?
-                      </Text>
-                      <View style={styles.dayGrid}>
-                        {TRAINING_DAY_OPTIONS.map((day) => (
-                          <SelectionChip
-                            accessibilityLabel={day.label}
-                            compact
-                            key={day.id}
-                            label={day.shortLabel}
-                            onPress={() =>
-                              setSelectedDays((currentSelection) =>
-                                toggleSelection(currentSelection, day.id),
-                              )
-                            }
-                            selected={selectedDays.has(day.id)}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  )}
+                  </View>
 
-                  {selectedDateParam ? (
-                    <View style={styles.reminderCard}>
+                  <View style={styles.reminderCard}>
                       <Pressable
                         accessibilityLabel="Antrenman hatırlatıcısını aç veya kapat"
                         accessibilityRole="switch"
@@ -500,35 +440,6 @@ export default function NewProgramScreen() {
                         </View>
                       ) : null}
                     </View>
-                  ) : null}
-
-                  {!selectedDateParam ? (
-                    <View style={styles.section}>
-                      <Text
-                        maxFontSizeMultiplier={1.3}
-                        style={styles.sectionLabel}
-                      >
-                        ODAKLANILAN KAS GRUPLARI
-                      </Text>
-                      <View style={styles.muscleGrid}>
-                        {muscleGroups.map((muscleGroup) => (
-                          <SelectionChip
-                            key={muscleGroup.id}
-                            label={muscleGroup.name}
-                            onPress={() =>
-                              setSelectedMuscleGroupIds((currentSelection) =>
-                                toggleSelection(
-                                  currentSelection,
-                                  muscleGroup.id,
-                                ),
-                              )
-                            }
-                            selected={selectedMuscleGroupIds.has(muscleGroup.id)}
-                          />
-                        ))}
-                      </View>
-                    </View>
-                  ) : null}
 
                   <View style={styles.summaryCard}>
                     <View style={styles.summaryHeader}>
