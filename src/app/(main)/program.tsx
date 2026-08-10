@@ -309,14 +309,20 @@ export default function ProgramScreen() {
   }, [activeProgram, selectedDateKey]);
 
   const handleAddWorkout = useCallback(() => {
+    const selectedTrainingDay = week.find(
+      (day) => day.dateKey === selectedDateKey,
+    )?.day;
     router.push({
       pathname: "/exercise" as never,
       params: {
         selectionMode: "new-program",
         selectedDate: selectedDateKey,
+        ...(selectedTrainingDay
+          ? { initialTrainingDay: selectedTrainingDay }
+          : {}),
       },
     });
-  }, [selectedDateKey]);
+  }, [selectedDateKey, week]);
 
   if (hasLoadError || isRetrying) {
     return (
@@ -396,6 +402,24 @@ export default function ProgramScreen() {
               />
             ))}
           </View>
+        ) : programs.length === 0 ? (
+          <View style={styles.emptyProgramsCard}>
+            <View style={styles.emptyProgramsIcon}>
+              <Ionicons name="barbell-outline" size={27} color={MainColors.primary} />
+            </View>
+            <Text style={styles.emptyProgramsTitle}>Henüz bir programın yok</Text>
+            <Text style={styles.stateText}>
+              Hazır olduğunda kendine uygun yeni bir program oluşturabilirsin.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={handleAddWorkout}
+              style={({ pressed }) => [styles.createProgramButton, pressed && styles.pressed]}
+            >
+              <Ionicons name="add" size={18} color={MainColors.text} />
+              <Text style={styles.createProgramText}>Yeni program oluştur</Text>
+            </Pressable>
+          </View>
         ) : (
           <EmptyCard text="Bu gün için planlanmış bir program bulunmuyor." />
         )}
@@ -438,7 +462,7 @@ export default function ProgramScreen() {
         ) : null}
       </ScrollView>
 
-      <View style={styles.fixedFooter}>
+      {programs.length > 0 ? <View style={styles.fixedFooter}>
         <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
         <Pressable
           accessibilityRole="button"
@@ -473,7 +497,7 @@ export default function ProgramScreen() {
             </>
           )}
         </Pressable>
-      </View>
+      </View> : null}
     </SafeAreaView>
   );
 }
@@ -569,6 +593,44 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  emptyProgramsCard: {
+    minHeight: 230,
+    padding: 24,
+    borderWidth: 1.5,
+    borderColor: MainColors.border,
+    borderRadius: 24,
+    backgroundColor: MainColors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyProgramsIcon: {
+    width: 56,
+    height: 56,
+    marginBottom: 12,
+    borderRadius: 28,
+    backgroundColor: MainColors.paleGreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyProgramsTitle: {
+    marginBottom: 7,
+    color: MainColors.text,
+    fontSize: 20,
+    fontWeight: "900",
+    textAlign: "center",
+  },
+  createProgramButton: {
+    minHeight: 50,
+    marginTop: 18,
+    paddingHorizontal: 20,
+    borderRadius: 17,
+    backgroundColor: MainColors.primaryBright,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  createProgramText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
   stateText: { color: MainColors.mutedText, fontSize: 14, lineHeight: 20, textAlign: "center" },
   retryButton: { minHeight: 40, paddingHorizontal: 18, justifyContent: "center" },
   retryText: { color: MainColors.primary, fontSize: 14, fontWeight: "800" },
