@@ -2,12 +2,14 @@ import {
   validateCustomExerciseValues,
 } from "@/features/exercises/exercise-detail-validation";
 import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
+import type { TrainingDay } from "@/providers/OnboardingContext";
 
 export type ProgramSelectionPayload = {
   exerciseId: string;
   sets: number;
   reps: number;
   restSeconds: number;
+  weightKg?: number;
 };
 
 export type ProgramSelectionSearchParams = {
@@ -15,6 +17,7 @@ export type ProgramSelectionSearchParams = {
   sets?: string | string[];
   reps?: string | string[];
   restSeconds?: string | string[];
+  weightKg?: string | string[];
   initialTrainingDay?: string | string[];
 };
 
@@ -34,6 +37,9 @@ export function serializeProgramSelectionPayload(
     ),
   };
   if (initialTrainingDay) params.initialTrainingDay = initialTrainingDay;
+  if (payload.weightKg !== undefined) {
+    params.weightKg = String(payload.weightKg);
+  }
   return params;
 }
 
@@ -66,6 +72,7 @@ export function parseProgramSelectionParams(
   const sets = getSingleParam(params.sets)?.trim();
   const reps = getSingleParam(params.reps)?.trim();
   const restSeconds = getSingleParam(params.restSeconds)?.trim();
+  const weightKgValue = getSingleParam(params.weightKg)?.trim();
 
   if (!exerciseId || sets === undefined || reps === undefined || restSeconds === undefined) {
     return null;
@@ -73,6 +80,16 @@ export function parseProgramSelectionParams(
 
   const validation = validateCustomExerciseValues({ sets, reps, restSeconds });
   if (!validation.success) return null;
+  const weightKg =
+    weightKgValue === undefined || weightKgValue === ""
+      ? undefined
+      : Number(weightKgValue.replace(",", "."));
+  if (
+    weightKg !== undefined &&
+    (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 500)
+  ) {
+    return null;
+  }
 
   return {
     exerciseId,
@@ -82,6 +99,7 @@ export function parseProgramSelectionParams(
       customRestSeconds: validation.values.restSeconds,
       recommendedRestSeconds: null,
     }),
+    ...(weightKg === undefined ? {} : { weightKg }),
   };
 }
 

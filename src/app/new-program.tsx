@@ -16,6 +16,7 @@ import {
   programRepository,
   ProgramRepositoryError,
 } from "@/features/programs/program-repository";
+import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import { MainColors } from "@/shared/constants/theme";
 import {
@@ -97,6 +98,7 @@ export default function NewProgramScreen() {
   const [createdProgramId, setCreatedProgramId] = useState<string | null>(
     null,
   );
+  const [leaveAfterModal, setLeaveAfterModal] = useState(false);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTimes, setReminderTimes] = useState(["18:00"]);
   const [reminderListOpen, setReminderListOpen] = useState<number | null>(null);
@@ -128,13 +130,29 @@ export default function NewProgramScreen() {
         exercise: selection,
       });
       setCreatedProgramId(createdProgram.id);
-      setModalState({
-        title: "Program oluşturuldu",
-        message:
-          "Program oluşturuldu ve egzersiz programa başarıyla eklendi.",
-        success: true,
-      });
+      setLeaveAfterModal(true);
+      try {
+        await saveInitialProgramExerciseWeight(
+          createdProgram,
+          selection.exerciseId,
+          selection.weightKg,
+        );
+        setModalState({
+          title: "Program oluşturuldu",
+          message:
+            "Program oluşturuldu ve egzersiz programa başarıyla eklendi.",
+          success: true,
+        });
+      } catch {
+        setModalState({
+          title: "Kilo kaydı tamamlanamadı",
+          message:
+            "Program oluşturuldu ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
+          success: false,
+        });
+      }
     } catch (error) {
+      setLeaveAfterModal(false);
       if (
         error instanceof ProgramRepositoryError &&
         error.code === "DUPLICATE_NAME"
@@ -166,8 +184,9 @@ export default function NewProgramScreen() {
   ]);
 
   const handleModalConfirm = useCallback(() => {
-    const shouldLeaveScreen = modalState?.success === true;
+    const shouldLeaveScreen = leaveAfterModal;
     setModalState(null);
+    setLeaveAfterModal(false);
     if (shouldLeaveScreen) {
       const selectedDate = initialTrainingDay
         ? getCurrentWeek().find((day) => day.day === initialTrainingDay)
@@ -182,7 +201,7 @@ export default function NewProgramScreen() {
       }
       router.replace("/(main)");
     }
-  }, [createdProgramId, initialTrainingDay, modalState?.success]);
+  }, [createdProgramId, initialTrainingDay, leaveAfterModal]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
