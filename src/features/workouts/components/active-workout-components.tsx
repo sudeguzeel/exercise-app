@@ -6,7 +6,7 @@ import type {
 } from "@/features/workouts/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -213,6 +213,72 @@ export function TargetRepetitionCard({ value }: { value: number }) {
   );
 }
 
+// Program kaç hareketten oluşuyorsa o kadar nokta gösterir; aktif nokta
+// büyür, kullanıcı bir noktaya dokunarak doğrudan o harekete atlayabilir.
+// Nokta sayısı ekrana sığmazsa şerit yatay kaydırılabilir ve aktif nokta
+// otomatik olarak ekranın ortasına gelecek şekilde kaydırılır.
+export function ExerciseDotPagination({
+  count,
+  activeIndex,
+  onSelect,
+}: {
+  count: number;
+  activeIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const { styles } = useWorkoutComponentTheme();
+  const scrollRef = useRef<ScrollView>(null);
+  const containerWidthRef = useRef(0);
+  const dotLayoutsRef = useRef<Map<number, { x: number; width: number }>>(
+    new Map(),
+  );
+
+  const centerOnIndex = useCallback((index: number) => {
+    const layout = dotLayoutsRef.current.get(index);
+    const containerWidth = containerWidthRef.current;
+    if (!layout || !containerWidth) return;
+    const target = Math.max(0, layout.x + layout.width / 2 - containerWidth / 2);
+    scrollRef.current?.scrollTo({ animated: true, x: target });
+  }, []);
+
+  useEffect(() => {
+    centerOnIndex(activeIndex);
+  }, [activeIndex, centerOnIndex]);
+
+  return (
+    <ScrollView
+      contentContainerStyle={styles.dotContent}
+      horizontal
+      onLayout={(event) => {
+        containerWidthRef.current = event.nativeEvent.layout.width;
+        centerOnIndex(activeIndex);
+      }}
+      ref={scrollRef}
+      showsHorizontalScrollIndicator={false}
+      style={styles.dotScroll}
+    >
+      {Array.from({ length: count }, (_, index) => {
+        const active = index === activeIndex;
+        return (
+          <Pressable
+            accessibilityLabel={`${index + 1}. harekete git`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            hitSlop={8}
+            key={index}
+            onLayout={(event) => {
+              const { x, width } = event.nativeEvent.layout;
+              dotLayoutsRef.current.set(index, { x, width });
+            }}
+            onPress={() => onSelect(index)}
+            style={[styles.dot, active && styles.dotActive]}
+          />
+        );
+      })}
+    </ScrollView>
+  );
+}
+
 function useWorkoutComponentTheme() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -274,5 +340,9 @@ function createStyles(colors: AppThemeColors) {
   targetCard: { minHeight: 78, paddingHorizontal: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 22, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
   targetValue: { color: colors.text, fontSize: 29, fontWeight: "900" },
   targetUnit: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
+  dotScroll: { flexGrow: 0 },
+  dotContent: { paddingHorizontal: 4, alignItems: "center", gap: 10 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.border },
+  dotActive: { width: 22, backgroundColor: colors.primaryBright },
   });
 }

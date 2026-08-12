@@ -24,6 +24,8 @@ import {
   areAllSetsCompleted,
   createWorkoutOccurrenceKey,
   findFirstIncompleteSet,
+  findFirstIncompleteSetIndexInExercise,
+  findMostRecentlyCompletedPosition,
   findPendingWorkoutTarget,
   findSetPosition,
   getElapsedDurationMs,
@@ -997,12 +999,10 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         );
       }
 
-      const completedSets = session.exercises.flatMap((exercise) =>
-        exercise.sets
-          .filter((set) => Boolean(set.completedAt))
-          .map((set) => ({ exercise, set })),
-      );
-      const previous = completedSets.at(-1);
+      // Kullanıcı hareketler arasında serbestçe geçebildiği için "önceki
+      // set" artık dizideki son eleman değil, gerçek zamanda en son
+      // tamamlanan settir (bkz. findMostRecentlyCompletedPosition).
+      const previous = findMostRecentlyCompletedPosition(session);
       if (!previous) return clone(session);
 
       const exerciseWasCompleted = isWorkoutExerciseCompleted(previous.exercise);
@@ -1028,7 +1028,8 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       session.restStartedAt = null;
       session.restEndsAt = null;
       session.restDurationSeconds = null;
-      session.lastCompletedSetId = completedSets.at(-2)?.set.id ?? null;
+      session.lastCompletedSetId =
+        findMostRecentlyCompletedPosition(session)?.set.id ?? null;
       return saveSession(userId, session);
     } finally {
       setRevertLocks.delete(workoutSessionId);
@@ -1072,11 +1073,18 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           "Devam etmeden önce mevcut antrenman adımını tamamlayın.",
         );
       }
-      const activePosition = findFirstIncompleteSet(session);
-      if (activePosition?.set.id !== input.setId) {
+      // Setler kendi hareketi içinde sırayla tamamlanmalı, ama hangi
+      // hareketle çalışılacağı serbest — kullanıcı ekranda hareketler
+      // arasında kaydırabiliyor (bkz. workout.tsx). Bu yüzden "aktif set"
+      // artık antrenman genelinde değil, yalnızca bu setin ait olduğu
+      // hareket içinde ilk tamamlanmamış set olmalı.
+      const firstIncompleteIndexInExercise = findFirstIncompleteSetIndexInExercise(
+        position.exercise,
+      );
+      if (firstIncompleteIndexInExercise !== position.setIndex) {
         throw new WorkoutRepositoryError(
           "OUT_OF_ORDER",
-          "Önce aktif seti tamamlamalısınız.",
+          "Bu hareketteki setleri sırayla tamamlamalısınız.",
         );
       }
       const completedAt = new Date().toISOString();
@@ -1087,20 +1095,39 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       position.set.completedAt = completedAt;
       session.lastCompletedSetId = position.set.id;
 
-      const next = findFirstIncompleteSet(session);
-      if (next) {
+      // Dinlenme sadece AYNI hareketin bir sonraki setine yönlendirir —
+      // hareketler arası otomatik geçiş yok, kullanıcı bir sonraki harekete
+      // ne zaman geçeceğine kendisi karar verir (skip edip sonra dönebilir).
+      const nextSetIndexInExercise = findFirstIncompleteSetIndexInExercise(
+        position.exercise,
+      );
+      if (nextSetIndexInExercise >= 0) {
         const restDurationSeconds = resolveRestDurationSeconds(
           position.exercise.restSeconds,
         );
         session.phase = "rest";
-        session.pendingTarget = toPendingWorkoutTarget(next);
+        session.pendingTarget = toPendingWorkoutTarget({
+          exerciseIndex: position.exerciseIndex,
+          setIndex: nextSetIndexInExercise,
+          exercise: position.exercise,
+          set: position.exercise.sets[nextSetIndexInExercise],
+        });
         session.restStartedAt = completedAt;
         session.restDurationSeconds = restDurationSeconds;
         session.restEndsAt = new Date(
           new Date(completedAt).getTime() + restDurationSeconds * 1000,
         ).toISOString();
-      } else {
+      } else if (areAllSetsCompleted(session)) {
         session.phase = "saving";
+        session.pendingTarget = null;
+        session.restStartedAt = null;
+        session.restEndsAt = null;
+        session.restDurationSeconds = null;
+      } else {
+        // Bu hareket bitti ama antrenmanda başka tamamlanmamış hareket var —
+        // otomatik olarak başka bir harekete geçilmez, ekran "active" kalır
+        // ve kullanıcı kaydırarak devam edeceği hareketi kendisi seçer.
+        session.phase = "active";
         session.pendingTarget = null;
         session.restStartedAt = null;
         session.restEndsAt = null;
@@ -1184,8 +1211,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       }
 
       const pending = findPendingWorkoutTarget(session);
-      const firstIncomplete = findFirstIncompleteSet(session);
-      if (!pending || pending.set.id !== firstIncomplete?.set.id) {
+      if (!pending) {
         throw new WorkoutRepositoryError(
           "INVALID_INPUT",
           "Sıradaki antrenman adımı bulunamadı.",
