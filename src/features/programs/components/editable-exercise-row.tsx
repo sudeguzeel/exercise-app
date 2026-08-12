@@ -1,5 +1,6 @@
 import type { PersistedProgramExercise } from "@/features/programs/types";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useRef } from "react";
 import {
@@ -28,6 +29,8 @@ export function EditableExerciseRow({
   onRemove: (relationId: string) => void;
   onDragStateChange: (dragging: boolean) => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const translateY = useRef(new Animated.Value(0)).current;
   const responder = useMemo(
     () =>
@@ -80,7 +83,7 @@ export function EditableExerciseRow({
         style={styles.dragHandle}
         {...responder.panHandlers}
       >
-        <Ionicons name="reorder-three-outline" size={24} color={MainColors.mutedText} />
+        <Ionicons name="reorder-three-outline" size={24} color={colors.textSecondary} />
       </View>
       <Text numberOfLines={2} style={styles.name}>
         {exercise.name}
@@ -95,20 +98,21 @@ export function EditableExerciseRow({
         onPress={() => onRemove(exercise.id)}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <Ionicons name="close" size={23} color="#FF4D55" />
+        <Ionicons name="close" size={23} color={colors.error} />
       </Pressable>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   row: {
     minHeight: 60,
     paddingHorizontal: 12,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
@@ -123,12 +127,13 @@ const styles = StyleSheet.create({
   name: {
     flex: 1,
     minWidth: 0,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "700",
   },
-  value: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
+  value: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
   pressed: { opacity: 0.65 },
-});
+  });
+}
 

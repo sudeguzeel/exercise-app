@@ -17,6 +17,8 @@ import { programRepository } from "@/features/programs/program-repository";
 import type { UserProgram } from "@/features/programs/types";
 import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   getBodyParts,
   getExerciseSummary,
@@ -43,6 +45,8 @@ type ResultModalState = {
 };
 
 export default function ProgramSelectionScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const searchParams =
     useLocalSearchParams<ProgramSelectionSearchParams>();
   const selection = useMemo(
@@ -232,7 +236,7 @@ export default function ProgramSelectionScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         <View style={styles.redirectState}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -270,7 +274,7 @@ export default function ProgramSelectionScreen() {
                   {listState === "loading" ? (
                     <View style={styles.stateCard}>
                       <ActivityIndicator
-                        color={MainColors.primary}
+                        color={colors.primary}
                         size="large"
                       />
                       <Text
@@ -287,7 +291,7 @@ export default function ProgramSelectionScreen() {
                       <Ionicons
                         name="alert-circle-outline"
                         size={34}
-                        color={MainColors.primary}
+                        color={colors.primary}
                       />
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -319,7 +323,7 @@ export default function ProgramSelectionScreen() {
                       <Ionicons
                         name="document-text-outline"
                         size={34}
-                        color={MainColors.primary}
+                        color={colors.primary}
                       />
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -358,7 +362,7 @@ export default function ProgramSelectionScreen() {
                   <Ionicons
                     name="add-circle-outline"
                     size={22}
-                    color={MainColors.primary}
+                    color={colors.primary}
                   />
                   <Text
                     maxFontSizeMultiplier={1.3}
@@ -373,7 +377,7 @@ export default function ProgramSelectionScreen() {
                 <Ionicons
                   name="alert-circle-outline"
                   size={44}
-                  color={MainColors.primary}
+                  color={colors.primary}
                 />
                 <Text
                   maxFontSizeMultiplier={1.3}
@@ -421,7 +425,7 @@ export default function ProgramSelectionScreen() {
                 ]}
               >
                 {isSubmitting ? (
-                  <ActivityIndicator color={MainColors.text} />
+                  <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                   <Text
                     maxFontSizeMultiplier={1.3}
@@ -463,7 +467,7 @@ function getProgramCategoryLabel(
   return names.slice(0, 2).join(" & ");
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: MainColors.background,

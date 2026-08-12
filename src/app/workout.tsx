@@ -1,7 +1,6 @@
 import {
   ExerciseInfoCard,
   ExerciseMedia,
-  SetPerformanceInputs,
   SetSelector,
   TargetRepetitionCard,
   WorkoutTopBar,
@@ -20,6 +19,8 @@ import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
 import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,6 +44,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     workoutSessionId?: string | string[];
@@ -54,8 +57,6 @@ export default function WorkoutScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [actualRepsInput, setActualRepsInput] = useState("");
-  const [weightInput, setWeightInput] = useState("");
   const mountedRef = useRef(true);
   const sessionRef = useRef<WorkoutSession | null>(null);
   const transitionInProgressRef = useRef(false);
@@ -201,17 +202,6 @@ export default function WorkoutScreen() {
     [session],
   );
 
-  useEffect(() => {
-    if (!activePosition) return;
-    setActualRepsInput(String(activePosition.set.actualReps));
-    setWeightInput(
-      activePosition.set.weightInput ||
-        (activePosition.set.weightKg === null
-          ? ""
-          : String(activePosition.set.weightKg)),
-    );
-  }, [activePosition]);
-
   const finishWorkout = useCallback(async () => {
     if (transitionInProgressRef.current) return;
     transitionInProgressRef.current = true;
@@ -239,21 +229,6 @@ export default function WorkoutScreen() {
     const active = current ? findFirstIncompleteSet(current) : null;
     if (!current || current.phase !== "active" || !active) return;
 
-    const actualReps = Number(actualRepsInput);
-    if (!Number.isInteger(actualReps) || actualReps < 1 || actualReps > 100) {
-      setActionError("Gerçek tekrar sayısı 1 ile 100 arasında olmalıdır.");
-      return;
-    }
-    const normalizedWeight = weightInput.trim().replace(",", ".");
-    const weightKg = normalizedWeight === "" ? null : Number(normalizedWeight);
-    if (
-      weightKg !== null &&
-      (!Number.isFinite(weightKg) || weightKg < 0 || weightKg > 500)
-    ) {
-      setActionError("Kullanılan kilo 0 ile 500 kg arasında olmalıdır.");
-      return;
-    }
-
     transitionInProgressRef.current = true;
     setIsTransitioning(true);
     setActionError(null);
@@ -262,8 +237,8 @@ export default function WorkoutScreen() {
       const updated = await workoutRepository.completeSet({
         workoutSessionId,
         setId: active.set.id,
-        actualReps,
-        weightKg,
+        actualReps: active.set.targetReps,
+        weightKg: active.set.weightKg,
       });
       sessionRef.current = updated;
       if (mountedRef.current) setSession(updated);
@@ -293,18 +268,12 @@ export default function WorkoutScreen() {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [
-    actualRepsInput,
-    replaceWithCompletion,
-    replaceWithRest,
-    weightInput,
-    workoutSessionId,
-  ]);
+  }, [replaceWithCompletion, replaceWithRest, workoutSessionId]);
 
   if (session === undefined && !loadError) {
     return (
       <ScreenState>
-        <ActivityIndicator color={MainColors.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         <Text style={styles.stateText}>Antrenman hazırlanıyor…</Text>
       </ScreenState>
     );
@@ -313,7 +282,7 @@ export default function WorkoutScreen() {
   if (!session || loadError) {
     return (
       <ScreenState>
-        <Ionicons name="alert-circle-outline" size={42} color={MainColors.primary} />
+        <Ionicons name="alert-circle-outline" size={42} color={colors.primary} />
         <Text style={styles.stateTitle}>Antrenman açılamadı</Text>
         <Text style={styles.stateText}>{loadError ?? "Antrenman verisi eksik."}</Text>
         <Pressable
@@ -334,9 +303,9 @@ export default function WorkoutScreen() {
     return (
       <ScreenState>
         {saveStatus === "saving" ? (
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         ) : (
-          <Ionicons name="cloud-upload-outline" size={44} color={MainColors.primary} />
+          <Ionicons name="cloud-upload-outline" size={44} color={colors.primary} />
         )}
         <Text style={styles.stateTitle}>Antrenman kaydediliyor</Text>
         <Text accessibilityLiveRegion="polite" style={styles.stateText}>
@@ -392,13 +361,6 @@ export default function WorkoutScreen() {
           <Text style={styles.fieldLabel}>HEDEF TEKRAR</Text>
           <TargetRepetitionCard value={set.targetReps} />
         </View>
-        <SetPerformanceInputs
-          actualReps={actualRepsInput}
-          disabled={isTransitioning}
-          onActualRepsChange={setActualRepsInput}
-          onWeightChange={setWeightInput}
-          weight={weightInput}
-        />
       </ScrollView>
 
       <View
@@ -427,7 +389,7 @@ export default function WorkoutScreen() {
           ]}
         >
           {isTransitioning ? (
-            <ActivityIndicator color={MainColors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.completeButtonText}>Seti tamamla ✓</Text>
           )}
@@ -438,6 +400,7 @@ export default function WorkoutScreen() {
 }
 
 function ScreenState({ children }: { children: React.ReactNode }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen options={{ gestureEnabled: false }} />
@@ -446,7 +409,7 @@ function ScreenState({ children }: { children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
   content: {
     flexGrow: 1,

@@ -19,6 +19,8 @@ import {
 import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   getExerciseSummary,
   type ExerciseSummary,
@@ -51,6 +53,8 @@ const REMINDER_TIMES = Array.from(
 );
 
 export default function NewProgramScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const searchParams =
     useLocalSearchParams<ProgramSelectionSearchParams>();
   const selection = useMemo(
@@ -239,7 +243,7 @@ export default function NewProgramScreen() {
                       maxFontSizeMultiplier={1.3}
                       onChangeText={setProgramName}
                       placeholder="Örn. İtiş Günü"
-                      placeholderTextColor={MainColors.mutedText}
+                      placeholderTextColor={colors.placeholder}
                       returnKeyType="done"
                       style={styles.nameInput}
                       value={programName}
@@ -303,7 +307,7 @@ export default function NewProgramScreen() {
                         <Ionicons
                           name="notifications-outline"
                           size={22}
-                          color={MainColors.primary}
+                          color={colors.primary}
                         />
                         <View style={styles.reminderTitleContent}>
                           <Text style={styles.reminderTitle}>
@@ -358,7 +362,7 @@ export default function NewProgramScreen() {
                                   <Ionicons
                                     name="time-outline"
                                     size={21}
-                                    color={MainColors.primary}
+                                    color={colors.primary}
                                   />
                                   <Text style={styles.selectedReminderTimeText}>
                                     {reminderTime}
@@ -370,7 +374,7 @@ export default function NewProgramScreen() {
                                         : "chevron-down"
                                     }
                                     size={19}
-                                    color={MainColors.mutedText}
+                                    color={colors.textSecondary}
                                   />
                                 </Pressable>
                                 {index > 0 ? (
@@ -391,7 +395,7 @@ export default function NewProgramScreen() {
                                     <Ionicons
                                       name="close"
                                       size={19}
-                                      color={MainColors.mutedText}
+                                      color={colors.textSecondary}
                                     />
                                   </Pressable>
                                 ) : null}
@@ -462,7 +466,7 @@ export default function NewProgramScreen() {
                               <Ionicons
                                 name="add"
                                 size={19}
-                                color={MainColors.primary}
+                                color={colors.primary}
                               />
                               <Text style={styles.addReminderButtonText}>
                                 Saat ekle
@@ -504,7 +508,7 @@ export default function NewProgramScreen() {
                   <Ionicons
                     name="alert-circle-outline"
                     size={44}
-                    color={MainColors.primary}
+                    color={colors.primary}
                   />
                   <Text
                     maxFontSizeMultiplier={1.3}
@@ -551,7 +555,7 @@ export default function NewProgramScreen() {
                   ]}
                 >
                   {isSubmitting ? (
-                    <ActivityIndicator color={MainColors.text} />
+                    <ActivityIndicator color={colors.onPrimary} />
                   ) : (
                     <Text
                       maxFontSizeMultiplier={1.3}
@@ -581,7 +585,7 @@ export default function NewProgramScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: MainColors.background,

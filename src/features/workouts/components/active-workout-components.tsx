@@ -1,18 +1,18 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import type {
   WorkoutExerciseSnapshot,
   WorkoutSetSnapshot,
 } from "@/features/workouts/types";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -25,6 +25,7 @@ export function WorkoutTopBar({
   onBack: () => void;
   onExit: () => void;
 }) {
+  const { colors, styles } = useWorkoutComponentTheme();
   return (
     <View style={styles.topBar}>
       <Pressable
@@ -34,7 +35,7 @@ export function WorkoutTopBar({
         onPress={onBack}
         style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
       >
-        <Ionicons name="chevron-back" size={22} color={MainColors.text} />
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
       <Text
         accessibilityLabel={`${elapsed} geçen süre`}
@@ -50,7 +51,7 @@ export function WorkoutTopBar({
         onPress={onExit}
         style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
       >
-        <Ionicons name="close" size={24} color={MainColors.text} />
+        <Ionicons name="close" size={24} color={colors.text} />
       </Pressable>
     </View>
   );
@@ -65,6 +66,7 @@ export function ExerciseInfoCard({
   exerciseIndex: number;
   totalExercises: number;
 }) {
+  const { styles } = useWorkoutComponentTheme();
   const detail = [
     exercise.muscleGroupName,
     `${exercise.targetSets} set × ${exercise.targetReps} tekrar`,
@@ -94,6 +96,7 @@ export function ExerciseMedia({
   exerciseName: string;
   mediaUrl: string | null;
 }) {
+  const { colors, styles } = useWorkoutComponentTheme();
   const [state, setState] = useState<"idle" | "loading" | "playing" | "error">(
     "idle",
   );
@@ -117,7 +120,7 @@ export function ExerciseMedia({
           />
           {state === "loading" ? (
             <View style={styles.mediaLoading}>
-              <ActivityIndicator color={MainColors.primary} size="large" />
+              <ActivityIndicator color={colors.primary} size="large" />
             </View>
           ) : null}
         </View>
@@ -136,9 +139,9 @@ export function ExerciseMedia({
             ]}
           >
             {state === "loading" ? (
-              <ActivityIndicator color={MainColors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Ionicons name="play" size={27} color={MainColors.text} />
+              <Ionicons name="play" size={27} color={colors.onPrimary} />
             )}
           </Pressable>
         </View>
@@ -161,6 +164,7 @@ export function SetSelector({
   sets: WorkoutSetSnapshot[];
   activeSetId: string | null;
 }) {
+  const { styles } = useWorkoutComponentTheme();
   return (
     <ScrollView
       horizontal
@@ -194,6 +198,7 @@ export function SetSelector({
 }
 
 export function TargetRepetitionCard({ value }: { value: number }) {
+  const { styles } = useWorkoutComponentTheme();
   return (
     <View
       accessibilityLabel={`Hedef tekrar: ${value}`}
@@ -208,62 +213,14 @@ export function TargetRepetitionCard({ value }: { value: number }) {
   );
 }
 
-export function SetPerformanceInputs({
-  actualReps,
-  weight,
-  disabled,
-  onActualRepsChange,
-  onWeightChange,
-}: {
-  actualReps: string;
-  weight: string;
-  disabled: boolean;
-  onActualRepsChange: (value: string) => void;
-  onWeightChange: (value: string) => void;
-}) {
-  return (
-    <View style={styles.performanceRow}>
-      <View style={styles.performanceField}>
-        <Text style={styles.performanceLabel}>GERÇEK TEKRAR</Text>
-        <View style={styles.performanceInputShell}>
-          <TextInput
-            accessibilityLabel="Gerçekleştirilen tekrar sayısı"
-            editable={!disabled}
-            inputMode="numeric"
-            keyboardType="number-pad"
-            maxLength={3}
-            onChangeText={(value) => onActualRepsChange(value.replace(/\D/g, ""))}
-            selectTextOnFocus
-            style={styles.performanceInput}
-            value={actualReps}
-          />
-          <Text style={styles.performanceUnit}>TEKRAR</Text>
-        </View>
-      </View>
-      <View style={styles.performanceField}>
-        <Text style={styles.performanceLabel}>KULLANILAN KİLO</Text>
-        <View style={styles.performanceInputShell}>
-          <TextInput
-            accessibilityLabel="Bu sette kullanılan kilo"
-            editable={!disabled}
-            inputMode="decimal"
-            keyboardType="decimal-pad"
-            maxLength={6}
-            onChangeText={onWeightChange}
-            placeholder="—"
-            placeholderTextColor={MainColors.mutedText}
-            selectTextOnFocus
-            style={styles.performanceInput}
-            value={weight}
-          />
-          <Text style={styles.performanceUnit}>kg</Text>
-        </View>
-      </View>
-    </View>
-  );
+function useWorkoutComponentTheme() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
 }
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
 
-const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
   topBar: {
     minHeight: 64,
@@ -276,78 +233,46 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  elapsedLabel: { flex: 1, color: MainColors.mutedText, fontSize: 13, textAlign: "center" },
-  elapsedValue: { color: MainColors.primaryBright, fontWeight: "900" },
+  elapsedLabel: { flex: 1, color: colors.textSecondary, fontSize: 13, textAlign: "center" },
+  elapsedValue: { color: colors.primaryBright, fontWeight: "900" },
   infoCard: {
     padding: 20,
     borderRadius: 24,
-    backgroundColor: "#171B1E",
+    backgroundColor: colors.surfaceElevated,
   },
-  infoEyebrow: { color: "#92979A", fontSize: 12, fontWeight: "800" },
-  exerciseTitle: { marginTop: 9, color: "#FFFFFF", fontSize: 24, lineHeight: 29, fontWeight: "900" },
-  exerciseDetail: { marginTop: 7, color: "#B3B7B9", fontSize: 13, lineHeight: 18 },
+  infoEyebrow: { color: colors.textSecondary, fontSize: 12, fontWeight: "800" },
+  exerciseTitle: { marginTop: 9, color: colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900" },
+  exerciseDetail: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
   mediaCard: {
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     overflow: "hidden",
   },
-  mediaFrame: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, backgroundColor: MainColors.paleGreen },
+  mediaFrame: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, backgroundColor: colors.primarySoft },
   mediaImage: { width: "100%", height: "100%" },
-  mediaLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: MainColors.paleGreen },
-  mediaPlaceholder: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, alignItems: "center", justifyContent: "center", backgroundColor: MainColors.paleGreen },
-  playButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
-  playButtonDisabled: { backgroundColor: MainColors.border, opacity: 0.7 },
-  mediaCaption: { paddingHorizontal: 14, paddingVertical: 12, color: MainColors.mutedText, fontSize: 12 },
+  mediaLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  mediaPlaceholder: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  playButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
+  playButtonDisabled: { backgroundColor: colors.disabled, opacity: 0.7 },
+  mediaCaption: { paddingHorizontal: 14, paddingVertical: 12, color: colors.textSecondary, fontSize: 12 },
   setContent: { gap: 8 },
-  setPill: { minWidth: 78, minHeight: 42, paddingHorizontal: 14, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 14, backgroundColor: MainColors.surface, alignItems: "center", justifyContent: "center" },
-  completedSet: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.paleGreen },
-  activeSet: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.primaryBright },
+  setPill: { minWidth: 78, minHeight: 42, paddingHorizontal: 14, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  completedSet: { borderColor: colors.primaryBright, backgroundColor: colors.primarySoft },
+  activeSet: { borderColor: colors.primaryBright, backgroundColor: colors.primaryBright },
   pendingSet: { opacity: 0.52 },
-  setText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
-  activeSetText: { color: MainColors.text, fontWeight: "900" },
-  targetCard: { minHeight: 78, paddingHorizontal: 20, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 22, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
-  targetValue: { color: MainColors.text, fontSize: 29, fontWeight: "900" },
-  targetUnit: { color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
-  performanceRow: { flexDirection: "row", gap: 10 },
-  performanceField: { flex: 1, minWidth: 0 },
-  performanceLabel: {
-    marginBottom: 8,
-    color: MainColors.mutedText,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  performanceInputShell: {
-    minHeight: 58,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: MainColors.border,
-    borderRadius: 18,
-    backgroundColor: MainColors.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  performanceInput: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: 0,
-    color: MainColors.text,
-    fontSize: 20,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  performanceUnit: {
-    color: MainColors.mutedText,
-    fontSize: 9,
-    fontWeight: "800",
-  },
-});
+
+  setText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
+  activeSetText: { color: colors.onPrimary, fontWeight: "900" },
+  targetCard: { minHeight: 78, paddingHorizontal: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 22, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
+  targetValue: { color: colors.text, fontSize: 29, fontWeight: "900" },
+  targetUnit: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
+  });
+}

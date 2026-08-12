@@ -13,7 +13,8 @@ import {
 } from "@/features/exercises/program-selection";
 import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
 import {
   getExerciseDetail,
@@ -91,6 +92,8 @@ function MetricCard({
   onDecrement: () => void;
   onIncrement: () => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.metricCard}>
       <View style={styles.metricControlRow}>
@@ -103,7 +106,7 @@ function MetricCard({
             pressed && styles.buttonPressed,
           ]}
         >
-          <Ionicons name="remove" size={18} color={MainColors.primary} />
+          <Ionicons name="remove" size={18} color={colors.primary} />
         </Pressable>
         <Text maxFontSizeMultiplier={1.3} style={styles.metricValue}>
           {value}
@@ -117,7 +120,7 @@ function MetricCard({
             pressed && styles.buttonPressed,
           ]}
         >
-          <Ionicons name="add" size={18} color={MainColors.primary} />
+          <Ionicons name="add" size={18} color={colors.primary} />
         </Pressable>
       </View>
       <Text maxFontSizeMultiplier={1.3} style={styles.metricLabel}>
@@ -128,6 +131,8 @@ function MetricCard({
 }
 
 export default function ExerciseDetailScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const searchParams = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
@@ -440,7 +445,7 @@ export default function ExerciseDetailScreen() {
                 <Ionicons
                   name="chevron-back"
                   size={24}
-                  color={MainColors.text}
+                  color={colors.text}
                 />
               </Pressable>
 
@@ -473,8 +478,8 @@ export default function ExerciseDetailScreen() {
                   size={25}
                   color={
                     exercise && isFavorite(exercise.id)
-                      ? MainColors.primary
-                      : MainColors.text
+                      ? colors.primary
+                      : colors.text
                   }
                 />
               </Pressable>
@@ -485,7 +490,7 @@ export default function ExerciseDetailScreen() {
                 <Ionicons
                   name="alert-circle-outline"
                   size={48}
-                  color={MainColors.primary}
+                  color={colors.primary}
                 />
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundTitle}>
                   Egzersiz yüklenemedi
@@ -503,7 +508,7 @@ export default function ExerciseDetailScreen() {
               </View>
             ) : exercise === undefined ? (
               <View style={styles.loadingCard}>
-                <ActivityIndicator color={MainColors.primary} size="large" />
+                <ActivityIndicator color={colors.primary} size="large" />
               </View>
             ) : exercise ? (
               <>
@@ -541,7 +546,7 @@ export default function ExerciseDetailScreen() {
                       <Ionicons
                         name={exercise.icon}
                         size={112}
-                        color={MainColors.mutedText}
+                        color={colors.textSecondary}
                       />
                     </View>
                   )}
@@ -689,7 +694,7 @@ export default function ExerciseDetailScreen() {
                         <Ionicons
                           name="checkmark"
                           size={20}
-                          color={MainColors.surface}
+                          color={colors.onPrimary}
                         />
                       ) : null}
                     </View>
@@ -705,6 +710,7 @@ export default function ExerciseDetailScreen() {
 
                 {useCustomValues || !hasRecommendedValues ? (
                 <View style={styles.customFieldRow}>
+
                   {CUSTOM_FIELDS.map((field) => {
                     const customFieldKey =
                       field.key === "weightKg" ? null : field.key;
@@ -742,7 +748,7 @@ export default function ExerciseDetailScreen() {
                             <Ionicons
                               name="remove"
                               size={18}
-                              color={MainColors.primary}
+                              color={colors.primary}
                             />
                           </Pressable>
                           <TextInput
@@ -771,7 +777,7 @@ export default function ExerciseDetailScreen() {
                               );
                             }}
                             placeholder={field.placeholder}
-                            placeholderTextColor={MainColors.mutedText}
+                            placeholderTextColor={colors.placeholder}
                             returnKeyType="done"
                             style={styles.customInput}
                             value={
@@ -781,6 +787,7 @@ export default function ExerciseDetailScreen() {
                                   ? `${customValues[customFieldKey]}s`
                                   : customValues[customFieldKey]
                             }
+
                           />
                           <Pressable
                             accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini artır`}
@@ -798,7 +805,7 @@ export default function ExerciseDetailScreen() {
                             <Ionicons
                               name="add"
                               size={18}
-                              color={MainColors.primary}
+                              color={colors.primary}
                             />
                           </Pressable>
                         </View>
@@ -833,7 +840,7 @@ export default function ExerciseDetailScreen() {
                 <Ionicons
                   name="alert-circle-outline"
                   size={48}
-                  color={MainColors.primary}
+                  color={colors.primary}
                 />
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundTitle}>
                   Egzersiz bulunamadı
@@ -859,10 +866,10 @@ export default function ExerciseDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: MainColors.background,
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
@@ -886,9 +893,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 25,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -904,9 +911,9 @@ const styles = StyleSheet.create({
   mediaCard: {
     marginTop: 28,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 28,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     overflow: "hidden",
   },
   mediaBadge: {
@@ -918,12 +925,12 @@ const styles = StyleSheet.create({
     minHeight: 34,
     paddingHorizontal: 16,
     borderRadius: 17,
-    backgroundColor: "#E7F2D3",
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   mediaBadgeText: {
-    color: MainColors.primary,
+    color: colors.primary,
     fontSize: 13,
     lineHeight: 18,
     fontWeight: "900",
@@ -953,7 +960,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   mediaMuscleInfoLabel: {
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "600",
@@ -961,14 +968,14 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   mediaMuscleInfoPrimaryValue: {
-    color: MainColors.primary,
+    color: colors.primary,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "900",
     textAlign: "center",
   },
   mediaMuscleInfoValue: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 14,
     lineHeight: 18,
     fontWeight: "800",
@@ -976,7 +983,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 26,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 32,
     lineHeight: 38,
     fontWeight: "900",
@@ -985,7 +992,7 @@ const styles = StyleSheet.create({
     marginTop: 26,
   },
   stepsTitle: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 18,
     fontWeight: "900",
     marginBottom: 12,
@@ -1000,26 +1007,26 @@ const styles = StyleSheet.create({
     width: 27,
     height: 27,
     borderRadius: 13.5,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   stepIndexText: {
-    color: MainColors.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: "900",
   },
   stepDescription: {
     flex: 1,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 18,
     lineHeight: 27,
     fontWeight: "600",
   },
   fieldsTitle: {
     marginTop: 28,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 16,
     fontWeight: "900",
   },
@@ -1035,9 +1042,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingVertical: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1053,20 +1060,22 @@ const styles = StyleSheet.create({
     height: 26,
     flexShrink: 0,
     borderRadius: 13,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   metricValue: {
+
     width: 58,
-    color: MainColors.text,
+    color: colors.text,
+
     fontSize: 20,
     fontWeight: "900",
     textAlign: "center",
   },
   metricLabel: {
     marginTop: 4,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -1080,19 +1089,19 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 8,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.inputBackground,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxSelected: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
   customToggleText: {
     flex: 1,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -1110,7 +1119,7 @@ const styles = StyleSheet.create({
   },
   customFieldLabel: {
     marginBottom: 7,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 11,
     fontWeight: "800",
     textAlign: "center",
@@ -1120,9 +1129,9 @@ const styles = StyleSheet.create({
     height: 52,
     paddingHorizontal: 4,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.inputBackground,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1134,7 +1143,7 @@ const styles = StyleSheet.create({
     height: 34,
     flexShrink: 0,
     borderRadius: 12,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1144,18 +1153,18 @@ const styles = StyleSheet.create({
     height: "100%",
     paddingHorizontal: 0,
     paddingVertical: 0,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 16,
     fontWeight: "800",
     textAlign: "center",
   },
   customInputError: {
-    borderColor: "#D14343",
+    borderColor: colors.error,
   },
   fieldError: {
     minHeight: 44,
     marginTop: 5,
-    color: "#D14343",
+    color: colors.error,
     fontSize: 10,
     lineHeight: 13,
     textAlign: "center",
@@ -1164,15 +1173,15 @@ const styles = StyleSheet.create({
     height: 56,
     marginTop: 18,
     borderRadius: 20,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
   },
   addButtonPressed: {
-    backgroundColor: MainColors.primary,
+    backgroundColor: colors.primary,
   },
   addButtonText: {
-    color: MainColors.text,
+    color: colors.onPrimary,
     fontSize: 17,
     fontWeight: "900",
   },
@@ -1180,21 +1189,21 @@ const styles = StyleSheet.create({
     marginTop: 48,
     padding: 28,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
   notFoundTitle: {
     marginTop: 16,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 24,
     fontWeight: "900",
     textAlign: "center",
   },
   notFoundText: {
     marginTop: 8,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",
@@ -1204,12 +1213,12 @@ const styles = StyleSheet.create({
     marginTop: 22,
     paddingHorizontal: 22,
     borderRadius: 17,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
   },
   notFoundButtonText: {
-    color: MainColors.text,
+    color: colors.onPrimary,
     fontSize: 15,
     fontWeight: "900",
   },

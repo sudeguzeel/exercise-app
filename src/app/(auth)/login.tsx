@@ -1,5 +1,7 @@
 import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { supabase } from "@/shared/lib/supabase";
 import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +24,8 @@ import {
 } from "react-native";
 
 export default function LoginScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -309,7 +313,7 @@ const handleGoogleLogin = async () => {
                 emailError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="mail-outline" size={19} color="#6C716C" />
+              <Ionicons name="mail-outline" size={19} color={colors.textSecondary} />
 
               <TextInput
                 value={email}
@@ -322,7 +326,7 @@ const handleGoogleLogin = async () => {
                   }
                 }}
                 placeholder="ornek@eposta.com"
-                placeholderTextColor="#9A9E99"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -344,7 +348,7 @@ const handleGoogleLogin = async () => {
                 passwordError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="lock-closed-outline" size={19} color="#6C716C" />
+              <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
 
               <TextInput
                 value={password}
@@ -357,7 +361,7 @@ const handleGoogleLogin = async () => {
                   }
                 }}
                 placeholder="••••••••"
-                placeholderTextColor="#9A9E99"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
@@ -399,7 +403,7 @@ const handleGoogleLogin = async () => {
               ]}
             >
               {loading ? (
-                <ActivityIndicator color="#101214" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.loginButtonText}>Giriş yap</Text>
               )}
@@ -432,7 +436,7 @@ const handleGoogleLogin = async () => {
                   pressed ? styles.socialButtonPressed : null,
                 ]}
               >
-                <Ionicons name="logo-apple" size={19} color="#14171A" />
+                <Ionicons name="logo-apple" size={19} color={colors.text} />
                 <Text style={styles.socialButtonText}>Apple</Text>
               </Pressable>
             </View>
@@ -451,7 +455,7 @@ const handleGoogleLogin = async () => {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",

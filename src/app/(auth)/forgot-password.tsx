@@ -1,4 +1,6 @@
 import { getPasswordResetRedirectUrl } from "@/shared/lib/services/passwordResetService";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -18,6 +20,8 @@ import {
 } from "react-native";
 
 export default function ForgotPasswordScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -98,7 +102,7 @@ export default function ForgotPasswordScreen() {
                 pressed ? styles.buttonPressed : null,
               ]}
             >
-              <Ionicons name="chevron-back" size={24} color="#14171A" />
+              <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
 
             <Text style={styles.title}>Şifreni{"\n"}sıfırla</Text>
@@ -116,7 +120,7 @@ export default function ForgotPasswordScreen() {
                 emailError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="mail-outline" size={20} color="#6C716C" />
+              <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
 
               <TextInput
                 value={email}
@@ -128,7 +132,7 @@ export default function ForgotPasswordScreen() {
                   }
                 }}
                 placeholder="ornek@eposta.com"
-                placeholderTextColor="#7A7F78"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -153,7 +157,7 @@ export default function ForgotPasswordScreen() {
               ]}
             >
               {loading ? (
-                <ActivityIndicator color="#101214" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.sendButtonText}>Bağlantı gönder</Text>
               )}
@@ -179,7 +183,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",

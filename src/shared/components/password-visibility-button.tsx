@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet } from "react-native";
+import { useAppTheme } from "@/providers/AppThemeContext";
 
 type PasswordVisibilityButtonProps = {
   visible: boolean;
@@ -12,6 +13,7 @@ export function PasswordVisibilityButton({
   onPress,
   disabled = false,
 }: PasswordVisibilityButtonProps) {
+  const { colors } = useAppTheme();
   return (
     <Pressable
       accessibilityLabel={visible ? "Şifreyi gizle" : "Şifreyi göster"}
@@ -29,7 +31,7 @@ export function PasswordVisibilityButton({
       <Ionicons
         name={visible ? "eye-off-outline" : "eye-outline"}
         size={21}
-        color="#6C716C"
+        color={colors.textSecondary}
       />
     </Pressable>
   );

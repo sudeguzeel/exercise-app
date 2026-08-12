@@ -5,7 +5,8 @@ import {
   removeFavoriteExercise,
 } from "@/shared/lib/services/favoriteExerciseService";
 import { supabase } from "@/shared/lib/supabase";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import {
   createContext,
   useCallback,
@@ -35,6 +36,8 @@ const FavoritesContext = createContext<FavoritesContextValue | undefined>(
 const SNACKBAR_DURATION_MS = 2200;
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [favorites, setFavorites] = useState<ExerciseListItem[]>([]);
   const [status, setStatus] = useState<FavoritesStatus>("loading");
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -175,7 +178,8 @@ export function useFavorites() {
   return context;
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   providerContent: {
     flex: 1,
   },
@@ -190,20 +194,21 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingHorizontal: 22,
     borderRadius: 18,
-    backgroundColor: MainColors.text,
+    backgroundColor: colors.inverseSurface,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000000",
+    shadowColor: colors.overlay,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 6,
   },
   snackbarText: {
-    color: "#FFFFFF",
+    color: colors.inverseText,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "800",
     textAlign: "center",
   },
-});
+  });
+}

@@ -5,25 +5,100 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+export type AppThemeMode = "light" | "dark";
+
+export type AppThemeColors = {
+  background: string;
+  surface: string;
+  surfaceElevated: string;
+  text: string;
+  textSecondary: string;
+  textDisabled: string;
+  border: string;
+  borderSubtle: string;
+  inputBackground: string;
+  placeholder: string;
+  primary: string;
+  primaryBright: string;
+  primaryStrong: string;
+  primarySoft: string;
+  onPrimary: string;
+  error: string;
+  errorBackground: string;
+  tabBar: string;
+  overlay: string;
+  disabled: string;
+  inverseSurface: string;
+  inverseText: string;
+};
+
+export const AppThemeTokens: Record<AppThemeMode, AppThemeColors> = {
+  light: {
+    background: "#F8F8F5",
+    surface: "#FFFFFF",
+    surfaceElevated: "#FFFFFF",
+    text: "#171A18",
+    textSecondary: "#747774",
+    textDisabled: "#A9ADA8",
+    border: "#CCE1AE",
+    borderSubtle: "#E1E3DF",
+    inputBackground: "#FFFFFF",
+    placeholder: "#7A7F78",
+    primary: "#62B900",
+    primaryBright: "#87D900",
+    primaryStrong: "#65A900",
+    primarySoft: "#F1F6EB",
+    onPrimary: "#111516",
+    error: "#D14343",
+    errorBackground: "rgba(209, 67, 67, 0.06)",
+    tabBar: "#FFFFFF",
+    overlay: "rgba(0, 0, 0, 0.48)",
+    disabled: "#D9DED4",
+    inverseSurface: "#111516",
+    inverseText: "#FFFFFF",
+  },
+  dark: {
+    background: "#111410",
+    surface: "#191D18",
+    surfaceElevated: "#222720",
+    text: "#F2F4EF",
+    textSecondary: "#A8AEA5",
+    textDisabled: "#747B71",
+    border: "#3A4634",
+    borderSubtle: "#2B302A",
+    inputBackground: "#1F241E",
+    placeholder: "#858D82",
+    primary: "#87D900",
+    primaryBright: "#87D900",
+    primaryStrong: "#9AE62A",
+    primarySoft: "#26331E",
+    onPrimary: "#101510",
+    error: "#FF7474",
+    errorBackground: "rgba(255, 116, 116, 0.12)",
+    tabBar: "#171B16",
+    overlay: "rgba(0, 0, 0, 0.68)",
+    disabled: "#343A32",
+    inverseSurface: "#F2F4EF",
+    inverseText: "#171A18",
+  },
+};
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: AppThemeTokens.light.text,
+    background: AppThemeTokens.light.background,
+    tint: AppThemeTokens.light.primary,
+    icon: AppThemeTokens.light.textSecondary,
+    tabIconDefault: AppThemeTokens.light.textSecondary,
+    tabIconSelected: AppThemeTokens.light.primary,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: AppThemeTokens.dark.text,
+    background: AppThemeTokens.dark.background,
+    tint: AppThemeTokens.dark.primary,
+    icon: AppThemeTokens.dark.textSecondary,
+    tabIconDefault: AppThemeTokens.dark.textSecondary,
+    tabIconSelected: AppThemeTokens.dark.primary,
   },
 };
 

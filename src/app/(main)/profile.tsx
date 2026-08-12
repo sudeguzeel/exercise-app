@@ -13,11 +13,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const GREEN = "#78D600";
-const TEXT = "#202320";
-const MUTED = "#7C807C";
-const BORDER = "#BFE28E";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 
 type MenuItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -26,6 +23,8 @@ type MenuItemProps = {
 };
 
 export default function ProfileScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [signingOut, setSigningOut] = useState(false);
@@ -130,10 +129,10 @@ export default function ProfileScreen() {
           ]}
         >
           {signingOut ? (
-            <ActivityIndicator color="#FF5757" />
+            <ActivityIndicator color={colors.error} />
           ) : (
             <>
-              <Ionicons name="log-out-outline" size={21} color="#FF5757" />
+              <Ionicons name="log-out-outline" size={21} color={colors.error} />
               <Text style={styles.signOutText}>Çıkış yap</Text>
             </>
           )}
@@ -150,6 +149,8 @@ function MenuItem({
   isLast = false,
   onPress,
 }: MenuItemProps & { isLast?: boolean; onPress: () => void }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       accessibilityRole="button"
@@ -160,15 +161,17 @@ function MenuItem({
         pressed && styles.pressed,
       ]}
     >
-      <Ionicons name={icon} size={20} color={GREEN} />
+      <Ionicons name={icon} size={20} color={colors.primary} />
       <Text style={styles.menuLabel}>{label}</Text>
       {value ? <Text style={styles.menuValue}>{value}</Text> : null}
-      <Ionicons name="chevron-forward" size={18} color={MUTED} />
+      <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
     </Pressable>
   );
 }
 
 function SectionLabel({ children }: { children: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
@@ -194,8 +197,8 @@ function getInitials(name: string) {
   return name.slice(0, 2).toLocaleUpperCase("tr-TR");
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F8F9F4" },
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 30, paddingBottom: 28 },
   identityRow: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
   avatar: {
@@ -204,17 +207,17 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#EAF6D7",
+    backgroundColor: colors.primarySoft,
   },
-  avatarText: { color: GREEN, fontSize: 27, fontWeight: "900" },
+  avatarText: { color: colors.primary, fontSize: 27, fontWeight: "900" },
   identityText: { flex: 1, marginLeft: 18 },
-  name: { color: TEXT, fontSize: 20, fontWeight: "800" },
-  email: { marginTop: 5, color: MUTED, fontSize: 15 },
+  name: { color: colors.text, fontSize: 20, fontWeight: "800" },
+  email: { marginTop: 5, color: colors.textSecondary, fontSize: 15 },
   sectionLabel: {
     marginTop: 2,
     marginBottom: 10,
     marginLeft: 2,
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -222,9 +225,9 @@ const styles = StyleSheet.create({
     marginBottom: 28,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   menuRow: {
     minHeight: 58,
@@ -232,19 +235,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 18,
   },
-  menuRowBorder: { borderBottomWidth: 1, borderBottomColor: BORDER },
-  menuLabel: { flex: 1, marginLeft: 14, color: TEXT, fontSize: 16 },
-  menuValue: { marginRight: 12, color: MUTED, fontSize: 14 },
+  menuRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+  menuLabel: { flex: 1, marginLeft: 14, color: colors.text, fontSize: 16 },
+  menuValue: { marginRight: 12, color: colors.textSecondary, fontSize: 14 },
   signOutButton: {
     minHeight: 58,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
-  signOutText: { marginLeft: 14, color: "#FF5757", fontSize: 16 },
+  signOutText: { marginLeft: 14, color: colors.error, fontSize: 16 },
   pressed: { opacity: 0.65 },
 });
