@@ -1229,7 +1229,10 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     }
   }
 
-  async completeWorkout(workoutSessionId: string) {
+  async completeWorkout(
+    workoutSessionId: string,
+    options?: { completeRemainingSets?: boolean },
+  ) {
     if (workoutCompletionLocks.has(workoutSessionId)) {
       throw new WorkoutRepositoryError(
         "IN_PROGRESS",
@@ -1256,6 +1259,26 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           "INVALID_INPUT",
           "Program bilgileri değişti. Antrenmanı yeniden açıp devam edin.",
         );
+      }
+      if (options?.completeRemainingSets) {
+        const completedAt = new Date().toISOString();
+        for (const exercise of session.exercises) {
+          for (const set of exercise.sets) {
+            if (set.completedAt) continue;
+            set.actualReps = set.targetReps;
+            set.completedAt = completedAt;
+          }
+          await upsertCompletedExercise(userId, {
+            programExerciseId: exercise.programExerciseId,
+            exerciseId: exercise.exerciseId,
+            workoutDate: session.workoutDate,
+          });
+        }
+        session.phase = "saving";
+        session.pendingTarget = null;
+        session.restStartedAt = null;
+        session.restEndsAt = null;
+        session.restDurationSeconds = null;
       }
       const progress = getWorkoutProgress(session.exercises);
       if (!progress.canFinalize) {
