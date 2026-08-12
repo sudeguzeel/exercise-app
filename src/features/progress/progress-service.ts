@@ -46,6 +46,11 @@ export async function loadExerciseWeightItems(): Promise<ExerciseWeightItem[]> {
   );
 
   return candidates
+    // "Hareket Ağırlıkların" sadece harici ağırlıkla yapılan egzersizleri
+    // (barbell/dumbbell/kettlebell/cable vb. — bkz. equipments.is_weight_based)
+    // listelemeli; body weight, band, kardiyo makinesi gibi ekipmanlarda
+    // "kaç kg" sorusu anlamsız.
+    .filter(({ exercise }) => detailByExerciseId.get(exercise.exerciseId)?.isWeightBased)
     .map(({ program, exercise }) => {
       const stored = weightsByProgramExercise.get(exercise.id);
       const completedFallback = completedWeightsByProgramExercise.get(exercise.id);
