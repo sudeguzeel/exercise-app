@@ -1,4 +1,6 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 type SelectionChipProps = {
@@ -16,6 +18,8 @@ export function SelectionChip({
   onPress,
   compact = false,
 }: SelectionChipProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       aria-checked={selected}
@@ -41,14 +45,15 @@ export function SelectionChip({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   chip: {
     minHeight: 46,
     paddingHorizontal: 20,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -58,18 +63,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   selectedChip: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
   pressedChip: {
     opacity: 0.74,
   },
   label: {
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: "800",
   },
   selectedLabel: {
-    color: MainColors.text,
+    color: colors.onPrimary,
   },
-});
+  });
+}

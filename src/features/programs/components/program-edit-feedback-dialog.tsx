@@ -1,5 +1,7 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props =
@@ -17,6 +19,8 @@ type Props =
     };
 
 export function ProgramEditFeedbackDialog(props: Props) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const deleting = props.mode === "delete";
 
   return (
@@ -31,7 +35,7 @@ export function ProgramEditFeedbackDialog(props: Props) {
         <View accessibilityViewIsModal style={styles.card}>
           <View style={[styles.iconCircle, !deleting && styles.successCircle]}>
             <Ionicons
-              color={MainColors.primary}
+              color={colors.primary}
               name={deleting ? "trash-outline" : "checkmark"}
               size={27}
             />
@@ -84,11 +88,12 @@ export function ProgramEditFeedbackDialog(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     paddingHorizontal: 24,
-    backgroundColor: "rgba(23, 26, 24, 0.48)",
+    backgroundColor: colors.overlay,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -97,9 +102,9 @@ const styles = StyleSheet.create({
     maxWidth: 350,
     padding: 24,
     borderRadius: 28,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surfaceElevated,
     alignItems: "center",
-    shadowColor: "#000000",
+    shadowColor: colors.overlay,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.14,
     shadowRadius: 18,
@@ -109,14 +114,14 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  successCircle: { backgroundColor: MainColors.paleGreen },
+  successCircle: { backgroundColor: colors.primarySoft },
   title: {
     marginTop: 16,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 20,
     lineHeight: 26,
     fontWeight: "900",
@@ -124,7 +129,7 @@ const styles = StyleSheet.create({
   },
   message: {
     marginTop: 9,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
@@ -138,10 +143,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cancelButton: {
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
-  deleteButton: { backgroundColor: "#FBEAE6" },
-  cancelText: { color: MainColors.text, fontSize: 15, fontWeight: "800" },
-  deleteText: { color: "#B65345", fontSize: 15, fontWeight: "900" },
+  deleteButton: { backgroundColor: colors.errorBackground },
+  cancelText: { color: colors.onPrimary, fontSize: 15, fontWeight: "800" },
+  deleteText: { color: colors.error, fontSize: 15, fontWeight: "900" },
   pressed: { opacity: 0.7 },
-});
+  });
+}

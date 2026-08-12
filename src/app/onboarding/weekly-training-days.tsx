@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -13,12 +15,6 @@ import {
 
 
 import { TrainingDay, useOnboarding } from "@/providers/OnboardingContext";
-
-const GREEN = "#79DE2D";
-const BACKGROUND = "#F7F8F2";
-const BORDER = "#BFDDA9";
-const TEXT = "#1C1C1C";
-const MUTED = "#666A64";
 
 type DayOption = {
   id: TrainingDay;
@@ -46,6 +42,8 @@ const dayToApiCode: Record<TrainingDay, string> = {
 };
 
 export default function WeeklyTrainingDaysScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { trainingDays, setTrainingDays } = useOnboarding();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -91,7 +89,7 @@ export default function WeeklyTrainingDaysScreen() {
       >
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={TEXT} />
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
 
           <Text style={styles.stepText}>
@@ -168,7 +166,7 @@ export default function WeeklyTrainingDaysScreen() {
             ]}
           >
             {isCreating ? (
-              <ActivityIndicator color="#111111" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.createButtonText}>Programımı oluştur</Text>
             )}
@@ -179,10 +177,10 @@ export default function WeeklyTrainingDaysScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.background,
   },
   content: {
     flexGrow: 1,
@@ -200,18 +198,18 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   stepText: {
     fontSize: 13,
-    color: MUTED,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   activeStep: {
-    color: GREEN,
+    color: colors.primaryBright,
     fontWeight: "700",
   },
   progressRow: {
@@ -226,25 +224,25 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressActive: {
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
   },
   title: {
     fontSize: 23,
     lineHeight: 27,
     fontWeight: "800",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 7,
   },
   subtitle: {
     fontSize: 13,
     lineHeight: 19,
-    color: MUTED,
+    color: colors.textSecondary,
     marginBottom: 25,
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#676B65",
+    color: colors.textSecondary,
     marginBottom: 9,
   },
   daysContainer: {
@@ -256,30 +254,30 @@ const styles = StyleSheet.create({
     width: "22%",
     height: 54,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 14,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   dayButtonSelected: {
-    borderColor: GREEN,
-    backgroundColor: GREEN,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
   dayText: {
     fontSize: 13,
-    color: MUTED,
+    color: colors.textSecondary,
     fontWeight: "700",
   },
   dayTextSelected: {
-    color: "#111111",
+    color: colors.onPrimary,
   },
   goalCard: {
     marginTop: 20,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
@@ -292,17 +290,17 @@ const styles = StyleSheet.create({
   goalTitle: {
     fontSize: 15,
     fontWeight: "800",
-    color: TEXT,
+    color: colors.text,
   },
   goalCount: {
     fontSize: 14,
     fontWeight: "800",
-    color: GREEN,
+    color: colors.primary,
   },
   goalDescription: {
     fontSize: 12,
     lineHeight: 17,
-    color: MUTED,
+    color: colors.textSecondary,
   },
   buttonArea: {
     marginTop: "auto",
@@ -311,10 +309,10 @@ const styles = StyleSheet.create({
   createButton: {
     height: 49,
     borderRadius: 15,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: GREEN,
+    shadowColor: colors.primary,
     shadowOffset: {
       width: 0,
       height: 7,
@@ -324,18 +322,18 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   createButtonDisabled: {
-    backgroundColor: "#D6D9D1",
+    backgroundColor: colors.disabled,
     shadowOpacity: 0,
     elevation: 0,
   },
   createButtonText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#101010",
+    color: colors.onPrimary,
   },
   errorText: {
     marginTop: 14,
-    color: "#D94B4B",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 16,
     textAlign: "center",

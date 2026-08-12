@@ -1,11 +1,12 @@
 import { ExerciseCard } from "@/features/exercises/components/exercise-card";
 import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +19,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FavoritesScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { favorites, status, refetchFavorites, toggleFavorite } =
     useFavorites();
   const [retrying, setRetrying] = useState(false);
@@ -73,7 +76,7 @@ export default function FavoritesScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="chevron-back" size={25} color={MainColors.text} />
+          <Ionicons name="chevron-back" size={25} color={colors.text} />
         </Pressable>
         <Text style={styles.title}>Favoriler</Text>
         <View style={styles.headerSpacer} />
@@ -81,7 +84,7 @@ export default function FavoritesScreen() {
 
       {status === "loading" ? (
         <View style={styles.centered}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.loadingText}>Yükleniyor...</Text>
         </View>
       ) : (
@@ -103,10 +106,12 @@ export default function FavoritesScreen() {
 }
 
 function EmptyFavorites() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.emptyState}>
       <View style={styles.emptyIcon}>
-        <Ionicons name="heart-outline" size={72} color={MainColors.primary} />
+        <Ionicons name="heart-outline" size={72} color={colors.primary} />
       </View>
       <Text style={styles.emptyTitle}>Henüz favori egzersizin yok</Text>
       <Text style={styles.emptyDescription}>
@@ -120,7 +125,7 @@ function EmptyFavorites() {
           pressed && styles.pressed,
         ]}
       >
-        <Ionicons name="search" size={21} color="#FFFFFF" />
+        <Ionicons name="search" size={21} color={colors.onPrimary} />
         <Text style={styles.discoverText}>Egzersizleri keşfet</Text>
       </Pressable>
     </View>
@@ -128,11 +133,14 @@ function EmptyFavorites() {
 }
 
 function Separator() {
-  return <View style={styles.separator} />;
+  const { colors } = useAppTheme();
+  return <View style={[separatorBase, { backgroundColor: colors.borderSubtle }]} />;
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: MainColors.background },
+const separatorBase = { height: 12 };
+
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   header: {
     minHeight: 76,
     paddingHorizontal: 20,
@@ -144,16 +152,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 18,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   headerSpacer: { width: 48 },
-  title: { color: MainColors.text, fontSize: 24, fontWeight: "900" },
+  title: { color: colors.text, fontSize: 24, fontWeight: "900" },
   centered: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingText: {
     marginTop: 14,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: "700",
   },
@@ -176,13 +184,13 @@ const styles = StyleSheet.create({
     width: 142,
     height: 142,
     borderRadius: 71,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyTitle: {
     marginTop: 28,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 24,
     lineHeight: 30,
     fontWeight: "900",
@@ -191,7 +199,7 @@ const styles = StyleSheet.create({
   emptyDescription: {
     maxWidth: 400,
     marginTop: 10,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 23,
     textAlign: "center",
@@ -201,12 +209,12 @@ const styles = StyleSheet.create({
     marginTop: 28,
     paddingHorizontal: 30,
     borderRadius: 18,
-    backgroundColor: MainColors.primary,
+    backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
   },
-  discoverText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
+  discoverText: { color: colors.onPrimary, fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.72 },
 });

@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
+import { useAppTheme } from '@/providers/AppThemeContext';
 
 export function ProfileButton() {
+  const { colors } = useAppTheme();
   const handlePress = () => {
     router.push('/profile');
   };
@@ -12,6 +14,7 @@ export function ProfileButton() {
       onPress={handlePress}
       style={({ pressed }) => [
         styles.button,
+        { borderColor: colors.primary, backgroundColor: colors.surface },
         pressed && styles.buttonPressed,
       ]}
       accessibilityRole="button"
@@ -21,7 +24,7 @@ export function ProfileButton() {
       <Ionicons
         name="person-outline"
         size={24}
-        color="#171A18"
+        color={colors.text}
       />
     </Pressable>
   );
@@ -33,8 +36,6 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#95D600',
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -1,5 +1,7 @@
 import { useOnboarding } from "@/providers/OnboardingContext";
 import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   getEmailVerificationRedirectUrl,
   rememberPendingVerificationEmail,
@@ -24,6 +26,8 @@ import {
 } from "react-native";
 
 export default function RegisterScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const { resetOnboarding } = useOnboarding();
 
   const [email, setEmail] = useState("");
@@ -155,7 +159,7 @@ export default function RegisterScreen() {
                 pressed ? styles.buttonPressed : null,
               ]}
             >
-              <Ionicons name="chevron-back" size={20} color="#14171A" />
+              <Ionicons name="chevron-back" size={20} color={colors.text} />
             </Pressable>
 
             <Text style={styles.title}>Hesap oluştur</Text>
@@ -172,7 +176,7 @@ export default function RegisterScreen() {
                 emailError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="mail-outline" size={19} color="#6C716C" />
+              <Ionicons name="mail-outline" size={19} color={colors.textSecondary} />
 
               <TextInput
                 value={email}
@@ -183,7 +187,7 @@ export default function RegisterScreen() {
                   }
                 }}
                 placeholder="ornek@eposta.com"
-                placeholderTextColor="#9A9E99"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -205,7 +209,7 @@ export default function RegisterScreen() {
                 passwordError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="lock-closed-outline" size={19} color="#6C716C" />
+              <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
 
               <TextInput
                 value={password}
@@ -216,7 +220,7 @@ export default function RegisterScreen() {
                   }
                 }}
                 placeholder="••••••••"
-                placeholderTextColor="#9A9E99"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
@@ -241,7 +245,7 @@ export default function RegisterScreen() {
                 confirmPasswordError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="lock-closed-outline" size={19} color="#6C716C" />
+              <Ionicons name="lock-closed-outline" size={19} color={colors.textSecondary} />
 
               <TextInput
                 value={confirmPassword}
@@ -252,7 +256,7 @@ export default function RegisterScreen() {
                   }
                 }}
                 placeholder="••••••••"
-                placeholderTextColor="#9A9E99"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
                 style={styles.input}
@@ -282,7 +286,7 @@ export default function RegisterScreen() {
               ]}
             >
               {loading ? (
-                <ActivityIndicator color="#101214" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.registerButtonText}>Hesap oluştur</Text>
               )}
@@ -302,7 +306,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",

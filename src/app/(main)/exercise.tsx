@@ -8,7 +8,8 @@ import {
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import {
@@ -44,6 +45,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<ProgramSelectionSearchParams & {
@@ -252,7 +255,7 @@ export default function ExerciseScreen() {
         <Ionicons
           name="chevron-back"
           size={25}
-          color={MainColors.text}
+          color={colors.text}
         />
       </Pressable>
       <Pressable
@@ -264,7 +267,7 @@ export default function ExerciseScreen() {
         <Ionicons
           name="heart-outline"
           size={25}
-          color={MainColors.text}
+          color={colors.text}
         />
       </Pressable>
     </View>
@@ -286,7 +289,7 @@ export default function ExerciseScreen() {
       <Ionicons
         name="chevron-back"
         size={25}
-        color={MainColors.text}
+        color={colors.text}
       />
     </Pressable>
   ) : (
@@ -299,7 +302,7 @@ export default function ExerciseScreen() {
       <Ionicons
         name="heart-outline"
         size={25}
-        color={MainColors.text}
+        color={colors.text}
       />
     </Pressable>
   )}
@@ -313,7 +316,7 @@ export default function ExerciseScreen() {
               <Ionicons
                 name="search-outline"
                 size={24}
-                color={MainColors.mutedText}
+                color={colors.textSecondary}
               />
               <TextInput
                 accessibilityLabel="Egzersiz ara"
@@ -323,7 +326,7 @@ export default function ExerciseScreen() {
                 maxFontSizeMultiplier={1.3}
                 onChangeText={setSearchText}
                 placeholder="Egzersiz ara..."
-                placeholderTextColor={MainColors.mutedText}
+                placeholderTextColor={colors.placeholder}
                 returnKeyType="search"
                 style={styles.searchInput}
                 value={searchText}
@@ -372,14 +375,14 @@ export default function ExerciseScreen() {
         ListEmptyComponent={
           listState === "loading" ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator color={MainColors.primary} size="large" />
+              <ActivityIndicator color={colors.primary} size="large" />
             </View>
           ) : (
             <View style={styles.emptyState}>
               <Ionicons
                 name="search-outline"
                 size={28}
-                color={MainColors.mutedText}
+                color={colors.textSecondary}
               />
               <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
                 Eşleşen egzersiz bulunamadı
@@ -390,7 +393,7 @@ export default function ExerciseScreen() {
         ListFooterComponent={
           isLoadingMore ? (
             <View style={styles.footerLoading}>
-              <ActivityIndicator color={MainColors.primary} />
+              <ActivityIndicator color={colors.primary} />
             </View>
           ) : null
         }
@@ -411,13 +414,16 @@ export default function ExerciseScreen() {
 }
 
 function ExerciseSeparator() {
-  return <View style={styles.separator} />;
+  const { colors } = useAppTheme();
+  return <View style={[separatorBase, { backgroundColor: colors.borderSubtle }]} />;
 }
 
-const styles = StyleSheet.create({
+const separatorBase = { height: 10 };
+
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: MainColors.background,
+    backgroundColor: colors.background,
   },
   list: {
     flex: 1,
@@ -441,9 +447,9 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 25,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -458,7 +464,7 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 36,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 34,
     lineHeight: 41,
     fontWeight: "900",
@@ -468,9 +474,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 18,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.inputBackground,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -479,7 +485,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: "100%",
     paddingVertical: 0,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -496,26 +502,26 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 20,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   categoryButtonSelected: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
   categoryButtonPressed: {
     opacity: 0.72,
   },
   categoryText: {
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "800",
   },
   categoryTextSelected: {
-    color: MainColors.text,
+    color: colors.text,
   },
   separator: {
     height: 14,
@@ -528,7 +534,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     marginTop: 10,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 23,
     fontWeight: "700",

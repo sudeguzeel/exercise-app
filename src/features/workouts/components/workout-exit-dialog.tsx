@@ -1,5 +1,7 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 export function WorkoutExitDialog({
@@ -11,6 +13,8 @@ export function WorkoutExitDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       animationType="fade"
@@ -35,10 +39,10 @@ export function WorkoutExitDialog({
               pressed && styles.pressed,
             ]}
           >
-            <Ionicons name="close" size={19} color={MainColors.mutedText} />
+            <Ionicons name="close" size={19} color={colors.textSecondary} />
           </Pressable>
           <View style={styles.iconCircle}>
-            <Ionicons name="exit-outline" size={25} color={MainColors.primary} />
+            <Ionicons name="exit-outline" size={25} color={colors.primary} />
           </View>
           <Text style={styles.title}>Antrenmanı bırakmak mı istiyorsun?</Text>
           <Text style={styles.description}>
@@ -75,11 +79,12 @@ export function WorkoutExitDialog({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   backdrop: {
     flex: 1,
     paddingHorizontal: 24,
-    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    backgroundColor: colors.overlay,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -90,8 +95,8 @@ const styles = StyleSheet.create({
     paddingTop: 26,
     paddingBottom: 20,
     borderRadius: 28,
-    backgroundColor: MainColors.surface,
-    shadowColor: "#000000",
+    backgroundColor: colors.surfaceElevated,
+    shadowColor: colors.overlay,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.16,
     shadowRadius: 18,
@@ -112,13 +117,13 @@ const styles = StyleSheet.create({
     height: 52,
     marginBottom: 15,
     borderRadius: 26,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
   },
   title: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 20,
     lineHeight: 26,
     fontWeight: "900",
@@ -126,7 +131,7 @@ const styles = StyleSheet.create({
   },
   description: {
     marginTop: 10,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 21,
     textAlign: "center",
@@ -140,10 +145,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   continueButton: {
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
-  exitButton: { backgroundColor: "#FBEAE6" },
-  continueText: { color: MainColors.text, fontSize: 14, fontWeight: "800" },
-  exitText: { color: "#B65345", fontSize: 14, fontWeight: "800" },
+  exitButton: { backgroundColor: colors.errorBackground },
+  continueText: { color: colors.onPrimary, fontSize: 14, fontWeight: "800" },
+  exitText: { color: colors.error, fontSize: 14, fontWeight: "800" },
   pressed: { opacity: 0.72 },
-});
+  });
+}

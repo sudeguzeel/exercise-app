@@ -1,5 +1,7 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type ProgramFlowHeaderProps = {
@@ -11,6 +13,8 @@ export function ProgramFlowHeader({
   title,
   onBack,
 }: ProgramFlowHeaderProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.header}>
       <Pressable
@@ -26,7 +30,7 @@ export function ProgramFlowHeader({
         <Ionicons
           name="chevron-back"
           size={23}
-          color={MainColors.text}
+          color={colors.text}
         />
       </Pressable>
 
@@ -43,7 +47,8 @@ export function ProgramFlowHeader({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   header: {
     minHeight: 52,
     flexDirection: "row",
@@ -54,9 +59,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -66,7 +71,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     marginHorizontal: 12,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 18,
     fontWeight: "700",
     textAlign: "center",
@@ -74,5 +79,6 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 48,
   },
-});
+  });
+}
 

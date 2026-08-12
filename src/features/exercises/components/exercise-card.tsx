@@ -1,7 +1,8 @@
 import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 type ExerciseCardProps = {
@@ -17,6 +18,8 @@ export function ExerciseCard({
   onFavoritePress,
   onPress,
 }: ExerciseCardProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   // Her kart kendi görsel yükleme hatasını takip eder — bir egzersizin
   // görseli 404 verirse yalnızca o kart ikon placeholder'a düşer.
   const [imageFailed, setImageFailed] = useState(false);
@@ -47,7 +50,7 @@ export function ExerciseCard({
           <Ionicons
             name={exercise.icon}
             size={38}
-            color={MainColors.mutedText}
+            color={colors.textSecondary}
           />
         )}
       </View>
@@ -91,28 +94,29 @@ export function ExerciseCard({
           <Ionicons
             name={favorited ? "heart" : "heart-outline"}
             size={27}
-            color={favorited ? MainColors.primary : MainColors.mutedText}
+            color={favorited ? colors.primary : colors.textSecondary}
           />
         </Pressable>
       ) : (
         <Ionicons
           name={favorited ? "heart" : "chevron-forward"}
           size={favorited ? 27 : 20}
-          color={favorited ? MainColors.primary : MainColors.mutedText}
+          color={favorited ? colors.primary : colors.textSecondary}
         />
       )}
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   card: {
     minHeight: 112,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
@@ -124,9 +128,9 @@ const styles = StyleSheet.create({
     width: 82,
     height: 82,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -148,19 +152,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   favoriteButtonPressed: {
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
   },
   name: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 20,
     lineHeight: 25,
     fontWeight: "800",
   },
   meta: {
     marginTop: 4,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 20,
     fontWeight: "600",
   },
-});
+  });
+}

@@ -4,6 +4,8 @@ import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { DataErrorState } from "@/shared/components/data-error-state";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -18,15 +20,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const GREEN = "#62B900";
-const DARK = "#111516";
-const TEXT = "#171A18";
-const MUTED = "#747774";
-const BORDER = "#E1E3DF";
 const MAX_CHART_VALUE = 20;
 const CHART_HEIGHT = 120;
 
 export default function HomeScreen() {
+  const { colors, isDark } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
   const { trainingDays } = useOnboarding();
   const { isOffline } = useConnectivity();
   const scrollRef = useRef<ScrollView>(null);
@@ -115,7 +114,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <View style={styles.centerState}>
-          <ActivityIndicator color={GREEN} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -163,7 +162,7 @@ export default function HomeScreen() {
               pressed && styles.profileButtonPressed,
             ]}
           >
-            <Ionicons name="person-outline" size={23} color={TEXT} />
+            <Ionicons name="person-outline" size={23} color={colors.text} />
           </Pressable>
         </View>
 
@@ -192,7 +191,7 @@ export default function HomeScreen() {
             {dashboard.categoryTotals.map((area) => (
               <View key={area.id} style={styles.bodyAreaItem}>
                 <View style={styles.bodyAreaIcon}>
-                  <Ionicons name={area.icon} size={22} color={TEXT} />
+                  <Ionicons name={area.icon} size={22} color={colors.text} />
                 </View>
                 <Text style={styles.bodyAreaLabel}>{area.name}</Text>
                 <Text style={styles.bodyAreaValue}>{area.value}</Text>
@@ -232,9 +231,9 @@ export default function HomeScreen() {
                   {day.label}
                 </Text>
                 {day.status === "completed" ? (
-                  <Ionicons name="checkmark" size={22} color="#111111" />
+                  <Ionicons name="checkmark" size={22} color={colors.onPrimary} />
                 ) : day.status === "missed" ? (
-                  <Ionicons name="close" size={22} color="#FFFFFF" />
+                  <Ionicons name="close" size={22} color={colors.inverseText} />
                 ) : day.status === "today" ? (
                   <Text style={styles.todayText}>Bugün</Text>
                 ) : (
@@ -272,7 +271,7 @@ export default function HomeScreen() {
                   pressed && styles.exerciseRowPressed,
                 ]}
               >
-                <Ionicons name="add-circle-outline" size={21} color="#111111" />
+                <Ionicons name="add-circle-outline" size={21} color={colors.onPrimary} />
                 <Text style={styles.createProgramButtonText}>Program Oluştur</Text>
               </Pressable>
             </View>
@@ -296,7 +295,7 @@ export default function HomeScreen() {
                   pressed && styles.exerciseRowPressed,
                 ]}
               >
-                <Ionicons name={plannedExercise.icon} size={22} color={GREEN} />
+                <Ionicons name={plannedExercise.icon} size={22} color={colors.primary} />
                 <View style={styles.exerciseTextColumn}>
                   <Text style={styles.exerciseName}>
                     {plannedExercise.exerciseName}
@@ -308,7 +307,7 @@ export default function HomeScreen() {
                 <Text style={styles.exerciseSets}>
                   {plannedExercise.sets}×{plannedExercise.reps}
                 </Text>
-                <Ionicons name="chevron-forward" size={22} color="#777A78" />
+                <Ionicons name="chevron-forward" size={22} color={colors.textSecondary} />
               </Pressable>
             ))
           )}
@@ -391,21 +390,27 @@ export default function HomeScreen() {
 }
 
 function SectionTitle({ children }: { children: string }) {
-  return <Text style={styles.sectionTitle}>{children}</Text>;
+  const { colors } = useAppTheme();
+  return <Text style={[sectionTitleBase, { color: colors.textSecondary }]}>{children}</Text>;
 }
 
 function EmptyCard({ text }: { text: string }) {
+  const { colors } = useAppTheme();
   return (
-    <View style={styles.emptyTargetCard}>
-      <Text style={styles.emptyTargetText}>{text}</Text>
+    <View style={[emptyCardBase, { backgroundColor: colors.surface, borderColor: colors.borderSubtle }]}>
+      <Text style={[emptyTextBase, { color: colors.textSecondary }]}>{text}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const sectionTitleBase = { marginTop: 27, marginBottom: 12, fontSize: 17, fontWeight: "800" as const };
+const emptyCardBase = { padding: 20, borderWidth: 1, borderRadius: 18 };
+const emptyTextBase = { fontSize: 14, textAlign: "center" as const };
+
+const createStyles = (colors: AppThemeColors, isDark: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#F6F7F2",
+    backgroundColor: colors.background,
   },
   centerState: {
     flex: 1,
@@ -415,7 +420,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   errorText: {
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 14,
     textAlign: "center",
   },
@@ -423,12 +428,12 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 20,
     borderRadius: 16,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
   retryButtonText: {
-    color: "#101214",
+    color: colors.onPrimary,
     fontSize: 14,
     fontWeight: "800",
   },
@@ -446,10 +451,10 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 23,
     borderWidth: 1,
-    borderColor: GREEN,
+    borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   profileButtonPressed: {
     opacity: 0.7,
@@ -461,7 +466,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: DARK,
+    backgroundColor: isDark ? colors.surfaceElevated : colors.inverseSurface,
   },
   summaryContent: {
     flex: 1,
@@ -470,14 +475,14 @@ const styles = StyleSheet.create({
   summaryLabel: {
     flexShrink: 1,
     marginRight: 8,
-    color: "#BFC2C0",
+    color: isDark ? colors.textSecondary : colors.inverseText,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: "700",
   },
   summaryValue: {
     marginTop: 10,
-    color: "#FFFFFF",
+    color: isDark ? colors.text : colors.inverseText,
     fontSize: 58,
     lineHeight: 64,
     fontWeight: "900",
@@ -487,17 +492,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 24,
-    backgroundColor: "#263709",
+    backgroundColor: colors.primarySoft,
   },
   streakText: {
-    color: "#80D000",
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "800",
   },
   sectionTitle: {
     marginTop: 27,
     marginBottom: 12,
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 17,
     fontWeight: "800",
   },
@@ -505,11 +510,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.borderSubtle,
     borderRadius: 22,
     flexDirection: "row",
     flexWrap: "wrap",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   bodyAreaItem: {
     width: "50%",
@@ -525,19 +530,19 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F2F3EA",
+    backgroundColor: colors.primarySoft,
   },
   bodyAreaLabel: {
     flex: 1,
     marginLeft: 8,
-    color: TEXT,
+    color: colors.text,
     fontSize: 12,
     lineHeight: 15,
   },
   bodyAreaValue: {
     marginLeft: 5,
     marginRight: 4,
-    color: GREEN,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -551,55 +556,55 @@ const styles = StyleSheet.create({
     minHeight: 82,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: GREEN,
+    borderColor: colors.primary,
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   targetDayCompleted: {
-    backgroundColor: "#72C600",
+    backgroundColor: colors.primary,
   },
   targetDayMissed: {
-    borderColor: "#D94A4A",
-    backgroundColor: "#D94A4A",
+    borderColor: colors.error,
+    backgroundColor: colors.error,
   },
   targetDaySelected: {
     borderWidth: 2,
-    borderColor: TEXT,
+    borderColor: colors.text,
   },
   targetDayLabel: {
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: "700",
   },
   targetDayCompletedText: {
-    color: "#111111",
+    color: colors.onPrimary,
   },
   targetDayMissedText: {
-    color: "#FFFFFF",
+    color: colors.inverseText,
   },
   todayText: {
     marginTop: 5,
-    color: TEXT,
+    color: colors.text,
     fontSize: 15,
     fontWeight: "900",
   },
   pendingText: {
     marginTop: 5,
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "700",
   },
   emptyTargetCard: {
     padding: 20,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.borderSubtle,
     borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   emptyTargetText: {
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 14,
     textAlign: "center",
   },
@@ -608,9 +613,9 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 10,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.borderSubtle,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   chart: {
     height: 166,
@@ -645,14 +650,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     right: 5,
     transform: [{ translateY: 7 }],
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 11,
   },
   gridRule: {
     width: "100%",
     borderTopWidth: 1,
     borderStyle: "dashed",
-    borderColor: "#E1E3DF",
+    borderColor: colors.borderSubtle,
   },
   barsRow: {
     position: "absolute",
@@ -679,7 +684,7 @@ const styles = StyleSheet.create({
   },
   barValue: {
     position: "absolute",
-    color: TEXT,
+    color: colors.text,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -687,20 +692,20 @@ const styles = StyleSheet.create({
     width: 25,
     borderTopLeftRadius: 6,
     borderTopRightRadius: 6,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primary,
   },
   barLabel: {
     marginTop: 8,
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   programCard: {
     paddingHorizontal: 18,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.borderSubtle,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   exerciseRow: {
     minHeight: 72,
@@ -710,13 +715,13 @@ const styles = StyleSheet.create({
   },
   exerciseRowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: BORDER,
+    borderBottomColor: colors.borderSubtle,
   },
   exerciseRowPressed: {
     opacity: 0.65,
   },
   restDayText: {
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
@@ -734,10 +739,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primary,
   },
   createProgramButtonText: {
-    color: "#111111",
+    color: colors.onPrimary,
     fontSize: 15,
     fontWeight: "900",
   },
@@ -746,19 +751,19 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   exerciseName: {
-    color: TEXT,
+    color: colors.text,
     fontSize: 15,
     fontWeight: "600",
   },
   exerciseProgramName: {
     marginTop: 2,
-    color: MUTED,
+    color: colors.textSecondary,
     fontSize: 12,
     fontWeight: "600",
   },
   exerciseSets: {
     marginHorizontal: 4,
-    color: GREEN,
+    color: colors.primary,
     fontSize: 18,
     fontWeight: "800",
   },

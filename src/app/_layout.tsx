@@ -1,25 +1,59 @@
 import {
-  DarkTheme,
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+import * as NativeSplashScreen from "expo-splash-screen";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useEffect, useMemo } from "react";
 import "react-native-reanimated";
 
+import {
+  AppThemeProvider,
+  useAppTheme,
+} from "@/providers/AppThemeContext";
 import { OnboardingProvider } from "@/providers/OnboardingContext";
 import { FavoritesProvider } from "@/providers/FavoritesContext";
-import { useColorScheme } from "@/shared/hooks/use-color-scheme";
+
+void NativeSplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  return (
+    <AppThemeProvider>
+      <RootNavigator />
+    </AppThemeProvider>
+  );
+}
+
+function RootNavigator() {
+  const { colors, isDark, isHydrated } = useAppTheme();
+  const navigationTheme = useMemo(
+    () => ({
+      ...DefaultTheme,
+      dark: isDark,
+      colors: {
+        ...DefaultTheme.colors,
+        primary: colors.primary,
+        background: colors.background,
+        card: colors.surface,
+        text: colors.text,
+        border: colors.borderSubtle,
+        notification: colors.error,
+      },
+    }),
+    [colors, isDark],
+  );
+
+  useEffect(() => {
+    if (isHydrated) void NativeSplashScreen.hideAsync();
+  }, [isHydrated]);
+
+  if (!isHydrated) return null;
 
   return (
     <OnboardingProvider>
       <FavoritesProvider>
-        <ThemeProvider
-          value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-        >
+        <ThemeProvider value={navigationTheme}>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen
               name="index"
@@ -56,7 +90,10 @@ export default function RootLayout() {
             <Stack.Screen name="onboarding/weekly-training-days" />
           </Stack>
 
-          <StatusBar style="auto" />
+          <StatusBar
+            backgroundColor={colors.background}
+            style={isDark ? "light" : "dark"}
+          />
         </ThemeProvider>
       </FavoritesProvider>
     </OnboardingProvider>

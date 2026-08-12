@@ -24,7 +24,8 @@ import {
   WorkoutRepositoryError,
 } from "@/features/workouts/workout-repository";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -49,6 +50,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function ProgramScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<{
     selectedDate?: string | string[];
@@ -372,7 +375,7 @@ export default function ProgramScreen() {
   <Ionicons
     name="person-outline"
     size={22}
-    color={MainColors.text}
+    color={colors.text}
   />
 </Pressable>
         </View>
@@ -405,7 +408,7 @@ export default function ProgramScreen() {
         ) : programs.length === 0 ? (
           <View style={styles.emptyProgramsCard}>
             <View style={styles.emptyProgramsIcon}>
-              <Ionicons name="barbell-outline" size={27} color={MainColors.primary} />
+              <Ionicons name="barbell-outline" size={27} color={colors.primary} />
             </View>
             <Text style={styles.emptyProgramsTitle}>Henüz bir programın yok</Text>
             <Text style={styles.stateText}>
@@ -416,7 +419,7 @@ export default function ProgramScreen() {
               onPress={handleAddWorkout}
               style={({ pressed }) => [styles.createProgramButton, pressed && styles.pressed]}
             >
-              <Ionicons name="add" size={18} color={MainColors.text} />
+              <Ionicons name="add" size={18} color={colors.onPrimary} />
               <Text style={styles.createProgramText}>Yeni program oluştur</Text>
             </Pressable>
           </View>
@@ -463,7 +466,7 @@ export default function ProgramScreen() {
       </ScrollView>
 
       {programs.length > 0 ? <View style={styles.fixedFooter}>
-        <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
+        <Ionicons name="barbell-outline" size={20} color={colors.textSecondary} />
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
@@ -483,13 +486,13 @@ export default function ProgramScreen() {
           ]}
         >
           {navigationBusy ? (
-            <ActivityIndicator color={MainColors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <>
               <Ionicons
                 name={activeProgram ? "play" : "add"}
                 size={18}
-                color={MainColors.text}
+                color={colors.onPrimary}
               />
               <Text style={styles.startButtonText}>
                 {activeProgram ? "Antrenmana başla" : "Antrenman ekle"}
@@ -511,12 +514,14 @@ function SectionState({
   text: string;
   onRetry?: () => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.stateCard}>
       {loading ? (
-        <ActivityIndicator color={MainColors.primary} />
+        <ActivityIndicator color={colors.primary} />
       ) : (
-        <Ionicons name="alert-circle-outline" size={24} color={MainColors.mutedText} />
+        <Ionicons name="alert-circle-outline" size={24} color={colors.textSecondary} />
       )}
       <Text style={styles.stateText}>{text}</Text>
       {onRetry ? (
@@ -529,6 +534,8 @@ function SectionState({
 }
 
 function EmptyCard({ text }: { text: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.emptyCard}>
       <Text style={styles.stateText}>{text}</Text>
@@ -536,8 +543,8 @@ function EmptyCard({ text }: { text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: MainColors.background },
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   content: {
     width: "100%",
     maxWidth: 680,
@@ -553,32 +560,32 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
   },
-  greeting: { flex: 1, color: MainColors.mutedText, fontSize: 16, fontWeight: "500" },
-  greetingName: { color: MainColors.primary, fontWeight: "800" },
+  greeting: { flex: 1, color: colors.textSecondary, fontSize: 16, fontWeight: "500" },
+  greetingName: { color: colors.primary, fontWeight: "800" },
   notificationButton: {
     width: 42,
     height: 42,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 21,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   fullBleed: { marginHorizontal: -18 },
   programCards: { gap: 12 },
-  sectionTitle: { marginTop: 2, color: MainColors.mutedText, fontSize: 15, fontWeight: "700" },
-  inlineEmpty: { color: MainColors.mutedText, fontSize: 14 },
+  sectionTitle: { marginTop: 2, color: colors.textSecondary, fontSize: 15, fontWeight: "700" },
+  inlineEmpty: { color: colors.textSecondary, fontSize: 14 },
   exerciseList: { gap: 10 },
   resetLink: { alignSelf: "center", padding: 8 },
-  resetLinkText: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
+  resetLinkText: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
   stateCard: {
     minHeight: 118,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     gap: 9,
@@ -587,9 +594,9 @@ const styles = StyleSheet.create({
     minHeight: 84,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -597,9 +604,9 @@ const styles = StyleSheet.create({
     minHeight: 230,
     padding: 24,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -608,13 +615,13 @@ const styles = StyleSheet.create({
     height: 56,
     marginBottom: 12,
     borderRadius: 28,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   emptyProgramsTitle: {
     marginBottom: 7,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 20,
     fontWeight: "900",
     textAlign: "center",
@@ -624,16 +631,16 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingHorizontal: 20,
     borderRadius: 17,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  createProgramText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  stateText: { color: MainColors.mutedText, fontSize: 14, lineHeight: 20, textAlign: "center" },
+  createProgramText: { color: colors.onPrimary, fontSize: 15, fontWeight: "900" },
+  stateText: { color: colors.textSecondary, fontSize: 14, lineHeight: 20, textAlign: "center" },
   retryButton: { minHeight: 40, paddingHorizontal: 18, justifyContent: "center" },
-  retryText: { color: MainColors.primary, fontSize: 14, fontWeight: "800" },
+  retryText: { color: colors.primary, fontSize: 14, fontWeight: "800" },
   fixedFooter: {
     position: "absolute",
     left: 18,
@@ -642,9 +649,9 @@ const styles = StyleSheet.create({
     height: 66,
     padding: 8,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surfaceElevated,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -653,13 +660,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 50,
     borderRadius: 18,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
   },
-  startButtonDisabled: { backgroundColor: MainColors.border, opacity: 0.72 },
-  startButtonText: { color: MainColors.text, fontSize: 16, fontWeight: "900" },
+  startButtonDisabled: { backgroundColor: colors.disabled, opacity: 0.72 },
+  startButtonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "900" },
   pressed: { opacity: 0.72 },
 });

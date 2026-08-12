@@ -1,5 +1,7 @@
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -13,6 +15,8 @@ type SplashScreenProps = {
 };
 
 export function SplashScreen({ isLeaving }: SplashScreenProps) {
+  const { colors, isDark } = useAppTheme();
+  const darkStyles = useMemo(() => createDarkStyles(colors), [colors]);
   const logoScale = useRef(new Animated.Value(0.82)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
 
@@ -102,6 +106,38 @@ export function SplashScreen({ isLeaving }: SplashScreenProps) {
     outputRange: ["0deg", "360deg"],
   });
 
+  const logo = (
+    <>
+      <Animated.Image
+        source={require("../../../assets/images/fitrehber_logo_icon.png")}
+        style={[styles.logoIcon, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}
+        resizeMode="contain"
+      />
+      <Animated.Image
+        source={require("../../../assets/images/fitrehber_logo_text.png")}
+        style={[styles.logoText, { opacity: textOpacity, transform: [{ translateY: textTranslateY }] }]}
+        resizeMode="contain"
+      />
+    </>
+  );
+
+  if (isDark) {
+    return (
+      <View style={darkStyles.container}>
+        <StatusBar style="light" />
+        <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
+          <View style={darkStyles.brandPanel}>{logo}</View>
+          <Animated.View
+            style={[
+              darkStyles.loadingRing,
+              { opacity: ringOpacity, transform: [{ rotate: ringRotate }] },
+            ]}
+          />
+        </Animated.View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
@@ -119,29 +155,7 @@ export function SplashScreen({ isLeaving }: SplashScreenProps) {
             },
           ]}
         >
-          <Animated.Image
-            source={require("../../../assets/images/fitrehber_logo_icon.png")}
-            style={[
-              styles.logoIcon,
-              {
-                opacity: logoOpacity,
-                transform: [{ scale: logoScale }],
-              },
-            ]}
-            resizeMode="contain"
-          />
-
-          <Animated.Image
-            source={require("../../../assets/images/fitrehber_logo_text.png")}
-            style={[
-              styles.logoText,
-              {
-                opacity: textOpacity,
-                transform: [{ translateY: textTranslateY }],
-              },
-            ]}
-            resizeMode="contain"
-          />
+          {logo}
 
           <Animated.Image
             source={require("../../../assets/images/fitrehber_loading_ring.png")}
@@ -158,6 +172,37 @@ export function SplashScreen({ isLeaving }: SplashScreenProps) {
       </ImageBackground>
     </View>
   );
+}
+
+function createDarkStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    brandPanel: {
+      width: "100%",
+      maxWidth: 360,
+      paddingHorizontal: 20,
+      paddingTop: 22,
+      paddingBottom: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 32,
+      backgroundColor: colors.inverseSurface,
+      alignItems: "center",
+    },
+    loadingRing: {
+      width: 48,
+      height: 48,
+      marginTop: 28,
+      borderWidth: 5,
+      borderColor: colors.border,
+      borderTopColor: colors.primary,
+      borderRightColor: colors.primary,
+      borderRadius: 24,
+    },
+  });
 }
 
 const styles = StyleSheet.create({

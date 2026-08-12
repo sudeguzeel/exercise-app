@@ -22,6 +22,8 @@ import {
 } from "@/features/programs/program-repository";
 import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -52,6 +54,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function ProgramEditScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const params = useLocalSearchParams<{
     programId?: string | string[];
     selectedDate?: string | string[];
@@ -284,10 +288,10 @@ export default function ProgramEditScreen() {
         <Header onBack={handleBack} />
         <View style={styles.centerState}>
           {loadState === "loading" ? (
-            <ActivityIndicator color={MainColors.primary} size="large" />
+            <ActivityIndicator color={colors.primary} size="large" />
           ) : (
             <>
-              <Ionicons name="alert-circle-outline" size={40} color={MainColors.primary} />
+              <Ionicons name="alert-circle-outline" size={40} color={colors.primary} />
               <Text style={styles.stateTitle}>
                 {loadState === "not-found" ? "Program bulunamadı" : "Program alınamadı"}
               </Text>
@@ -338,7 +342,7 @@ export default function ProgramEditScreen() {
             onBlur={() => setNameTouched(true)}
             onChangeText={(name) => updateDraft({ ...draft, name })}
             placeholder="Program adı"
-            placeholderTextColor={MainColors.mutedText}
+            placeholderTextColor={colors.placeholder}
             returnKeyType="done"
             style={[
               styles.nameInput,
@@ -395,7 +399,7 @@ export default function ProgramEditScreen() {
               }
               style={({ pressed }) => [styles.reminderHeader, pressed && styles.pressed]}
             >
-              <Ionicons name="notifications-outline" size={22} color={MainColors.primary} />
+              <Ionicons name="notifications-outline" size={22} color={colors.primary} />
               <View style={styles.reminderTitleContent}>
                 <Text style={styles.reminderTitle}>Antrenman Hatırlatıcısı</Text>
                 <Text style={styles.reminderDescription}>Antrenman saatinde bildirim al.</Text>
@@ -421,9 +425,9 @@ export default function ProgramEditScreen() {
                         onPress={() => setReminderListOpen((openIndex) => openIndex === index ? null : index)}
                         style={({ pressed }) => [styles.selectedReminderTime, pressed && styles.pressed]}
                       >
-                        <Ionicons name="time-outline" size={21} color={MainColors.primary} />
+                        <Ionicons name="time-outline" size={21} color={colors.primary} />
                         <Text style={styles.selectedReminderTimeText}>{reminderTime}</Text>
-                        <Ionicons name={reminderListOpen === index ? "chevron-up" : "chevron-down"} size={19} color={MainColors.mutedText} />
+                        <Ionicons name={reminderListOpen === index ? "chevron-up" : "chevron-down"} size={19} color={colors.textSecondary} />
                       </Pressable>
                       {index > 0 ? (
                         <Pressable
@@ -435,7 +439,7 @@ export default function ProgramEditScreen() {
                           }}
                           style={({ pressed }) => [styles.removeReminderButton, pressed && styles.pressed]}
                         >
-                          <Ionicons name="close" size={19} color={MainColors.mutedText} />
+                          <Ionicons name="close" size={19} color={colors.textSecondary} />
                         </Pressable>
                       ) : null}
                     </View>
@@ -473,7 +477,7 @@ export default function ProgramEditScreen() {
                     }}
                     style={({ pressed }) => [styles.addReminderButton, pressed && styles.pressed]}
                   >
-                    <Ionicons name="add" size={19} color={MainColors.primary} />
+                    <Ionicons name="add" size={19} color={colors.primary} />
                     <Text style={styles.addReminderButtonText}>Saat ekle</Text>
                   </Pressable>
                 ) : null}
@@ -519,7 +523,7 @@ export default function ProgramEditScreen() {
             ]}
           >
             {isSaving ? (
-              <ActivityIndicator color={MainColors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.saveButtonText}>Değişiklikleri kaydet</Text>
             )}
@@ -533,7 +537,7 @@ export default function ProgramEditScreen() {
             style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}
           >
             {isDeleting ? (
-              <ActivityIndicator color="#FF4D55" />
+              <ActivityIndicator color={colors.error} />
             ) : (
               <Text style={styles.deleteButtonText}>Programı sil</Text>
             )}
@@ -545,6 +549,8 @@ export default function ProgramEditScreen() {
 }
 
 function Header({ onBack }: { onBack: () => void }) {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <View style={styles.header}>
       <Pressable
@@ -553,7 +559,7 @@ function Header({ onBack }: { onBack: () => void }) {
         onPress={onBack}
         style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
       >
-        <Ionicons name="chevron-back" size={22} color={MainColors.text} />
+        <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
       <Text style={styles.headerTitle}>Programı düzenle</Text>
       <View style={styles.headerSpacer} />
@@ -562,6 +568,7 @@ function Header({ onBack }: { onBack: () => void }) {
 }
 
 function FormLabel({ children }: { children: string }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return <Text style={styles.formLabel}>{children}</Text>;
 }
 
@@ -576,6 +583,7 @@ function ChoiceChip({
   onPress: () => void;
   style?: object;
 }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -595,7 +603,7 @@ function ChoiceChip({
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
   keyboardView: { flex: 1 },
   header: {

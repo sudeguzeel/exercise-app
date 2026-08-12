@@ -6,7 +6,7 @@ import {
 } from "@/shared/lib/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,17 +20,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-const GREEN = "#70C900";
-const TEXT = "#202320";
-const MUTED = "#747874";
-const BORDER = "#DDE2D8";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 const EMPTY: PersonalInfo = {
   fullName: "", gender: "", birthDate: "", height: "",
   currentWeight: "", targetWeight: "", goal: "",
 };
 
 export default function ProfilePersonalInfoScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { setPersonalInfo } = useOnboarding();
   const [form, setForm] = useState<PersonalInfo>(EMPTY);
   const [loading, setLoading] = useState(true);
@@ -80,7 +79,7 @@ export default function ProfilePersonalInfoScreen() {
   };
 
   if (loading) {
-    return <SafeAreaView style={styles.safeArea}><View style={styles.center}><ActivityIndicator size="large" color={GREEN} /></View></SafeAreaView>;
+    return <SafeAreaView style={styles.safeArea}><View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View></SafeAreaView>;
   }
 
   return (
@@ -108,9 +107,9 @@ export default function ProfilePersonalInfoScreen() {
           </View>
 
           <Pressable disabled={saving || Boolean(loadError)} onPress={() => void handleSave()} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed, (saving || Boolean(loadError)) && styles.disabled]}>
-            {saving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveText}>Kaydet</Text>}
+            {saving ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.saveText}>Kaydet</Text>}
           </Pressable>
-          <View style={styles.privateNote}><Ionicons name="lock-closed-outline" size={16} color={GREEN} /><Text style={styles.privateText}>Bilgilerin sadece senin tarafından görülebilir ve güvenle saklanır.</Text></View>
+          <View style={styles.privateNote}><Ionicons name="lock-closed-outline" size={16} color={colors.primary} /><Text style={styles.privateText}>Bilgilerin sadece senin tarafından görülebilir ve güvenle saklanır.</Text></View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -118,34 +117,40 @@ export default function ProfilePersonalInfoScreen() {
 }
 
 function Header({ title }: { title: string }) {
-  return <View style={styles.header}><Pressable onPress={() => router.replace("/(main)/profile")} style={styles.back}><Ionicons name="chevron-back" size={22} color={GREEN} /></Pressable><Text style={styles.headerTitle}>{title}</Text><View style={styles.headerSpacer} /></View>;
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return <View style={styles.header}><Pressable onPress={() => router.replace("/(main)/profile")} style={styles.back}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable><Text style={styles.headerTitle}>{title}</Text><View style={styles.headerSpacer} /></View>;
 }
 
 type FieldProps = { icon: keyof typeof Ionicons.glyphMap; label: string; value: string; placeholder?: string; keyboardType?: "default" | "number-pad" | "decimal-pad"; onChangeText: (value: string) => void };
 function Field({ icon, label, ...inputProps }: FieldProps) {
-  return <View style={styles.fieldRow}><Ionicons name={icon} size={20} color={GREEN} /><View style={styles.fieldContent}><Text style={styles.label}>{label}</Text><TextInput {...inputProps} placeholderTextColor="#A5A9A4" style={styles.input} /></View></View>;
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return <View style={styles.fieldRow}><Ionicons name={icon} size={20} color={colors.primary} /><View style={styles.fieldContent}><Text style={styles.label}>{label}</Text><TextInput {...inputProps} placeholderTextColor={colors.placeholder} style={styles.input} /></View></View>;
 }
 function SelectField({ icon, label, value, onPress }: Omit<FieldProps, "onChangeText"> & { onPress: () => void }) {
-  return <View style={styles.fieldRow}><Ionicons name={icon} size={20} color={GREEN} /><View style={styles.fieldContent}><Text style={styles.label}>{label}</Text><Pressable onPress={onPress} style={styles.select}><Text style={styles.selectText}>{value || "Seçiniz"}</Text><Ionicons name="chevron-down" size={18} color={GREEN} /></Pressable></View></View>;
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return <View style={styles.fieldRow}><Ionicons name={icon} size={20} color={colors.primary} /><View style={styles.fieldContent}><Text style={styles.label}>{label}</Text><Pressable onPress={onPress} style={styles.select}><Text style={styles.selectText}>{value || "Seçiniz"}</Text><Ionicons name="chevron-down" size={18} color={colors.primary} /></Pressable></View></View>;
 }
 const genderLabel = (v: PersonalInfo["gender"]) => v === "female" ? "Kadın" : v === "male" ? "Erkek" : v === "other" ? "Belirtmek istemiyorum" : "";
 const goalLabel = (v: PersonalInfo["goal"]) => v === "build-muscle" ? "Kas Kazanımı" : v === "lose-weight" ? "Yağ Yakımı" : v === "stay-fit" ? "Genel Fitness" : "";
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#F8F9F4" }, flex: { flex: 1 }, center: { flex: 1, alignItems: "center", justifyContent: "center" },
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 }, center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 28 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 },
-  back: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: "#A8D96D", alignItems: "center", justifyContent: "center", backgroundColor: "#FFFFFF" },
-  headerTitle: { color: TEXT, fontSize: 19, fontWeight: "900" }, headerSpacer: { width: 38 },
+  back: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  headerTitle: { color: colors.text, fontSize: 19, fontWeight: "900" }, headerSpacer: { width: 38 },
   introRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  avatar: { width: 66, height: 66, borderRadius: 33, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF6D7" },
-  avatarText: { color: GREEN, fontSize: 27, fontWeight: "900" }, introText: { flex: 1, marginLeft: 16, color: "#4E524D", fontSize: 13, lineHeight: 19 },
-  formCard: { padding: 16, borderWidth: 1, borderColor: BORDER, borderRadius: 20, backgroundColor: "#FFFFFF" },
-  fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 }, fieldContent: { flex: 1, marginLeft: 12 }, label: { marginBottom: 6, color: TEXT, fontSize: 12, fontWeight: "700" },
-  input: { height: 42, paddingHorizontal: 12, borderWidth: 1, borderColor: BORDER, borderRadius: 11, color: TEXT, backgroundColor: "#FFFFFF" },
-  select: { height: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, borderWidth: 1, borderColor: BORDER, borderRadius: 11 }, selectText: { color: TEXT, fontSize: 14 },
+  avatar: { width: 66, height: 66, borderRadius: 33, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  avatarText: { color: colors.primary, fontSize: 27, fontWeight: "900" }, introText: { flex: 1, marginLeft: 16, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  formCard: { padding: 16, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 20, backgroundColor: colors.surface },
+  fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 }, fieldContent: { flex: 1, marginLeft: 12 }, label: { marginBottom: 6, color: colors.text, fontSize: 12, fontWeight: "700" },
+  input: { height: 42, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 11, color: colors.text, backgroundColor: colors.inputBackground },
+  select: { height: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 11, backgroundColor: colors.inputBackground }, selectText: { color: colors.text, fontSize: 14 },
   doubleRow: { flexDirection: "row", gap: 10 }, half: { flex: 1 },
-  saveButton: { height: 50, marginTop: 12, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: GREEN }, saveText: { color: "#FFFFFF", fontSize: 16, fontWeight: "900" },
-  privateNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 16, paddingHorizontal: 18 }, privateText: { flexShrink: 1, marginLeft: 9, color: MUTED, fontSize: 11, lineHeight: 16 },
-  errorText: { marginBottom: 12, color: "#D94A4A", fontSize: 13, textAlign: "center" }, pressed: { opacity: 0.72 }, disabled: { opacity: 0.55 },
+  saveButton: { height: 50, marginTop: 12, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary }, saveText: { color: colors.onPrimary, fontSize: 16, fontWeight: "900" },
+  privateNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 16, paddingHorizontal: 18 }, privateText: { flexShrink: 1, marginLeft: 9, color: colors.textSecondary, fontSize: 11, lineHeight: 16 },
+  errorText: { marginBottom: 12, color: colors.error, fontSize: 13, textAlign: "center" }, pressed: { opacity: 0.72 }, disabled: { opacity: 0.55 },
 });

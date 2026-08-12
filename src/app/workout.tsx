@@ -20,6 +20,8 @@ import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
 import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -43,6 +45,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     workoutSessionId?: string | string[];
@@ -304,7 +308,7 @@ export default function WorkoutScreen() {
   if (session === undefined && !loadError) {
     return (
       <ScreenState>
-        <ActivityIndicator color={MainColors.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         <Text style={styles.stateText}>Antrenman hazırlanıyor…</Text>
       </ScreenState>
     );
@@ -313,7 +317,7 @@ export default function WorkoutScreen() {
   if (!session || loadError) {
     return (
       <ScreenState>
-        <Ionicons name="alert-circle-outline" size={42} color={MainColors.primary} />
+        <Ionicons name="alert-circle-outline" size={42} color={colors.primary} />
         <Text style={styles.stateTitle}>Antrenman açılamadı</Text>
         <Text style={styles.stateText}>{loadError ?? "Antrenman verisi eksik."}</Text>
         <Pressable
@@ -334,9 +338,9 @@ export default function WorkoutScreen() {
     return (
       <ScreenState>
         {saveStatus === "saving" ? (
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         ) : (
-          <Ionicons name="cloud-upload-outline" size={44} color={MainColors.primary} />
+          <Ionicons name="cloud-upload-outline" size={44} color={colors.primary} />
         )}
         <Text style={styles.stateTitle}>Antrenman kaydediliyor</Text>
         <Text accessibilityLiveRegion="polite" style={styles.stateText}>
@@ -427,7 +431,7 @@ export default function WorkoutScreen() {
           ]}
         >
           {isTransitioning ? (
-            <ActivityIndicator color={MainColors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.completeButtonText}>Seti tamamla ✓</Text>
           )}
@@ -438,6 +442,7 @@ export default function WorkoutScreen() {
 }
 
 function ScreenState({ children }: { children: React.ReactNode }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen options={{ gestureEnabled: false }} />
@@ -446,7 +451,7 @@ function ScreenState({ children }: { children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
   content: {
     flexGrow: 1,

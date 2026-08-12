@@ -1,5 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -21,6 +23,8 @@ import { establishPasswordResetSession } from "@/shared/lib/services/passwordRes
 import { supabase } from "@/shared/lib/supabase";
 
 export default function ResetPasswordScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const linkingUrl = Linking.useLinkingURL();
   const sessionPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -113,7 +117,7 @@ export default function ResetPasswordScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
-          <ActivityIndicator color="#74A800" size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -124,7 +128,7 @@ export default function ResetPasswordScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerContainer}>
           <View style={styles.iconCircle}>
-            <Ionicons name="alert-circle-outline" size={40} color="#FF5A5A" />
+            <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
           </View>
 
           <Text style={styles.title}>Bağlantı geçersiz</Text>
@@ -172,7 +176,7 @@ export default function ResetPasswordScreen() {
                 passwordError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="lock-closed-outline" size={20} color="#6C716C" />
+              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
 
               <TextInput
                 value={password}
@@ -184,7 +188,7 @@ export default function ResetPasswordScreen() {
                   }
                 }}
                 placeholder="••••••••"
-                placeholderTextColor="#7A7F78"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
                 style={styles.input}
@@ -209,7 +213,7 @@ export default function ResetPasswordScreen() {
                 confirmPasswordError ? styles.inputContainerError : null,
               ]}
             >
-              <Ionicons name="lock-closed-outline" size={20} color="#6C716C" />
+              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
 
               <TextInput
                 value={confirmPassword}
@@ -221,7 +225,7 @@ export default function ResetPasswordScreen() {
                   }
                 }}
                 placeholder="••••••••"
-                placeholderTextColor="#7A7F78"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
                 style={styles.input}
@@ -251,7 +255,7 @@ export default function ResetPasswordScreen() {
               ]}
             >
               {loading ? (
-                <ActivityIndicator color="#101214" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.sendButtonText}>Şifreyi güncelle</Text>
               )}
@@ -277,7 +281,7 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",
