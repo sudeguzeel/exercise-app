@@ -85,7 +85,7 @@ export function StatCard({
 }: {
   label: string;
   value: string;
-  detail: string;
+  detail?: string;
 }) {
   const { styles } = useProgressTheme();
   return (
@@ -94,9 +94,11 @@ export function StatCard({
       <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>
         {value}
       </Text>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statDetail}>
-        {detail}
-      </Text>
+      {detail ? (
+        <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statDetail}>
+          {detail}
+        </Text>
+      ) : null}
     </View>
   );
 }
