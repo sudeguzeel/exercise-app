@@ -72,15 +72,29 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.identityRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
+          <View style={styles.identityLeft}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials}</Text>
+            </View>
+            <View style={styles.identityText}>
+              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.email} numberOfLines={1}>
+                {email || "E-posta bilgisi bulunamadı"}
+              </Text>
+            </View>
           </View>
-          <View style={styles.identityText}>
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email} numberOfLines={1}>
-              {email || "E-posta bilgisi bulunamadı"}
-            </Text>
-          </View>
+          <Pressable
+            accessibilityLabel="Geri dön"
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </Pressable>
         </View>
 
         <SectionLabel>HESAP</SectionLabel>
@@ -200,7 +214,24 @@ function getInitials(name: string) {
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 30, paddingBottom: 28 },
-  identityRow: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
+  identityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 28,
+  },
+  identityLeft: { flex: 1, minWidth: 0, flexDirection: "row", alignItems: "center" },
+  backButton: {
+    width: 48,
+    height: 48,
+    marginLeft: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 24,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatar: {
     width: 72,
     height: 72,
