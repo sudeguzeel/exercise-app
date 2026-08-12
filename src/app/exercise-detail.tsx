@@ -44,20 +44,14 @@ const INITIAL_CUSTOM_VALUES: CustomExerciseValues = {
   restSeconds: "45",
 };
 
-const INITIAL_WEIGHT_KG = "18";
-const WEIGHT_LIMITS = { min: 0, max: 500 };
-
-type ExerciseMetricKey = CustomExerciseValueKey | "weightKg";
-
 const CUSTOM_FIELDS: {
-  key: ExerciseMetricKey;
+  key: CustomExerciseValueKey;
   label: string;
   placeholder: string;
   maxLength: number;
 }[] = [
   { key: "sets", label: "SET", placeholder: "1–10", maxLength: 2 },
   { key: "reps", label: "TEKRAR", placeholder: "1–100", maxLength: 3 },
-  { key: "weightKg", label: "KİLO", placeholder: "0–500", maxLength: 3 },
   {
     key: "restSeconds",
     label: "DİNLENME",
@@ -164,7 +158,6 @@ export default function ExerciseDetailScreen() {
   const [customValues, setCustomValues] = useState<CustomExerciseValues>(
     INITIAL_CUSTOM_VALUES,
   );
-  const [weightKg, setWeightKg] = useState(INITIAL_WEIGHT_KG);
   const [errors, setErrors] = useState<CustomExerciseValueErrors>({});
 
   const hasRecommendedValues = Boolean(
@@ -209,7 +202,6 @@ export default function ExerciseDetailScreen() {
   useEffect(() => {
     setUseCustomValues(!hasRecommendedValues);
     setCustomValues(INITIAL_CUSTOM_VALUES);
-    setWeightKg(INITIAL_WEIGHT_KG);
     setErrors({});
     setGifFailed(false);
   }, [exercise?.id, hasRecommendedValues]);
@@ -258,21 +250,6 @@ export default function ExerciseDetailScreen() {
     [],
   );
 
-  const adjustWeightKg = useCallback((change: number) => {
-    setWeightKg((currentWeight) => {
-      const parsedWeight = Number.parseInt(currentWeight, 10);
-      const safeWeight = Number.isNaN(parsedWeight)
-        ? WEIGHT_LIMITS.min
-        : parsedWeight;
-      const nextWeight = Math.min(
-        WEIGHT_LIMITS.max,
-        Math.max(WEIGHT_LIMITS.min, safeWeight + change),
-      );
-
-      return String(nextWeight);
-    });
-  }, []);
-
   const adjustRecommendedValue = useCallback(
     (field: CustomExerciseValueKey, change: number) => {
       if (
@@ -309,18 +286,6 @@ export default function ExerciseDetailScreen() {
 
   const handleAddToProgram = useCallback(() => {
     if (!exercise) return;
-    const parsedWeightKg = Number(weightKg.replace(",", "."));
-    if (
-      !Number.isFinite(parsedWeightKg) ||
-      parsedWeightKg < 0 ||
-      parsedWeightKg > 500
-    ) {
-      Alert.alert(
-        "Kilo bilgisi geçersiz",
-        "Kilo değeri 0 ile 500 arasında olmalıdır.",
-      );
-      return;
-    }
 
     let payload: ProgramSelectionPayload;
 
@@ -335,7 +300,6 @@ export default function ExerciseDetailScreen() {
         exerciseId: exercise.id,
         sets: exercise.recommendedSets,
         reps: exercise.recommendedReps,
-        weightKg: parsedWeightKg,
         restSeconds: resolveProgramExerciseRestSeconds({
           customRestSeconds: null,
           recommendedRestSeconds: exercise.recommendedRestSeconds,
@@ -352,7 +316,6 @@ export default function ExerciseDetailScreen() {
         exerciseId: exercise.id,
         sets: validation.values.sets,
         reps: validation.values.reps,
-        weightKg: parsedWeightKg,
         restSeconds: resolveProgramExerciseRestSeconds({
           customRestSeconds: validation.values.restSeconds,
           recommendedRestSeconds: exercise.recommendedRestSeconds,
@@ -416,7 +379,6 @@ export default function ExerciseDetailScreen() {
     normalizedSelectionMode,
     initialTrainingDay,
     useCustomValues,
-    weightKg,
   ]);
 
   return (
@@ -630,7 +592,7 @@ export default function ExerciseDetailScreen() {
                 ) : null}
 
                 <Text maxFontSizeMultiplier={1.3} style={styles.fieldsTitle}>
-                  Set / Tekrar / Kilo / Dinlenme Süresi
+                  Set / Tekrar / Dinlenme Süresi
                 </Text>
 
                 {hasRecommendedValues &&
@@ -650,12 +612,6 @@ export default function ExerciseDetailScreen() {
                       value={String(exercise.recommendedReps)}
                       onDecrement={() => adjustRecommendedValue("reps", -1)}
                       onIncrement={() => adjustRecommendedValue("reps", 1)}
-                    />
-                    <MetricCard
-                      label="KİLO"
-                      value={weightKg}
-                      onDecrement={() => adjustWeightKg(-1)}
-                      onIncrement={() => adjustWeightKg(1)}
                     />
                     <MetricCard
                       label="DİNLENME"
@@ -702,7 +658,7 @@ export default function ExerciseDetailScreen() {
                       maxFontSizeMultiplier={1.3}
                       style={styles.customToggleText}
                     >
-                      Kendi set, tekrar, kilo ve dinlenme değerlerimi belirlemek
+                      Kendi set, tekrar ve dinlenme değerlerimi belirlemek
                       istiyorum.
                     </Text>
                   </Pressable>
@@ -710,115 +666,86 @@ export default function ExerciseDetailScreen() {
 
                 {useCustomValues || !hasRecommendedValues ? (
                 <View style={styles.customFieldRow}>
-
-                  {CUSTOM_FIELDS.map((field) => {
-                    const customFieldKey =
-                      field.key === "weightKg" ? null : field.key;
-                    const fieldError = customFieldKey
-                      ? errors[customFieldKey]
-                      : undefined;
-
-                    return (
-                      <View key={field.key} style={styles.customField}>
-                        <Text
-                          maxFontSizeMultiplier={1.3}
-                          style={styles.customFieldLabel}
-                        >
-                          {field.label}
-                        </Text>
-                        <View
-                          style={[
-                            styles.customInputRow,
-                            fieldError && styles.customInputError,
+                  {CUSTOM_FIELDS.map((field) => (
+                    <View key={field.key} style={styles.customField}>
+                      <Text
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.customFieldLabel}
+                      >
+                        {field.label}
+                      </Text>
+                      <View
+                        style={[
+                          styles.customInputRow,
+                          errors[field.key] && styles.customInputError,
+                        ]}
+                      >
+                        <Pressable
+                          accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini azalt`}
+                          accessibilityRole="button"
+                          onPress={() => adjustCustomValue(field.key, -1)}
+                          style={({ pressed }) => [
+                            styles.customControlButton,
+                            pressed && styles.buttonPressed,
                           ]}
                         >
-                          <Pressable
-                            accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini azalt`}
-                            accessibilityRole="button"
-                            onPress={() =>
-                              customFieldKey
-                                ? adjustCustomValue(customFieldKey, -1)
-                                : adjustWeightKg(-1)
-                            }
-                            style={({ pressed }) => [
-                              styles.customControlButton,
-                              pressed && styles.buttonPressed,
-                            ]}
-                          >
-                            <Ionicons
-                              name="remove"
-                              size={18}
-                              color={colors.primary}
-                            />
-                          </Pressable>
-                          <TextInput
-                            accessibilityLabel={`${field.label.toLocaleLowerCase(
-                              "tr-TR",
-                            )}`}
-                            inputMode="numeric"
-                            keyboardType="number-pad"
-                            maxFontSizeMultiplier={1.3}
-                            maxLength={field.maxLength}
-                            onChangeText={(value) => {
-                              const normalizedValue =
-                                !customFieldKey ||
-                                customFieldKey === "restSeconds"
-                                  ? value.replace(/\D/g, "")
-                                  : value;
-
-                              if (!customFieldKey) {
-                                setWeightKg(normalizedValue);
-                                return;
-                              }
-
-                              handleValueChange(
-                                customFieldKey,
-                                normalizedValue,
-                              );
-                            }}
-                            placeholder={field.placeholder}
-                            placeholderTextColor={colors.placeholder}
-                            returnKeyType="done"
-                            style={styles.customInput}
-                            value={
-                              !customFieldKey
-                                ? weightKg
-                                : customFieldKey === "restSeconds"
-                                  ? `${customValues[customFieldKey]}s`
-                                  : customValues[customFieldKey]
-                            }
-
+                          <Ionicons
+                            name="remove"
+                            size={18}
+                            color={colors.primary}
                           />
-                          <Pressable
-                            accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini artır`}
-                            accessibilityRole="button"
-                            onPress={() =>
-                              customFieldKey
-                                ? adjustCustomValue(customFieldKey, 1)
-                                : adjustWeightKg(1)
-                            }
-                            style={({ pressed }) => [
-                              styles.customControlButton,
-                              pressed && styles.buttonPressed,
-                            ]}
-                          >
-                            <Ionicons
-                              name="add"
-                              size={18}
-                              color={colors.primary}
-                            />
-                          </Pressable>
-                        </View>
-                        <Text
-                          accessibilityLiveRegion="polite"
+                        </Pressable>
+                        <TextInput
+                          accessibilityLabel={`${field.label.toLocaleLowerCase(
+                            "tr-TR",
+                          )}`}
+                          inputMode="numeric"
+                          keyboardType="number-pad"
                           maxFontSizeMultiplier={1.3}
-                          style={styles.fieldError}
+                          maxLength={field.maxLength}
+                          onChangeText={(value) =>
+                            handleValueChange(
+                              field.key,
+                              field.key === "restSeconds"
+                                ? value.replace(/\D/g, "")
+                                : value,
+                            )
+                          }
+                          placeholder={field.placeholder}
+                          placeholderTextColor={colors.placeholder}
+                          returnKeyType="done"
+                          style={styles.customInput}
+                          value={
+                            field.key === "restSeconds"
+                              ? `${customValues[field.key]}s`
+                              : customValues[field.key]
+                          }
+                        />
+                        <Pressable
+                          accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini artır`}
+                          accessibilityRole="button"
+                          onPress={() => adjustCustomValue(field.key, 1)}
+                          style={({ pressed }) => [
+                            styles.customControlButton,
+                            pressed && styles.buttonPressed,
+                          ]}
                         >
-                          {fieldError ?? " "}
-                        </Text>
+                          <Ionicons
+                            name="add"
+                            size={18}
+                            color={colors.primary}
+                          />
+                        </Pressable>
                       </View>
-                    );
-                  })}
+                      <Text
+                        accessibilityLiveRegion="polite"
+                        maxFontSizeMultiplier={1.3}
+                        style={styles.fieldError}
+                      >
+                        {errors[field.key] ?? " "}
+                      </Text>
+                    </View>
+                  ))}
                 </View>
                 ) : null}
 
@@ -1033,12 +960,10 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   metricRow: {
     marginTop: 14,
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
   },
   metricCard: {
-    flexBasis: "48%",
-    flexGrow: 1,
+    flex: 1,
     minWidth: 0,
     paddingVertical: 14,
     borderWidth: 1.5,
@@ -1065,10 +990,8 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     justifyContent: "center",
   },
   metricValue: {
-
-    width: 58,
+    width: 32,
     color: colors.text,
-
     fontSize: 20,
     fontWeight: "900",
     textAlign: "center",
@@ -1108,13 +1031,11 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   customFieldRow: {
     marginTop: 14,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "flex-start",
     gap: 8,
   },
   customField: {
-    flexBasis: "48%",
-    flexGrow: 1,
+    flex: 1,
     minWidth: 0,
   },
   customFieldLabel: {
