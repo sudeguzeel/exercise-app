@@ -1,3 +1,5 @@
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { loadProfilePersonalInfo } from "@/shared/lib/services/profileService";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,8 +15,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 
 type MenuItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -71,17 +71,34 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.identityRow}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
-          <View style={styles.identityText}>
-            <Text style={styles.name}>{displayName}</Text>
-            <Text style={styles.email} numberOfLines={1}>
-              {email || "E-posta bilgisi bulunamadı"}
-            </Text>
-          </View>
-        </View>
+       <View style={styles.identityRow}>
+  <View style={styles.avatar}>
+    <Text style={styles.avatarText}>{initials}</Text>
+  </View>
+
+  <View style={styles.identityText}>
+    <Text style={styles.name}>{displayName}</Text>
+    <Text style={styles.email} numberOfLines={1}>
+      {email || "E-posta bilgisi bulunamadı"}
+    </Text>
+  </View>
+
+  <Pressable
+    accessibilityLabel="Geri dön"
+    accessibilityRole="button"
+    onPress={() => router.back()}
+    style={({ pressed }) => [
+      styles.backButton,
+      pressed && styles.pressed,
+    ]}
+  >
+    <Ionicons
+      name="chevron-back"
+      size={24}
+      color={colors.text}
+    />
+  </Pressable>
+</View>
 
         <SectionLabel>HESAP</SectionLabel>
         <View style={styles.menuCard}>
@@ -200,6 +217,17 @@ function getInitials(name: string) {
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 30, paddingBottom: 28 },
+  
+  backButton: { 
+  width: 48,
+  height: 48,
+  alignItems: "center",
+  justifyContent: "center",
+  borderWidth: 1,
+  borderColor: colors.border,
+  borderRadius: 18,
+  backgroundColor: colors.surface,
+},
   identityRow: { flexDirection: "row", alignItems: "center", marginBottom: 28 },
   avatar: {
     width: 72,
