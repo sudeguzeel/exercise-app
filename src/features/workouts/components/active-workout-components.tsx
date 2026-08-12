@@ -13,7 +13,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 
@@ -214,63 +213,6 @@ export function TargetRepetitionCard({ value }: { value: number }) {
   );
 }
 
-
-export function SetPerformanceInputs({
-  actualReps,
-  weight,
-  disabled,
-  onActualRepsChange,
-  onWeightChange,
-}: {
-  actualReps: string;
-  weight: string;
-  disabled: boolean;
-  onActualRepsChange: (value: string) => void;
-  onWeightChange: (value: string) => void;
-}) {
-  const { colors, styles } = useWorkoutComponentTheme();
-  return (
-    <View style={styles.performanceRow}>
-      <View style={styles.performanceField}>
-        <Text style={styles.performanceLabel}>GERÇEK TEKRAR</Text>
-        <View style={styles.performanceInputShell}>
-          <TextInput
-            accessibilityLabel="Gerçekleştirilen tekrar sayısı"
-            editable={!disabled}
-            inputMode="numeric"
-            keyboardType="number-pad"
-            maxLength={3}
-            onChangeText={(value) => onActualRepsChange(value.replace(/\D/g, ""))}
-            selectTextOnFocus
-            style={styles.performanceInput}
-            value={actualReps}
-          />
-          <Text style={styles.performanceUnit}>TEKRAR</Text>
-        </View>
-      </View>
-      <View style={styles.performanceField}>
-        <Text style={styles.performanceLabel}>KULLANILAN KİLO</Text>
-        <View style={styles.performanceInputShell}>
-          <TextInput
-            accessibilityLabel="Bu sette kullanılan kilo"
-            editable={!disabled}
-            inputMode="decimal"
-            keyboardType="decimal-pad"
-            maxLength={6}
-            onChangeText={onWeightChange}
-            placeholder="—"
-            placeholderTextColor={colors.placeholder}
-            selectTextOnFocus
-            style={styles.performanceInput}
-            value={weight}
-          />
-          <Text style={styles.performanceUnit}>kg</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
 function useWorkoutComponentTheme() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -332,39 +274,5 @@ function createStyles(colors: AppThemeColors) {
   targetCard: { minHeight: 78, paddingHorizontal: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 22, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9 },
   targetValue: { color: colors.text, fontSize: 29, fontWeight: "900" },
   targetUnit: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
-  performanceRow: { flexDirection: "row", gap: 10 },
-  performanceField: { flex: 1, minWidth: 0 },
-  performanceLabel: {
-    marginBottom: 8,
-    color: colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  performanceInputShell: {
-    minHeight: 58,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 18,
-    backgroundColor: colors.inputBackground,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
-  performanceInput: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: 0,
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  performanceUnit: {
-    color: colors.textSecondary,
-    fontSize: 9,
-    fontWeight: "800",
-  },
   });
 }
