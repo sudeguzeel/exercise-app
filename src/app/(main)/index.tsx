@@ -236,11 +236,9 @@ export default function HomeScreen() {
                   <Ionicons name="close" size={22} color={colors.inverseText} />
                 ) : day.status === "today" ? (
                   <Text style={styles.todayText}>Bugün</Text>
-                ) : (
-                  <Text style={styles.pendingText}>
-                    {day.status === "rest" ? "Dinlenme" : "Bekliyor"}
-                  </Text>
-                )}
+                ) : day.status === "rest" ? (
+                  <Text style={styles.pendingText}>Dinlenme</Text>
+                ) : null}
               </Pressable>
             ))}
           </ScrollView>
