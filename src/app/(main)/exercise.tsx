@@ -238,7 +238,7 @@ export default function ExerciseScreen() {
         ItemSeparatorComponent={ExerciseSeparator}
         ListHeaderComponent={
           <View style={styles.header}>
-          <View style={styles.profileRow}>
+          <View style={styles.headerRow}>
   {isNewProgramSelection ? (
     <View style={styles.programActionRow}>
       <Pressable
@@ -252,11 +252,7 @@ export default function ExerciseScreen() {
         }
         style={styles.profileButton}
       >
-        <Ionicons
-          name="chevron-back"
-          size={25}
-          color={colors.text}
-        />
+        <Ionicons name="chevron-back" size={24} color={colors.text} />
       </Pressable>
       <Pressable
         accessibilityRole="button"
@@ -264,11 +260,7 @@ export default function ExerciseScreen() {
         onPress={() => router.push("/(main)/favorites" as never)}
         style={styles.profileButton}
       >
-        <Ionicons
-          name="heart-outline"
-          size={25}
-          color={colors.text}
-        />
+        <Ionicons name="heart-outline" size={24} color={colors.text} />
       </Pressable>
     </View>
   ) : isProgramEditSelection ? (
@@ -284,13 +276,9 @@ export default function ExerciseScreen() {
           },
         })
       }
-      style={[styles.profileButton, styles.programEditBackButton]}
+      style={styles.profileButton}
     >
-      <Ionicons
-        name="chevron-back"
-        size={25}
-        color={colors.text}
-      />
+      <Ionicons name="chevron-back" size={24} color={colors.text} />
     </Pressable>
   ) : (
     <Pressable
@@ -299,18 +287,14 @@ export default function ExerciseScreen() {
       onPress={() => router.push("/(main)/favorites" as never)}
       style={styles.profileButton}
     >
-      <Ionicons
-        name="heart-outline"
-        size={25}
-        color={colors.text}
-      />
+      <Ionicons name="heart-outline" size={24} color={colors.text} />
     </Pressable>
   )}
 </View>
 
-            <Text maxFontSizeMultiplier={1.3} style={styles.title}>
-              {isProgramEditSelection ? "Programa egzersiz ekle" : "Egzersizler"}
-            </Text>
+  <Text maxFontSizeMultiplier={1.3} style={styles.title}>
+    {isProgramEditSelection ? "Programa egzersiz ekle" : "Egzersizler"}
+  </Text>
 
             <View style={styles.searchContainer}>
               <Ionicons
@@ -439,16 +423,17 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   header: {
     paddingBottom: 28,
   },
-  profileRow: {
-    minHeight: 52,
+  headerRow: {
+    minHeight: 64,
     alignItems: "flex-end",
+    justifyContent: "center",
   },
   profileButton: {
-    width: 50,
-    height: 50,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 25,
+    width: 46,
+    height: 46,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 23,
     backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
@@ -459,14 +444,11 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  programEditBackButton: {
-    alignSelf: "flex-start",
-  },
   title: {
-    marginTop: 36,
+    marginTop: 14,
     color: colors.text,
-    fontSize: 34,
-    lineHeight: 41,
+    fontSize: 32,
+    lineHeight: 38,
     fontWeight: "900",
   },
   searchContainer: {
