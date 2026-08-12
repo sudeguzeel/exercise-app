@@ -2,7 +2,6 @@ import {
   EmptyContent,
   HistoryCard,
   PeriodSelector,
-  RoundBackButton,
   SectionTitle,
   StatCard,
   WeightSummaryRow,
@@ -217,7 +216,6 @@ export default function ProgressScreen() {
 
   const header = (
     <View style={styles.headerContent}>
-      <RoundBackButton onPress={() => router.back()} />
       <Text style={styles.title}>İlerlemen</Text>
       <PeriodSelector onChange={setPeriod} value={period} />
 
