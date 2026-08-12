@@ -2,7 +2,6 @@ import {
   EmptyContent,
   HistoryCard,
   PeriodSelector,
-  PersonalRecordRow,
   RoundBackButton,
   SectionTitle,
   StatCard,
@@ -365,23 +364,6 @@ export default function ProgressScreen() {
         </View>
       </View>
 
-      <SectionTitle>KİŞİSEL REKORLAR</SectionTitle>
-      {dashboard.personalRecords.length > 0 ? (
-        <View style={styles.sectionGap}>
-          {dashboard.personalRecords.map((record) => (
-            <PersonalRecordRow key={record.id} record={record} />
-          ))}
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <EmptyContent
-            description="Rekorlar yalnızca tamamlanmış antrenman ve setlerden hesaplanır."
-            icon="trophy-outline"
-            title="Henüz kişisel rekor yok"
-          />
-        </View>
-      )}
-
       <SectionTitle action="Tümünü gör" onAction={() => listRef.current?.scrollToEnd()}>
         GEÇMİŞ
       </SectionTitle>
@@ -569,7 +551,6 @@ const styles = StyleSheet.create({
   formError: { marginTop: 8, color: "#D14343", fontSize: 11, lineHeight: 16, textAlign: "center" },
   primaryButton: { minHeight: 51, borderRadius: 18, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
   primaryButtonText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  sectionGap: { gap: 10 },
   historyItem: { marginBottom: 12 },
   footerSpace: { height: 18 },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },

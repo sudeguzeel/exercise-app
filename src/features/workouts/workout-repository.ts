@@ -18,6 +18,7 @@ import type {
   WorkoutPhase,
   WorkoutRepository,
   WorkoutSession,
+  WorkoutSetSnapshot,
 } from "@/features/workouts/types";
 import {
   areAllSetsCompleted,
@@ -87,9 +88,6 @@ type LegacyWorkoutSession = WorkoutSession &
     lastCompletedSetId: string | null;
   }>;
 
-type LegacyWorkoutCompletion = Omit<WorkoutCompletion, "completedDate"> &
-  Partial<Pick<WorkoutCompletion, "completedDate">>;
-
 function normalizeSession(session: WorkoutSession): WorkoutSession {
   const legacy = session as LegacyWorkoutSession;
   const pendingTarget = legacy.pendingTarget ?? null;
@@ -116,18 +114,6 @@ function normalizeSession(session: WorkoutSession): WorkoutSession {
         : null,
     lastCompletedSetId: legacy.lastCompletedSetId ?? null,
   };
-}
-
-function normalizeCompletion(
-  completion: LegacyWorkoutCompletion,
-): WorkoutCompletion {
-  const storedCompletedDate = completion.completedDate;
-  const completedDate = isValidLocalDateKey(storedCompletedDate)
-    ? storedCompletedDate!
-    : (getLocalDateKeyFromTimestamp(completion.completedAt) ??
-      completion.workoutDate);
-
-  return { ...completion, completedDate };
 }
 
 function activateFirstIncompleteTarget(session: WorkoutSession) {
@@ -183,10 +169,6 @@ function sessionsKey(userId: string) {
   return `${STORAGE_PREFIX}:${userId}:sessions`;
 }
 
-function completionsKey(userId: string) {
-  return `${STORAGE_PREFIX}:${userId}:completions`;
-}
-
 async function readList<T>(key: string): Promise<T[]> {
   try {
     const raw = await AsyncStorage.getItem(key);
@@ -219,13 +201,255 @@ async function readSessions(userId: string) {
     .map(normalizeSession);
 }
 
-async function readCompletions(userId: string) {
-  const completions = await readList<LegacyWorkoutCompletion>(
-    completionsKey(userId),
+// Tamamlanmış antrenman geçmişi (sessions'ın aksine) Supabase'de tutulur —
+// cihaz değişse/uygulama silinse bile GEÇMİŞ, TOPLAM/SERİ istatistikleri ve
+// çalışma kilosu geri düşüşü (bkz. progress-domain.getLatestCompletedWeights)
+// kaybolmasın diye. Aktif antrenman oturumu (sessions) hâlâ cihaz içi kalır —
+// o ekrana özel, geçici durum.
+const WORKOUT_COMPLETION_SELECT =
+  "id, workout_session_id, user_id, program_id, program_name, workout_date, completed_date, started_at, completed_at, duration_ms, completed_exercise_count, planned_day, user_workout_completion_sets(program_exercise_id, exercise_id, exercise_order_index, exercise_name, muscle_group_name, set_number, actual_reps, weight_kg, completed_at)";
+
+type WorkoutCompletionSetRow = {
+  program_exercise_id: string;
+  exercise_id: string;
+  exercise_order_index: number;
+  exercise_name: string;
+  muscle_group_name: string | null;
+  set_number: number;
+  actual_reps: number;
+  weight_kg: number | null;
+  completed_at: string | null;
+};
+
+type WorkoutCompletionRow = {
+  id: string;
+  workout_session_id: string;
+  user_id: string;
+  program_id: string;
+  program_name: string;
+  workout_date: string;
+  completed_date: string;
+  started_at: string;
+  completed_at: string;
+  duration_ms: number;
+  completed_exercise_count: number;
+  planned_day: boolean;
+  user_workout_completion_sets: WorkoutCompletionSetRow[];
+};
+
+function mapCompletionRow(row: WorkoutCompletionRow): WorkoutCompletion {
+  const exercisesByProgramExerciseId = new Map<
+    string,
+    Omit<WorkoutExerciseSnapshot, "sets"> & { sets: WorkoutSetSnapshot[] }
+  >();
+
+  for (const setRow of row.user_workout_completion_sets) {
+    let exercise = exercisesByProgramExerciseId.get(setRow.program_exercise_id);
+    if (!exercise) {
+      exercise = {
+        programExerciseId: setRow.program_exercise_id,
+        exerciseId: setRow.exercise_id,
+        orderIndex: setRow.exercise_order_index,
+        name: setRow.exercise_name,
+        muscleGroupName: setRow.muscle_group_name,
+        mediaUrl: null,
+        mediaType: null,
+        targetSets: 0,
+        targetReps: setRow.actual_reps,
+        restSeconds: 0,
+        sets: [],
+      };
+      exercisesByProgramExerciseId.set(setRow.program_exercise_id, exercise);
+    }
+    exercise.sets.push({
+      id: `${row.workout_session_id}:${setRow.program_exercise_id}:set:${setRow.set_number}`,
+      setNumber: setRow.set_number,
+      targetReps: setRow.actual_reps,
+      actualReps: setRow.actual_reps,
+      weightInput: setRow.weight_kg === null ? "" : String(setRow.weight_kg),
+      weightKg: setRow.weight_kg,
+      completedAt: setRow.completed_at,
+    });
+  }
+
+  const exercises = [...exercisesByProgramExerciseId.values()]
+    .sort((left, right) => left.orderIndex - right.orderIndex)
+    .map((exercise) => ({
+      ...exercise,
+      targetSets: exercise.sets.length,
+      sets: exercise.sets.sort((left, right) => left.setNumber - right.setNumber),
+    }));
+
+  return {
+    id: `wc-${row.workout_session_id}`,
+    workoutSessionId: row.workout_session_id,
+    userId: row.user_id,
+    programId: row.program_id,
+    programName: row.program_name,
+    workoutDate: row.workout_date,
+    completedDate: row.completed_date,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    durationMs: row.duration_ms,
+    completedExerciseCount: row.completed_exercise_count,
+    exercises,
+    plannedDay: row.planned_day,
+    // Sunucuda saklanmıyor — yalnızca completeWorkout()'un döndürdüğü anlık
+    // sonuçta (workout-complete.tsx tebrik ekranı) anlamlı; geçmişten tekrar
+    // okunduğunda kullanılmıyor.
+    currentStreak: 0,
+    status: "completed",
+  };
+}
+
+async function readCompletions(userId: string): Promise<WorkoutCompletion[]> {
+  const { data, error } = await supabase
+    .from("user_workout_completions")
+    .select(WORKOUT_COMPLETION_SELECT)
+    .eq("user_id", userId)
+    .order("completed_at", { ascending: false });
+  if (error) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Antrenman geçmişi alınamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    );
+  }
+  return (data as unknown as WorkoutCompletionRow[]).map(mapCompletionRow);
+}
+
+async function getCompletionBySessionId(
+  userId: string,
+  workoutSessionId: string,
+): Promise<WorkoutCompletion | null> {
+  const { data, error } = await supabase
+    .from("user_workout_completions")
+    .select(WORKOUT_COMPLETION_SELECT)
+    .eq("user_id", userId)
+    .eq("workout_session_id", workoutSessionId)
+    .maybeSingle<WorkoutCompletionRow>();
+  if (error || !data) return null;
+  return mapCompletionRow(data);
+}
+
+async function listCompletionsForProgramDate(
+  userId: string,
+  programId: string,
+  workoutDate: string,
+): Promise<WorkoutCompletion[]> {
+  const { data, error } = await supabase
+    .from("user_workout_completions")
+    .select(WORKOUT_COMPLETION_SELECT)
+    .eq("user_id", userId)
+    .eq("program_id", programId)
+    .eq("workout_date", workoutDate);
+  if (error) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Antrenman geçmişi alınamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    );
+  }
+  return (data as unknown as WorkoutCompletionRow[]).map(mapCompletionRow);
+}
+
+async function deleteCompletionBySessionId(
+  userId: string,
+  workoutSessionId: string,
+) {
+  const { error } = await supabase
+    .from("user_workout_completions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("workout_session_id", workoutSessionId);
+  if (error) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Önceki antrenman kaydı temizlenemedi.",
+    );
+  }
+}
+
+async function deleteCompletionsForProgramDate(
+  userId: string,
+  programId: string,
+  workoutDate: string,
+) {
+  const { error } = await supabase
+    .from("user_workout_completions")
+    .delete()
+    .eq("user_id", userId)
+    .eq("program_id", programId)
+    .eq("workout_date", workoutDate);
+  if (error) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Antrenman kayıtları sunucudan silinemedi.",
+    );
+  }
+}
+
+// completeWorkout() tarafından bir kere üretilen final WorkoutCompletion'ı
+// Supabase'e yazar. Aynı session için daha önce (tutarsız/yarım) bir kayıt
+// varsa önce silinir — FK cascade ile setleri de gider — sonra temiz bir
+// kayıt eklenir. İki adım da başarısız olursa (özellikle setler) üst kayıt
+// da geri alınır ki geçmişte "hareketsiz" bir antrenman kalmasın.
+async function persistCompletion(userId: string, completion: WorkoutCompletion) {
+  await deleteCompletionBySessionId(userId, completion.workoutSessionId);
+
+  const { data, error } = await supabase
+    .from("user_workout_completions")
+    .insert({
+      user_id: userId,
+      workout_session_id: completion.workoutSessionId,
+      program_id: completion.programId,
+      program_name: completion.programName,
+      workout_date: completion.workoutDate,
+      completed_date: completion.completedDate,
+      started_at: completion.startedAt,
+      completed_at: completion.completedAt,
+      duration_ms: completion.durationMs,
+      completed_exercise_count: completion.completedExerciseCount,
+      planned_day: completion.plannedDay,
+    })
+    .select("id")
+    .single<{ id: string }>();
+
+  if (error || !data) {
+    throw new WorkoutRepositoryError(
+      "STORAGE_FAILED",
+      "Antrenman geçmişe kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+    );
+  }
+
+  const setRows = completion.exercises.flatMap((exercise) =>
+    exercise.sets
+      .filter((set) => Boolean(set.completedAt))
+      .map((set) => ({
+        completion_id: data.id,
+        user_id: userId,
+        program_exercise_id: exercise.programExerciseId,
+        exercise_id: exercise.exerciseId,
+        exercise_order_index: exercise.orderIndex,
+        exercise_name: exercise.name,
+        muscle_group_name: exercise.muscleGroupName,
+        set_number: set.setNumber,
+        actual_reps: set.actualReps,
+        weight_kg: set.weightKg,
+        completed_at: set.completedAt,
+      })),
   );
-  return completions
-    .filter((completion) => completion.userId === userId)
-    .map(normalizeCompletion);
+
+  if (setRows.length > 0) {
+    const { error: setsError } = await supabase
+      .from("user_workout_completion_sets")
+      .insert(setRows);
+    if (setsError) {
+      await supabase.from("user_workout_completions").delete().eq("id", data.id);
+      throw new WorkoutRepositoryError(
+        "STORAGE_FAILED",
+        "Antrenman setleri kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+      );
+    }
+  }
 }
 
 async function saveSession(userId: string, session: WorkoutSession) {
@@ -402,19 +626,6 @@ function isCompletionConsistentWithSession(
   );
 }
 
-async function removeCompletionForSession(
-  userId: string,
-  workoutSessionId: string,
-) {
-  const completions = await readCompletions(userId);
-  const nextCompletions = completions.filter(
-    (completion) => completion.workoutSessionId !== workoutSessionId,
-  );
-  if (nextCompletions.length !== completions.length) {
-    await writeList(completionsKey(userId), nextCompletions);
-  }
-}
-
 function completionExerciseRecords(
   completions: WorkoutCompletion[],
 ): CompletedExerciseRecord[] {
@@ -585,9 +796,9 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           program,
           userId,
         );
-        const storedCompletions = await readCompletions(userId);
-        const storedCompletion = storedCompletions.find(
-          (completion) => completion.workoutSessionId === reconciled.id,
+        const storedCompletion = await getCompletionBySessionId(
+          userId,
+          reconciled.id,
         );
 
         if (
@@ -606,7 +817,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         }
 
         if (storedCompletion) {
-          await removeCompletionForSession(userId, reconciled.id);
+          await deleteCompletionBySessionId(userId, reconciled.id);
         }
 
         const progress = getWorkoutProgress(reconciled.exercises);
@@ -627,9 +838,9 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         return saveSession(userId, reconciled);
       }
 
-            const [allSessions, completions] = await Promise.all([
+      const [allSessions, programDateCompletions] = await Promise.all([
         readSessions(userId),
-        readList<WorkoutCompletion>(completionsKey(userId)),
+        listCompletionsForProgramDate(userId, programId, workoutDate),
       ]);
 
       const programCandidates = allSessions
@@ -651,19 +862,13 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       );
 
       const completedProgramExerciseIds = new Set(
-        completions
-          .filter(
-            (completion) =>
-              completion.programId === programId &&
-              completion.workoutDate === workoutDate,
-          )
-          .flatMap((completion) =>
-            completion.exercises
-              .filter((exercise) =>
-                exercise.sets.every((set) => Boolean(set.completedAt)),
-              )
-              .map((exercise) => exercise.programExerciseId),
-          ),
+        programDateCompletions.flatMap((completion) =>
+          completion.exercises
+            .filter((exercise) =>
+              exercise.sets.every((set) => Boolean(set.completedAt)),
+            )
+            .map((exercise) => exercise.programExerciseId),
+        ),
       );
 
       const pendingExercises = program.exercises.filter(
@@ -1008,7 +1213,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     workoutCompletionLocks.add(workoutSessionId);
     try {
       const userId = await requireUserId();
-      const completions = await readCompletions(userId);
+      const existing = await getCompletionBySessionId(userId, workoutSessionId);
       const session = await getSessionForUser(userId, workoutSessionId);
       if (!session) {
         throw new WorkoutRepositoryError("NOT_FOUND", "Antrenman oturumu bulunamadı.");
@@ -1034,9 +1239,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         );
       }
 
-      const existing = completions.find(
-        (completion) => completion.workoutSessionId === workoutSessionId,
-      );
       if (existing && isCompletionConsistentWithSession(existing, session)) {
         session.status = "completed";
         session.phase = "completed";
@@ -1050,11 +1252,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         await saveSession(userId, session);
         return clone(existing);
       }
-      const validCompletions = existing
-        ? completions.filter(
-            (completion) => completion.workoutSessionId !== workoutSessionId,
-          )
-        : completions;
 
       const completedAt = new Date().toISOString();
       const completedDate = getLocalDateKeyFromTimestamp(completedAt);
@@ -1092,6 +1289,12 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         currentStreak: 0,
         status: "completed",
       };
+      const allCompletions = await readCompletions(userId);
+      const validCompletions = existing
+        ? allCompletions.filter(
+            (completion) => completion.workoutSessionId !== workoutSessionId,
+          )
+        : allCompletions;
       const completion: WorkoutCompletion = {
         ...baseCompletion,
         currentStreak: await getCurrentStreak(session, [
@@ -1099,10 +1302,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           baseCompletion,
         ]),
       };
-      await writeList(completionsKey(userId), [
-        ...validCompletions,
-        completion,
-      ]);
+      await persistCompletion(userId, completion);
 
       session.status = "completed";
       session.phase = "completed";
@@ -1121,8 +1321,8 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
   async getCompletion(workoutSessionId: string) {
     if (!isValidWorkoutSessionId(workoutSessionId)) return null;
     const userId = await requireUserId();
-    const [completions, session] = await Promise.all([
-      readCompletions(userId),
+    const [completion, session] = await Promise.all([
+      getCompletionBySessionId(userId, workoutSessionId),
       getSessionForUser(userId, workoutSessionId),
     ]);
     if (
@@ -1133,10 +1333,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     ) {
       return null;
     }
-    const completion = completions.find(
-      (item) =>
-        item.workoutSessionId === workoutSessionId && item.userId === userId,
-    );
     if (!completion || !isCompletionConsistentWithSession(completion, session)) {
       return null;
     }
@@ -1178,19 +1374,20 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
 
   async getCompletionForProgramDate(programId: string, workoutDate: string) {
     const userId = await requireUserId();
-    const completions = await readCompletions(userId);
-    const completion = completions.find(
-      (item) => item.programId === programId && item.workoutDate === workoutDate,
+    const completions = await listCompletionsForProgramDate(
+      userId,
+      programId,
+      workoutDate,
     );
-    return completion ? clone(completion) : null;
+    return completions[0] ? clone(completions[0]) : null;
   }
 
   async resetCompletedSession(programId: string, workoutDate: string) {
     const userId = await requireUserId();
-    const completions = await readCompletions(userId);
-    const matchingCompletions = completions.filter(
-      (completion) =>
-        completion.programId === programId && completion.workoutDate === workoutDate,
+    const matchingCompletions = await listCompletionsForProgramDate(
+      userId,
+      programId,
+      workoutDate,
     );
     const programExerciseIds = [
       ...new Set(
@@ -1233,13 +1430,7 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       ),
     );
 
-    await writeList(
-      completionsKey(userId),
-      completions.filter(
-        (completion) =>
-          !(completion.programId === programId && completion.workoutDate === workoutDate),
-      ),
-    );
+    await deleteCompletionsForProgramDate(userId, programId, workoutDate);
   }
 
   async getLocalCompletedExerciseRecords(fromDate?: string, toDate?: string) {

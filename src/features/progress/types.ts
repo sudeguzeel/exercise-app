@@ -47,15 +47,6 @@ export type ExerciseWeightCandidate = {
   exercise: PersistedProgramExercise;
 };
 
-export type ProgressPersonalRecord = {
-  id: "longest-streak" | "fastest-workout" | "weight-record";
-  title: string;
-  value: string;
-  detail: string;
-  change: string | null;
-  icon: "star-outline" | "timer-outline" | "barbell-outline";
-};
-
 export type ProgressDashboard = {
   period: ProgressPeriod;
   periodLabel: string;
@@ -66,6 +57,5 @@ export type ProgressDashboard = {
   longestStreak: number;
   exerciseWeights: ExerciseWeightItem[];
   bodyProgress: BodyProgress;
-  personalRecords: ProgressPersonalRecord[];
   history: WorkoutCompletion[];
 };

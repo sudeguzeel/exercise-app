@@ -1,10 +1,7 @@
 import type { UserProgram } from "@/features/programs/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { toLocalDateKey } from "@/features/workouts/workout-domain";
-import type {
-  ProgressPeriod,
-  ProgressPersonalRecord,
-} from "@/features/progress/types";
+import type { ProgressPeriod } from "@/features/progress/types";
 
 type PeriodBounds = {
   start: Date;
@@ -315,76 +312,4 @@ export function parsePositiveWeight(value: string) {
   return Number.isFinite(parsed) && parsed > 0 && parsed <= 500
     ? parsed
     : null;
-}
-
-export function buildPersonalRecords(
-  completions: readonly WorkoutCompletion[],
-  longestStreak: number,
-): ProgressPersonalRecord[] {
-  const records: ProgressPersonalRecord[] = [];
-  if (longestStreak > 0) {
-    const latest = completions[0];
-    records.push({
-      id: "longest-streak",
-      title: "En uzun seri",
-      value: `${longestStreak} gün`,
-      detail: latest
-        ? `${formatLocalWorkoutDate(latest.completedAt).toLocaleLowerCase("tr-TR")} kaydedildi`
-        : "Tamamlanan antrenmanlardan hesaplandı",
-      change: null,
-      icon: "star-outline",
-    });
-  }
-
-  const fastest = [...completions]
-    .filter((completion) => completion.durationMs > 0)
-    .sort((left, right) => left.durationMs - right.durationMs)[0];
-  if (fastest) {
-    records.push({
-      id: "fastest-workout",
-      title: "En hızlı antrenman",
-      value: `${Math.max(1, Math.round(fastest.durationMs / 60_000))} dk`,
-      detail: `${formatLocalWorkoutDate(fastest.completedAt).toLocaleLowerCase("tr-TR")} kaydedildi`,
-      change: null,
-      icon: "timer-outline",
-    });
-  }
-
-  const weightedSets = completions
-    .flatMap((completion) =>
-      completion.exercises.flatMap((exercise) =>
-        exercise.sets
-          .filter(
-            (set) =>
-              Boolean(set.completedAt) &&
-              set.weightKg !== null &&
-              set.weightKg > 0,
-          )
-          .map((set) => ({
-            weightKg: set.weightKg as number,
-            completedAt: set.completedAt as string,
-            exerciseName: exercise.name,
-          })),
-      ),
-    )
-    .sort((left, right) => right.weightKg - left.weightKg);
-  const weightRecord = weightedSets[0];
-  if (weightRecord) {
-    const previousWeight = weightedSets.find(
-      (set) => set.weightKg < weightRecord.weightKg,
-    )?.weightKg;
-    records.push({
-      id: "weight-record",
-      title: "Kilo rekoru",
-      value: `${formatDecimal(weightRecord.weightKg)} kg`,
-      detail: `${weightRecord.exerciseName} · ${formatLocalWorkoutDate(weightRecord.completedAt).toLocaleLowerCase("tr-TR")}`,
-      change:
-        previousWeight === undefined
-          ? null
-          : `+${formatDecimal(weightRecord.weightKg - previousWeight)} kg`,
-      icon: "barbell-outline",
-    });
-  }
-
-  return records;
 }

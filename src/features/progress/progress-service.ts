@@ -1,5 +1,4 @@
 import {
-  buildPersonalRecords,
   calculateWorkoutStreaks,
   countScheduledWorkouts,
   filterCompletedWorkoutsByPeriod,
@@ -113,7 +112,6 @@ export async function loadProgressDashboard(
     longestStreak,
     exerciseWeights: exerciseWeights.filter((item) => item.hasWeightRecord),
     bodyProgress,
-    personalRecords: buildPersonalRecords(completions, longestStreak),
     history,
   };
 }
