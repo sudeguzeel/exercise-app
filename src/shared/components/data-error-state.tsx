@@ -1,6 +1,8 @@
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useMemo } from "react";
 
 type DataErrorStateProps = {
   variant: "offline" | "service";
@@ -38,6 +40,8 @@ export function DataErrorState({
   retrying = false,
   presentation = "fullscreen",
 }: DataErrorStateProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const copy = COPY[variant];
   const isService = variant === "service";
 
@@ -52,7 +56,7 @@ export function DataErrorState({
         <Ionicons
           name={isService ? "warning-outline" : "cloud-offline-outline"}
           size={44}
-          color={isService ? "#FF5A5F" : "#747B74"}
+          color={isService ? colors.error : colors.textSecondary}
         />
       </View>
 
@@ -70,7 +74,7 @@ export function DataErrorState({
           ]}
         >
           {retrying ? (
-            <ActivityIndicator color={MainColors.text} />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.primaryText}>{copy.primary}</Text>
           )}
@@ -107,12 +111,13 @@ export function DataErrorState({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   container: {
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: MainColors.background,
+    backgroundColor: colors.background,
   },
   fullscreen: {
     flex: 1,
@@ -124,7 +129,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 34,
     borderWidth: 1,
-    borderColor: MainColors.subtleBorder,
+    borderColor: colors.borderSubtle,
     borderRadius: 28,
   },
   iconBox: {
@@ -134,11 +139,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  serviceIconBox: { backgroundColor: "#FBE7E4" },
-  offlineIconBox: { backgroundColor: "#F0F2EC" },
+  serviceIconBox: { backgroundColor: colors.errorBackground },
+  offlineIconBox: { backgroundColor: colors.surfaceElevated },
   title: {
     marginTop: 28,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 29,
     lineHeight: 35,
     fontWeight: "900",
@@ -147,7 +152,7 @@ const styles = StyleSheet.create({
   description: {
     maxWidth: 430,
     marginTop: 14,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 16,
     lineHeight: 24,
     textAlign: "center",
@@ -156,23 +161,24 @@ const styles = StyleSheet.create({
   primaryButton: {
     minHeight: 58,
     borderRadius: 18,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryText: { color: MainColors.text, fontSize: 17, fontWeight: "900" },
+  primaryText: { color: colors.onPrimary, fontSize: 17, fontWeight: "900" },
   secondaryButton: {
     minHeight: 56,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   secondaryButtonDisabled: { opacity: 0.45 },
-  secondaryText: { color: MainColors.text, fontSize: 16, fontWeight: "800" },
-  secondaryTextDisabled: { color: MainColors.mutedText },
-  errorCode: { marginTop: 12, color: MainColors.mutedText, fontSize: 13 },
+  secondaryText: { color: colors.text, fontSize: 16, fontWeight: "800" },
+  secondaryTextDisabled: { color: colors.textDisabled },
+  errorCode: { marginTop: 12, color: colors.textSecondary, fontSize: 13 },
   pressed: { opacity: 0.72 },
-});
+  });
+}

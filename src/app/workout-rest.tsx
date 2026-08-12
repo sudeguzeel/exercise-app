@@ -20,6 +20,8 @@ import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
 import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -41,6 +43,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutRestScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
     workoutSessionId?: string | string[];
@@ -254,7 +258,7 @@ export default function WorkoutRestScreen() {
   if (session === undefined && !loadError) {
     return (
       <ScreenState>
-        <ActivityIndicator color={MainColors.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
         <Text style={styles.stateText}>Dinlenme süresi hazırlanıyor…</Text>
       </ScreenState>
     );
@@ -263,7 +267,7 @@ export default function WorkoutRestScreen() {
   if (!session || loadError || !completedPosition || !pendingPosition) {
     return (
       <ScreenState>
-        <Ionicons name="alert-circle-outline" size={42} color={MainColors.primary} />
+        <Ionicons name="alert-circle-outline" size={42} color={colors.primary} />
         <Text style={styles.stateTitle}>Dinlenme ekranı açılamadı</Text>
         <Text style={styles.stateText}>{loadError ?? "Dinlenme verisi eksik."}</Text>
         <Pressable
@@ -338,7 +342,7 @@ export default function WorkoutRestScreen() {
             ]}
           >
             {isExtending ? (
-              <ActivityIndicator color={MainColors.text} size="small" />
+              <ActivityIndicator color={colors.onPrimary} size="small" />
             ) : (
               <Text style={styles.addButtonText}>+15sn</Text>
             )}
@@ -356,7 +360,7 @@ export default function WorkoutRestScreen() {
             ]}
           >
             {isTransitioning ? (
-              <ActivityIndicator color={MainColors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.skipButtonText}>Dinlenmeyi atla</Text>
             )}
@@ -368,6 +372,7 @@ export default function WorkoutRestScreen() {
 }
 
 function ScreenState({ children }: { children: React.ReactNode }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen options={{ gestureEnabled: false }} />
@@ -376,7 +381,7 @@ function ScreenState({ children }: { children: React.ReactNode }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
   content: {
     flexGrow: 1,

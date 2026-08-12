@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -18,13 +20,6 @@ import {
 
 import { Gender, Goal, useOnboarding } from "@/providers/OnboardingContext";
 import { savePersonalInfo } from "@/shared/lib/services/personalInfoService";
-
-const GREEN = "#79DE2D";
-const BACKGROUND = "#F7F8F2";
-const BORDER = "#BFDDA9";
-const TEXT = "#1C1C1C";
-const MUTED = "#666A64";
-const ERROR = "#D94B4B";
 
 const genderOptions: {
   label: string;
@@ -138,6 +133,8 @@ function formatWeightInput(value: string) {
 }
 
 export default function PersonalInfoScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { personalInfo, setPersonalInfo } = useOnboarding();
 
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -329,7 +326,7 @@ export default function PersonalInfoScreen() {
       >
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={TEXT} />
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
 
           <Text style={styles.stepText}>
@@ -414,7 +411,7 @@ export default function PersonalInfoScreen() {
                 }))
               }
               placeholder="Ad Soyad"
-              placeholderTextColor="#777B76"
+              placeholderTextColor={colors.placeholder}
               autoCapitalize="words"
               maxLength={50}
               style={[
@@ -444,7 +441,7 @@ export default function PersonalInfoScreen() {
                   }))
                 }
                 placeholder="GG/AA/YYYY"
-                placeholderTextColor="#777B76"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="number-pad"
                 maxLength={10}
                 style={[
@@ -466,7 +463,7 @@ export default function PersonalInfoScreen() {
                   setShowDatePicker(true);
                 }}
               >
-                <Ionicons name="calendar-outline" size={19} color={TEXT} />
+                <Ionicons name="calendar-outline" size={19} color={colors.text} />
               </Pressable>
             </View>
 
@@ -485,8 +482,8 @@ export default function PersonalInfoScreen() {
               maximumDate={new Date()}
               onChange={handleDateChange}
               themeVariant="light"
-              textColor="#111111"
-              accentColor={GREEN}
+              textColor={colors.text}
+              accentColor={colors.primaryBright}
               locale="tr-TR"
             />
 
@@ -526,7 +523,7 @@ export default function PersonalInfoScreen() {
                   }))
                 }
                 placeholder="175"
-                placeholderTextColor="#777B76"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="number-pad"
                 maxLength={3}
                 style={styles.unitInput}
@@ -557,7 +554,7 @@ export default function PersonalInfoScreen() {
                   }))
                 }
                 placeholder="72"
-                placeholderTextColor="#777B76"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="decimal-pad"
                 maxLength={5}
                 style={styles.unitInput}
@@ -588,7 +585,7 @@ export default function PersonalInfoScreen() {
                   }))
                 }
                 placeholder="68"
-                placeholderTextColor="#777B76"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="decimal-pad"
                 maxLength={5}
                 style={styles.unitInput}
@@ -623,7 +620,7 @@ export default function PersonalInfoScreen() {
             ]}
           >
             {isSaving ? (
-              <ActivityIndicator color="#111111" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.continueButtonText}>Devam et</Text>
             )}
@@ -634,10 +631,10 @@ export default function PersonalInfoScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.background,
   },
   content: {
     flexGrow: 1,
@@ -655,18 +652,18 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   stepText: {
     fontSize: 13,
-    color: MUTED,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   activeStep: {
-    color: GREEN,
+    color: colors.primaryBright,
     fontWeight: "700",
   },
   progressRow: {
@@ -679,26 +676,26 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 4,
-    backgroundColor: "#C4D8B6",
+    backgroundColor: colors.disabled,
   },
   progressActive: {
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
   },
   title: {
     fontSize: 23,
     fontWeight: "800",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 5,
   },
   subtitle: {
     fontSize: 14,
-    color: MUTED,
+    color: colors.textSecondary,
     marginBottom: 30,
   },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "800",
-    color: "#676B65",
+    color: colors.textSecondary,
     marginBottom: 9,
     marginTop: 18,
   },
@@ -710,9 +707,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 72,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
@@ -721,45 +718,45 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 58,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 5,
   },
   selectedCard: {
-    borderColor: GREEN,
-    backgroundColor: "#EDF8DE",
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primarySoft,
   },
   radioOuter: {
     width: 13,
     height: 13,
     borderRadius: 7,
     borderWidth: 1,
-    borderColor: "#111111",
+    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
   radioSelected: {
-    borderColor: GREEN,
+    borderColor: colors.primaryBright,
   },
   radioInner: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: "#111111",
+    backgroundColor: colors.text,
   },
   optionText: {
     fontSize: 12,
     lineHeight: 15,
-    color: "#5F625E",
+    color: colors.textSecondary,
     fontWeight: "700",
     textAlign: "center",
   },
   selectedText: {
-    color: GREEN,
+    color: colors.primary,
   },
   doubleRow: {
     flexDirection: "row",
@@ -780,12 +777,12 @@ const styles = StyleSheet.create({
   input: {
     height: 44,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.inputBackground,
     paddingHorizontal: 14,
     fontSize: 14,
-    color: TEXT,
+    color: colors.text,
   },
   dateFieldRow: {
     flexDirection: "row",
@@ -796,29 +793,29 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.inputBackground,
     paddingHorizontal: 10,
     fontSize: 13,
-    color: TEXT,
+    color: colors.text,
   },
   calendarButton: {
     width: 42,
     height: 44,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   datePickerContainer: {
     marginTop: 12,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surfaceElevated,
     overflow: "hidden",
     paddingBottom: Platform.OS === "ios" ? 8 : 0,
   },
@@ -829,10 +826,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 10,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
   },
   datePickerDoneText: {
-    color: "#111111",
+    color: colors.onPrimary,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -841,9 +838,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.inputBackground,
     paddingHorizontal: 10,
   },
   unitInput: {
@@ -851,18 +848,18 @@ const styles = StyleSheet.create({
     height: 42,
     padding: 0,
     fontSize: 14,
-    color: TEXT,
+    color: colors.text,
   },
   unitText: {
     fontSize: 13,
-    color: "#777B76",
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   inputError: {
-    borderColor: ERROR,
+    borderColor: colors.error,
   },
   errorText: {
-    color: ERROR,
+    color: colors.error,
     fontSize: 10,
     lineHeight: 13,
     marginTop: 5,
@@ -874,10 +871,10 @@ const styles = StyleSheet.create({
   continueButton: {
     height: 49,
     borderRadius: 15,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: GREEN,
+    shadowColor: colors.primary,
     shadowOffset: {
       width: 0,
       height: 7,
@@ -887,13 +884,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   continueButtonDisabled: {
-    backgroundColor: "#D6D9D1",
+    backgroundColor: colors.disabled,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#101010",
+    color: colors.onPrimary,
   },
 });

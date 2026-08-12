@@ -24,11 +24,12 @@ import type {
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -57,6 +58,8 @@ const EMPTY_MEASUREMENT: MeasurementFields = {
 };
 
 export default function ProgressScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const listRef = useRef<FlatList<WorkoutCompletion>>(null);
   const [period, setPeriod] = useState<ProgressPeriod>("week");
   const [dashboard, setDashboard] = useState<ProgressDashboard>();
@@ -183,7 +186,7 @@ export default function ProgressScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.stateText}>İlerleme bilgilerin hazırlanıyor…</Text>
         </View>
       </SafeAreaView>
@@ -260,7 +263,7 @@ export default function ProgressScreen() {
             </Text>
           </View>
           <View style={styles.arrowButton}>
-            <Ionicons name="chevron-forward" size={18} color={MainColors.text} />
+            <Ionicons name="chevron-forward" size={18} color={colors.text} />
           </View>
         </Pressable>
         {dashboard.exerciseWeights.length > 0 ? (
@@ -274,7 +277,7 @@ export default function ProgressScreen() {
               style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             >
               <Text style={styles.secondaryButtonText}>Tüm hareketleri gör</Text>
-              <Ionicons name="chevron-forward" size={16} color={MainColors.text} />
+              <Ionicons name="chevron-forward" size={16} color={colors.text} />
             </Pressable>
           </>
         ) : (
@@ -357,7 +360,7 @@ export default function ProgressScreen() {
             style={[styles.primaryButton, savingMeasurement && styles.disabled]}
           >
             {savingMeasurement ? (
-              <ActivityIndicator color={MainColors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.primaryButtonText}>Ölçümlerimi kaydet</Text>
             )}
@@ -413,10 +416,10 @@ export default function ProgressScreen() {
           ref={listRef}
           refreshControl={
             <RefreshControl
-              colors={[MainColors.primary]}
+              colors={[colors.primary]}
               onRefresh={() => void load(true)}
               refreshing={refreshing}
-              tintColor={MainColors.primary}
+              tintColor={colors.primary}
             />
           }
           renderItem={({ item }) => (
@@ -453,7 +456,7 @@ export default function ProgressScreen() {
               keyboardType="decimal-pad"
               onChangeText={setTargetWeight}
               placeholder="Örn. 70"
-              placeholderTextColor={MainColors.mutedText}
+              placeholderTextColor={colors.placeholder}
               style={[styles.modalInput, targetError && styles.inputError]}
               value={targetWeight}
             />
@@ -472,7 +475,7 @@ export default function ProgressScreen() {
                 style={[styles.modalPrimary, savingTarget && styles.disabled]}
               >
                 {savingTarget ? (
-                  <ActivityIndicator color={MainColors.text} />
+                  <ActivityIndicator color={colors.onPrimary} />
                 ) : (
                   <Text style={styles.primaryButtonText}>Kaydet</Text>
                 )}
@@ -486,6 +489,8 @@ export default function ProgressScreen() {
 }
 
 function BodyMetric({ label, value }: { label: string; value: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.bodyMetric}>
       <Text style={styles.bodyMetricLabel}>{label}</Text>
@@ -507,6 +512,8 @@ function MeasurementInput({
   error?: string;
   onChangeText: (value: string) => void;
 }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.inputGroup}>
       <Text style={styles.inputLabel}>{label}</Text>
@@ -526,63 +533,63 @@ function MeasurementInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   flex: { flex: 1 },
-  safeArea: { flex: 1, backgroundColor: MainColors.background },
+  safeArea: { flex: 1, backgroundColor: colors.background },
   listContent: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22 },
   headerContent: { paddingTop: 8, paddingBottom: 14, gap: 22 },
-  title: { color: MainColors.text, fontSize: 31, lineHeight: 37, fontWeight: "900" },
+  title: { color: colors.text, fontSize: 31, lineHeight: 37, fontWeight: "900" },
   statsRow: { flexDirection: "row", gap: 10 },
-  card: { padding: 20, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 25, backgroundColor: MainColors.surface },
+  card: { padding: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cardHeaderCopy: { flex: 1, minWidth: 0 },
-  cardTitle: { color: MainColors.text, fontSize: 19, fontWeight: "900" },
-  cardDescription: { marginTop: 4, color: MainColors.mutedText, fontSize: 13, lineHeight: 19 },
-  arrowButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
-  secondaryButton: { minHeight: 50, marginTop: 12, paddingHorizontal: 16, borderRadius: 18, backgroundColor: "#F0F2EC", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
-  secondaryButtonText: { color: MainColors.text, fontSize: 14, fontWeight: "900" },
+  cardTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
+  cardDescription: { marginTop: 4, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  arrowButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  secondaryButton: { minHeight: 50, marginTop: 12, paddingHorizontal: 16, borderRadius: 18, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  secondaryButtonText: { color: colors.text, fontSize: 14, fontWeight: "900" },
   bodyHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  targetButton: { marginTop: 2, minHeight: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
-  targetButtonText: { color: MainColors.primary, fontSize: 11, fontWeight: "900" },
-  bodySummary: { marginTop: 16, padding: 17, borderRadius: 22, backgroundColor: "#171B1E" },
-  bodyEyebrow: { color: "#8F9491", fontSize: 10, fontWeight: "900" },
+  targetButton: { marginTop: 2, minHeight: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  targetButtonText: { color: colors.primary, fontSize: 11, fontWeight: "900" },
+  bodySummary: { marginTop: 16, padding: 17, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated },
+  bodyEyebrow: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
   currentWeightRow: { marginTop: 6, flexDirection: "row", alignItems: "flex-end" },
-  currentWeight: { color: "#FFFFFF", fontSize: 34, fontWeight: "900" },
-  currentWeightUnit: { marginLeft: 6, marginBottom: 5, color: "#A8ADAA", fontSize: 12, fontWeight: "800" },
+  currentWeight: { color: colors.text, fontSize: 34, fontWeight: "900" },
+  currentWeightUnit: { marginLeft: 6, marginBottom: 5, color: colors.textSecondary, fontSize: 12, fontWeight: "800" },
   targetSummary: { marginLeft: "auto", alignItems: "flex-end" },
-  targetSummaryText: { color: "#D8DBD9", fontSize: 12, fontWeight: "800" },
-  targetDifference: { marginTop: 3, color: MainColors.primaryBright, fontSize: 11, fontWeight: "900" },
-  bodyMetricsRow: { marginTop: 15, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#3C4140", flexDirection: "row", gap: 10 },
+  targetSummaryText: { color: colors.text, fontSize: 12, fontWeight: "800" },
+  targetDifference: { marginTop: 3, color: colors.primaryBright, fontSize: 11, fontWeight: "900" },
+  bodyMetricsRow: { marginTop: 15, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, flexDirection: "row", gap: 10 },
   bodyMetric: { flex: 1, minWidth: 0 },
-  bodyMetricLabel: { color: "#8F9491", fontSize: 8, fontWeight: "800" },
-  bodyMetricValue: { marginTop: 5, color: "#FFFFFF", fontSize: 13, fontWeight: "900" },
-  measurementSection: { marginTop: 18, paddingTop: 17, borderTopWidth: 1, borderTopColor: MainColors.border },
-  measurementTitle: { color: MainColors.text, fontSize: 16, fontWeight: "900" },
+  bodyMetricLabel: { color: colors.textSecondary, fontSize: 8, fontWeight: "800" },
+  bodyMetricValue: { marginTop: 5, color: colors.text, fontSize: 13, fontWeight: "900" },
+  measurementSection: { marginTop: 18, paddingTop: 17, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  measurementTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   inputRow: { marginTop: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 },
   inputGroup: { flex: 1, minWidth: 0 },
-  inputLabel: { marginBottom: 6, color: MainColors.mutedText, fontSize: 10, fontWeight: "900" },
-  inputShell: { height: 50, paddingHorizontal: 9, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 15, backgroundColor: MainColors.background, flexDirection: "row", alignItems: "center" },
-  input: { flex: 1, minWidth: 0, color: MainColors.text, fontSize: 15, fontWeight: "900", textAlign: "center" },
-  inputSuffix: { color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
-  inputError: { borderColor: "#D14343" },
-  fieldError: { minHeight: 31, marginTop: 4, color: "#D14343", fontSize: 8, lineHeight: 11 },
-  formError: { marginTop: 8, color: "#D14343", fontSize: 11, lineHeight: 16, textAlign: "center" },
-  primaryButton: { minHeight: 51, borderRadius: 18, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
-  primaryButtonText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
+  inputLabel: { marginBottom: 6, color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
+  inputShell: { height: 50, paddingHorizontal: 9, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.inputBackground, flexDirection: "row", alignItems: "center" },
+  input: { flex: 1, minWidth: 0, color: colors.text, fontSize: 15, fontWeight: "900", textAlign: "center" },
+  inputSuffix: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
+  inputError: { borderColor: colors.error },
+  fieldError: { minHeight: 31, marginTop: 4, color: colors.error, fontSize: 8, lineHeight: 11 },
+  formError: { marginTop: 8, color: colors.error, fontSize: 11, lineHeight: 16, textAlign: "center" },
+  primaryButton: { minHeight: 51, borderRadius: 18, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
+  primaryButtonText: { color: colors.onPrimary, fontSize: 15, fontWeight: "900" },
   sectionGap: { gap: 10 },
   historyItem: { marginBottom: 12 },
   footerSpace: { height: 18 },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },
-  stateText: { color: MainColors.mutedText, fontSize: 14 },
-  modalBackdrop: { flex: 1, padding: 24, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center" },
-  modalCard: { width: "100%", maxWidth: 420, padding: 22, borderRadius: 24, backgroundColor: MainColors.surface },
-  modalTitle: { color: MainColors.text, fontSize: 22, fontWeight: "900" },
-  modalDescription: { marginTop: 7, color: MainColors.mutedText, fontSize: 13, lineHeight: 19 },
-  modalInput: { height: 54, marginTop: 18, paddingHorizontal: 16, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 17, color: MainColors.text, fontSize: 17, fontWeight: "800" },
+  stateText: { color: colors.textSecondary, fontSize: 14 },
+  modalBackdrop: { flex: 1, padding: 24, backgroundColor: colors.overlay, alignItems: "center", justifyContent: "center" },
+  modalCard: { width: "100%", maxWidth: 420, padding: 22, borderRadius: 24, backgroundColor: colors.surfaceElevated },
+  modalTitle: { color: colors.text, fontSize: 22, fontWeight: "900" },
+  modalDescription: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  modalInput: { height: 54, marginTop: 18, paddingHorizontal: 16, borderWidth: 1.5, borderColor: colors.border, borderRadius: 17, backgroundColor: colors.inputBackground, color: colors.text, fontSize: 17, fontWeight: "800" },
   modalActions: { marginTop: 18, flexDirection: "row", gap: 10 },
-  modalSecondary: { flex: 1, minHeight: 50, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 17, alignItems: "center", justifyContent: "center" },
-  modalSecondaryText: { color: MainColors.text, fontSize: 14, fontWeight: "800" },
-  modalPrimary: { flex: 1, minHeight: 50, borderRadius: 17, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
+  modalSecondary: { flex: 1, minHeight: 50, borderWidth: 1.5, borderColor: colors.border, borderRadius: 17, alignItems: "center", justifyContent: "center" },
+  modalSecondaryText: { color: colors.text, fontSize: 14, fontWeight: "800" },
+  modalPrimary: { flex: 1, minHeight: 50, borderRadius: 17, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.7 },
 });

@@ -1,4 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,6 +14,8 @@ import {
 } from "react-native";
 
 export default function EmailSentScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const { email } = useLocalSearchParams<{
     email?: string | string[];
   }>();
@@ -51,7 +55,7 @@ export default function EmailSentScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.iconContainer}>
-          <Ionicons name="mail-outline" size={42} color="#74A800" />
+          <Ionicons name="mail-outline" size={42} color={colors.primary} />
         </View>
 
         <Text style={styles.title}>E-postanı kontrol et</Text>
@@ -61,7 +65,7 @@ export default function EmailSentScreen() {
         </Text>
 
         <View style={styles.emailContainer}>
-          <Ionicons name="mail-outline" size={18} color="#74A800" />
+          <Ionicons name="mail-outline" size={18} color={colors.primary} />
 
           <Text style={styles.emailText} numberOfLines={1}>
             {displayedEmail}
@@ -69,7 +73,7 @@ export default function EmailSentScreen() {
         </View>
 
         <View style={styles.durationContainer}>
-          <Ionicons name="time-outline" size={18} color="#6C716C" />
+          <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
 
           <Text style={styles.durationText}>
             Bağlantı 3 dakika boyunca geçerlidir.
@@ -99,12 +103,12 @@ export default function EmailSentScreen() {
         >
           {loading ? (
             <>
-              <ActivityIndicator size="small" color="#74A800" />
+              <ActivityIndicator size="small" color={colors.primary} />
               <Text style={styles.resendButtonText}>Gönderiliyor...</Text>
             </>
           ) : (
             <>
-              <Ionicons name="refresh-outline" size={19} color="#74A800" />
+              <Ionicons name="refresh-outline" size={19} color={colors.primary} />
               <Text style={styles.resendButtonText}>Tekrar gönder</Text>
             </>
           )}
@@ -114,7 +118,7 @@ export default function EmailSentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#F6F7F2",

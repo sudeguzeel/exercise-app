@@ -16,7 +16,8 @@ import type {
   WorkoutExerciseSnapshot,
 } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,6 +36,8 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutDetailScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const params = useLocalSearchParams<{ workoutSessionId?: string | string[] }>();
   const workoutSessionId = singleParam(params.workoutSessionId)?.trim() ?? "";
   const [completion, setCompletion] = useState<WorkoutCompletion | null>();
@@ -75,7 +78,7 @@ export default function WorkoutDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.stateText}>Antrenman detayı hazırlanıyor…</Text>
         </View>
       </SafeAreaView>
@@ -99,7 +102,7 @@ export default function WorkoutDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
-          <Ionicons name="document-outline" size={44} color={MainColors.primary} />
+          <Ionicons name="document-outline" size={44} color={colors.primary} />
           <Text style={styles.stateTitle}>Antrenman detayı bulunamadı</Text>
           <Text style={styles.stateText}>
             Geçerli ve tamamlanmış bir antrenman kaydı seçilmedi.
@@ -162,6 +165,8 @@ export default function WorkoutDetailScreen() {
 }
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.summaryMetric}>
       <Text adjustsFontSizeToFit numberOfLines={1} style={styles.summaryMetricValue}>{value}</Text>
@@ -171,6 +176,8 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
 }
 
 function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <View style={styles.exerciseCard}>
       <View style={styles.exerciseHeader}>
@@ -179,7 +186,7 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
           <Text style={styles.exerciseMuscle}>{exercise.muscleGroupName ?? "Kas grubu bilinmiyor"}</Text>
         </View>
         <View style={styles.exerciseIcon}>
-          <Ionicons name="barbell-outline" size={21} color={MainColors.mutedText} />
+          <Ionicons name="barbell-outline" size={21} color={colors.textSecondary} />
         </View>
       </View>
       <View style={styles.tableHeader}>
@@ -206,7 +213,7 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
               <Ionicons
                 name={completed ? "checkmark" : "remove"}
                 size={17}
-                color={completed ? MainColors.text : MainColors.mutedText}
+                color={completed ? colors.onPrimary : colors.textSecondary}
               />
             </View>
           </View>
@@ -216,41 +223,41 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: MainColors.background },
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   content: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30, gap: 18 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  topTitle: { color: MainColors.mutedText, fontSize: 17, fontWeight: "700" },
+  topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },
   headerSpacer: { width: 42 },
-  summaryCard: { marginTop: 10, padding: 22, borderRadius: 25, backgroundColor: "#171B1E" },
-  summaryDate: { color: "#969B98", fontSize: 12, fontWeight: "900" },
-  summaryName: { marginTop: 9, color: "#FFFFFF", fontSize: 27, fontWeight: "900" },
+  summaryCard: { marginTop: 10, padding: 22, borderRadius: 25, backgroundColor: colors.inverseSurface },
+  summaryDate: { color: colors.inverseText, opacity: 0.62, fontSize: 12, fontWeight: "900" },
+  summaryName: { marginTop: 9, color: colors.inverseText, fontSize: 27, fontWeight: "900" },
   summaryStats: { marginTop: 22, flexDirection: "row", gap: 16 },
   summaryMetric: { flex: 1, minWidth: 0 },
-  summaryMetricValue: { color: "#FFFFFF", fontSize: 19, fontWeight: "900" },
-  summaryMetricLabel: { marginTop: 4, color: "#767B78", fontSize: 10, fontWeight: "900" },
-  sectionTitle: { marginTop: 2, color: MainColors.mutedText, fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
-  exerciseCard: { padding: 18, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 24, backgroundColor: MainColors.surface },
+  summaryMetricValue: { color: colors.inverseText, fontSize: 19, fontWeight: "900" },
+  summaryMetricLabel: { marginTop: 4, color: colors.inverseText, opacity: 0.58, fontSize: 10, fontWeight: "900" },
+  sectionTitle: { marginTop: 2, color: colors.textSecondary, fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
+  exerciseCard: { padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface },
   exerciseHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   exerciseCopy: { flex: 1 },
-  exerciseName: { color: MainColors.text, fontSize: 20, fontWeight: "900" },
-  exerciseMuscle: { marginTop: 3, color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
-  exerciseIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: "#F0F2EC", alignItems: "center", justifyContent: "center" },
-  tableHeader: { marginTop: 16, paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: MainColors.border, flexDirection: "row", alignItems: "center", gap: 8 },
-  tableHeaderText: { color: MainColors.mutedText, fontSize: 10, fontWeight: "900" },
+  exerciseName: { color: colors.text, fontSize: 20, fontWeight: "900" },
+  exerciseMuscle: { marginTop: 3, color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
+  exerciseIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  tableHeader: { marginTop: 16, paddingBottom: 9, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, flexDirection: "row", alignItems: "center", gap: 8 },
+  tableHeaderText: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
   setColumn: { width: 42 },
   dataColumn: { flex: 1, minWidth: 0 },
   statusColumn: { width: 38 },
-  setRow: { minHeight: 58, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: MainColors.border, flexDirection: "row", alignItems: "center", gap: 8 },
-  setNumber: { color: MainColors.text, fontSize: 16, fontWeight: "900" },
-  setValueBox: { minHeight: 36, borderRadius: 12, backgroundColor: "#F0F2EC", alignItems: "center", justifyContent: "center" },
-  setValue: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  setStatus: { width: 38, height: 30, borderRadius: 15, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
-  setStatusPending: { backgroundColor: "#F0F2EC" },
-  emptyCard: { padding: 28, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 24, alignItems: "center" },
+  setRow: { minHeight: 58, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle, flexDirection: "row", alignItems: "center", gap: 8 },
+  setNumber: { color: colors.text, fontSize: 16, fontWeight: "900" },
+  setValueBox: { minHeight: 36, borderRadius: 12, backgroundColor: colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
+  setValue: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  setStatus: { width: 38, height: 30, borderRadius: 15, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
+  setStatusPending: { backgroundColor: colors.surfaceElevated },
+  emptyCard: { padding: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center" },
   centerState: { flex: 1, padding: 28, alignItems: "center", justifyContent: "center", gap: 12 },
-  stateTitle: { color: MainColors.text, fontSize: 21, fontWeight: "900", textAlign: "center" },
-  stateText: { color: MainColors.mutedText, fontSize: 14, lineHeight: 21, textAlign: "center" },
-  backToProgress: { minHeight: 50, marginTop: 8, paddingHorizontal: 22, borderRadius: 17, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
-  backToProgressText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
+  stateTitle: { color: colors.text, fontSize: 21, fontWeight: "900", textAlign: "center" },
+  stateText: { color: colors.textSecondary, fontSize: 14, lineHeight: 21, textAlign: "center" },
+  backToProgress: { minHeight: 50, marginTop: 8, paddingHorizontal: 22, borderRadius: 17, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
+  backToProgressText: { color: colors.onPrimary, fontSize: 15, fontWeight: "900" },
 });

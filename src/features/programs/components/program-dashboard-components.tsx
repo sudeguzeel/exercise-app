@@ -1,7 +1,9 @@
 import type { WeekDayItem } from "@/features/programs/program-dashboard";
 import type { PersistedProgramExercise, UserProgram } from "@/features/programs/types";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function WeekDaySelector({
@@ -13,6 +15,7 @@ export function WeekDaySelector({
   selectedDateKey: string;
   onSelect: (dateKey: string) => void;
 }) {
+  const { styles } = useDashboardTheme();
   return (
     <ScrollView
       horizontal
@@ -56,6 +59,7 @@ export function ProgramSummaryCard({
   completion: number;
   onEdit: (programId: string) => void;
 }) {
+  const { colors, styles } = useDashboardTheme();
   return (
     <View style={styles.programCard}>
       <View style={styles.programHeader}>
@@ -73,7 +77,7 @@ export function ProgramSummaryCard({
             pressed && styles.pressed,
           ]}
         >
-          <Ionicons name="pencil-outline" size={20} color={MainColors.mutedText} />
+          <Ionicons name="pencil-outline" size={20} color={colors.textSecondary} />
         </Pressable>
       </View>
       <View style={styles.progressTrack}>
@@ -95,6 +99,7 @@ export function ProgramPills({
   activeProgramId: string | null;
   onSelect: (programId: string) => void;
 }) {
+  const { styles } = useDashboardTheme();
   return (
     <ScrollView
       horizontal
@@ -133,6 +138,7 @@ export function WeeklyTrainingChart({
 }: {
   values: { dateKey: string; shortLabel: string; value: number }[];
 }) {
+  const { styles } = useDashboardTheme();
   const maximum = Math.max(1, ...values.map((item) => Math.max(0, item.value)));
   return (
     <View style={styles.chartCard}>
@@ -168,6 +174,7 @@ export function ProgramExerciseRow({
   exercise: PersistedProgramExercise;
   completed: boolean;
 }) {
+  const { colors, styles } = useDashboardTheme();
   return (
     <View
       accessibilityLabel={`${exercise.name}, ${completed ? "tamamlandı" : "tamamlanmadı"}`}
@@ -178,7 +185,7 @@ export function ProgramExerciseRow({
     >
       {completed ? (
         <View style={[styles.statusCircle, styles.statusCircleCompleted]}>
-          <Ionicons name="checkmark" size={17} color={MainColors.text} />
+          <Ionicons name="checkmark" size={17} color={colors.onPrimary} />
         </View>
       ) : null}
       <Text
@@ -194,53 +201,60 @@ export function ProgramExerciseRow({
   );
 }
 
-const styles = StyleSheet.create({
+function useDashboardTheme() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
+}
+
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   pressed: { opacity: 0.72 },
   selectedControl: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
-  selectedText: { color: MainColors.text },
+  selectedText: { color: colors.onPrimary },
   dayContent: { gap: 10, paddingHorizontal: 20 },
   dayCard: {
     width: 68,
     height: 72,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
-  dayLabel: { color: MainColors.mutedText, fontSize: 13, fontWeight: "600" },
+  dayLabel: { color: colors.textSecondary, fontSize: 13, fontWeight: "600" },
   dayNumber: {
     marginTop: 4,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 18,
     fontWeight: "800",
   },
   programCard: {
     padding: 20,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
   },
   programHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   programName: {
     flex: 1,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 20,
     lineHeight: 25,
     fontWeight: "900",
   },
-  completionText: { color: MainColors.primary, fontSize: 15, fontWeight: "800" },
+  completionText: { color: colors.primary, fontSize: 15, fontWeight: "800" },
   editButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -249,42 +263,42 @@ const styles = StyleSheet.create({
     marginTop: 17,
     borderRadius: 4,
     overflow: "hidden",
-    backgroundColor: MainColors.border,
+    backgroundColor: colors.disabled,
   },
-  progressFill: { height: "100%", borderRadius: 4, backgroundColor: MainColors.primaryBright },
+  progressFill: { height: "100%", borderRadius: 4, backgroundColor: colors.primaryBright },
   pillContent: { gap: 10 },
   pill: {
     maxWidth: 220,
     minHeight: 44,
     paddingHorizontal: 20,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 23,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     justifyContent: "center",
   },
-  pillText: { color: MainColors.mutedText, fontSize: 15, fontWeight: "700" },
+  pillText: { color: colors.textSecondary, fontSize: 15, fontWeight: "700" },
   chartCard: {
     padding: 20,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
   },
-  chartTitle: { color: MainColors.mutedText, fontSize: 15, fontWeight: "600" },
+  chartTitle: { color: colors.textSecondary, fontSize: 15, fontWeight: "600" },
   chartRow: { height: 130, marginTop: 14, flexDirection: "row", alignItems: "flex-end" },
   chartColumn: { flex: 1, minWidth: 0, alignItems: "center" },
   barArea: { height: 94, justifyContent: "flex-end", alignItems: "center" },
-  bar: { width: "64%", maxWidth: 40, borderRadius: 7, backgroundColor: MainColors.primaryBright },
-  emptyBar: { backgroundColor: MainColors.border },
-  chartLabel: { marginTop: 8, color: MainColors.mutedText, fontSize: 11 },
+  bar: { width: "64%", maxWidth: 40, borderRadius: 7, backgroundColor: colors.primaryBright },
+  emptyBar: { backgroundColor: colors.disabled },
+  chartLabel: { marginTop: 8, color: colors.textSecondary, fontSize: 11 },
   exerciseRow: {
     minHeight: 58,
     paddingHorizontal: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 18,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -294,13 +308,14 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  statusCircleCompleted: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.primaryBright },
-  exerciseName: { flex: 1, color: MainColors.text, fontSize: 15, lineHeight: 20, fontWeight: "600" },
-  completedExerciseName: { color: MainColors.mutedText, textDecorationLine: "line-through" },
-  exerciseValue: { color: MainColors.mutedText, fontSize: 13, fontWeight: "700" },
-});
+  statusCircleCompleted: { borderColor: colors.primaryBright, backgroundColor: colors.primaryBright },
+  exerciseName: { flex: 1, color: colors.text, fontSize: 15, lineHeight: 20, fontWeight: "600" },
+  completedExerciseName: { color: colors.textSecondary, textDecorationLine: "line-through" },
+  exerciseValue: { color: colors.textSecondary, fontSize: 13, fontWeight: "700" },
+  });
+}
 

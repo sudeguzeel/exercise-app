@@ -14,12 +14,14 @@ import type {
   ProgressPersonalRecord,
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import type { ComponentProps, ReactNode } from "react";
+import { useMemo, type ComponentProps, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export function RoundBackButton({ onPress }: { onPress: () => void }) {
+  const { colors, styles } = useProgressTheme();
   return (
     <Pressable
       accessibilityLabel="Geri dön"
@@ -28,7 +30,7 @@ export function RoundBackButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [styles.roundButton, pressed && styles.pressed]}
     >
-      <Ionicons name="chevron-back" size={21} color={MainColors.text} />
+      <Ionicons name="chevron-back" size={21} color={colors.text} />
     </Pressable>
   );
 }
@@ -40,6 +42,7 @@ export function PeriodSelector({
   value: ProgressPeriod;
   onChange: (period: ProgressPeriod) => void;
 }) {
+  const { styles } = useProgressTheme();
   const options: { id: ProgressPeriod; label: string }[] = [
     { id: "week", label: "Hafta" },
     { id: "month", label: "Ay" },
@@ -85,6 +88,7 @@ export function StatCard({
   value: string;
   detail: string;
 }) {
+  const { styles } = useProgressTheme();
   return (
     <View style={styles.statCard}>
       <Text style={styles.statLabel}>{label}</Text>
@@ -107,6 +111,7 @@ export function SectionTitle({
   action?: string;
   onAction?: () => void;
 }) {
+  const { styles } = useProgressTheme();
   return (
     <View style={styles.sectionTitleRow}>
       <Text style={styles.sectionTitle}>{children}</Text>
@@ -128,9 +133,10 @@ export function EmptyContent({
   title: string;
   description: string;
 }) {
+  const { colors, styles } = useProgressTheme();
   return (
     <View style={styles.emptyContent}>
-      <Ionicons name={icon} size={28} color={MainColors.primary} />
+      <Ionicons name={icon} size={28} color={colors.primary} />
       <View style={styles.emptyCopy}>
         <Text style={styles.emptyTitle}>{title}</Text>
         <Text style={styles.emptyDescription}>{description}</Text>
@@ -140,6 +146,7 @@ export function EmptyContent({
 }
 
 export function WeightSummaryRow({ item }: { item: ExerciseWeightItem }) {
+  const { colors, styles } = useProgressTheme();
   const difference =
     item.previousWeightKg === null
       ? null
@@ -147,7 +154,7 @@ export function WeightSummaryRow({ item }: { item: ExerciseWeightItem }) {
   return (
     <View style={styles.weightRow}>
       <View style={styles.smallIconBox}>
-        <Ionicons name="barbell-outline" size={19} color={MainColors.mutedText} />
+        <Ionicons name="barbell-outline" size={19} color={colors.textSecondary} />
       </View>
       <View style={styles.weightCopy}>
         <Text numberOfLines={1} style={styles.weightName}>
@@ -173,10 +180,11 @@ export function WeightSummaryRow({ item }: { item: ExerciseWeightItem }) {
 }
 
 export function PersonalRecordRow({ record }: { record: ProgressPersonalRecord }) {
+  const { colors, styles } = useProgressTheme();
   return (
     <View style={styles.recordCard}>
       <View style={styles.recordIcon}>
-        <Ionicons name={record.icon} size={21} color={MainColors.text} />
+        <Ionicons name={record.icon} size={21} color={colors.text} />
       </View>
       <View style={styles.recordCopy}>
         <Text style={styles.recordTitle}>{record.title}</Text>
@@ -197,6 +205,7 @@ export function HistoryCard({
   completion: WorkoutCompletion;
   onPress: () => void;
 }) {
+  const { colors, styles } = useProgressTheme();
   return (
     <Pressable
       accessibilityRole="button"
@@ -213,22 +222,28 @@ export function HistoryCard({
         </Text>
       </View>
       <View style={styles.historyAction}>
-        <Ionicons name="checkmark" size={17} color={MainColors.text} />
+        <Ionicons name="checkmark" size={17} color={colors.onPrimary} />
       </View>
-      <Ionicons name="chevron-forward" size={18} color={MainColors.text} />
+      <Ionicons name="chevron-forward" size={18} color={colors.text} />
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+function useProgressTheme() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
+}
+
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   pressed: { opacity: 0.7 },
   roundButton: {
     width: 42,
     height: 42,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 21,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -238,18 +253,18 @@ const styles = StyleSheet.create({
     minHeight: 42,
     paddingHorizontal: 18,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 22,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surfaceElevated,
     alignItems: "center",
     justifyContent: "center",
   },
   periodButtonSelected: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
-  periodText: { color: MainColors.mutedText, fontSize: 15, fontWeight: "800" },
-  periodTextSelected: { color: MainColors.text },
+  periodText: { color: colors.textSecondary, fontSize: 15, fontWeight: "800" },
+  periodTextSelected: { color: colors.onPrimary },
   statCard: {
     flex: 1,
     minWidth: 0,
@@ -257,41 +272,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
   },
-  statLabel: { color: MainColors.mutedText, fontSize: 11, fontWeight: "800" },
-  statValue: { marginTop: 5, color: MainColors.text, fontSize: 21, fontWeight: "900" },
-  statDetail: { marginTop: 4, color: MainColors.primary, fontSize: 10, fontWeight: "900" },
+  statLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
+  statValue: { marginTop: 5, color: colors.text, fontSize: 21, fontWeight: "900" },
+  statDetail: { marginTop: 4, color: colors.primary, fontSize: 10, fontWeight: "900" },
   sectionTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionTitle: { color: MainColors.mutedText, fontSize: 14, fontWeight: "900", letterSpacing: 0.4 },
-  sectionAction: { color: MainColors.primary, fontSize: 13, fontWeight: "900" },
+  sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: "900", letterSpacing: 0.4 },
+  sectionAction: { color: colors.primary, fontSize: 13, fontWeight: "900" },
   emptyContent: { paddingVertical: 16, flexDirection: "row", alignItems: "center", gap: 13 },
   emptyCopy: { flex: 1 },
-  emptyTitle: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  emptyDescription: { marginTop: 3, color: MainColors.mutedText, fontSize: 12, lineHeight: 17 },
-  weightRow: { minHeight: 66, flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: MainColors.border },
-  smallIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  emptyDescription: { marginTop: 3, color: colors.textSecondary, fontSize: 12, lineHeight: 17 },
+  weightRow: { minHeight: 66, flexDirection: "row", alignItems: "center", gap: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
+  smallIconBox: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   weightCopy: { flex: 1, minWidth: 0 },
-  weightName: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  weightMeta: { marginTop: 2, color: MainColors.mutedText, fontSize: 10, fontWeight: "700" },
+  weightName: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  weightMeta: { marginTop: 2, color: colors.textSecondary, fontSize: 10, fontWeight: "700" },
   weightValueBox: { alignItems: "flex-end" },
-  weightValue: { color: MainColors.text, fontSize: 16, fontWeight: "900" },
-  weightChange: { marginTop: 3, color: MainColors.primary, fontSize: 10, fontWeight: "900" },
-  recordCard: { minHeight: 78, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 20, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center", gap: 12 },
-  recordIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: "#FFF4D8", alignItems: "center", justifyContent: "center" },
+  weightValue: { color: colors.text, fontSize: 16, fontWeight: "900" },
+  weightChange: { marginTop: 3, color: colors.primary, fontSize: 10, fontWeight: "900" },
+  recordCard: { minHeight: 78, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 12 },
+  recordIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   recordCopy: { flex: 1, minWidth: 0 },
-  recordTitle: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  recordDetail: { marginTop: 2, color: MainColors.mutedText, fontSize: 11 },
+  recordTitle: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  recordDetail: { marginTop: 2, color: colors.textSecondary, fontSize: 11 },
   recordValueBox: { alignItems: "flex-end" },
-  recordValue: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
-  recordChange: { marginTop: 3, color: MainColors.primary, fontSize: 11, fontWeight: "900" },
-  historyCard: { minHeight: 106, padding: 16, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 20, backgroundColor: MainColors.surface, flexDirection: "row", alignItems: "center", gap: 8 },
+  recordValue: { color: colors.text, fontSize: 15, fontWeight: "900" },
+  recordChange: { marginTop: 3, color: colors.primary, fontSize: 11, fontWeight: "900" },
+  historyCard: { minHeight: 106, padding: 16, borderWidth: 1.5, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 8 },
   historyCopy: { flex: 1, minWidth: 0 },
-  historyDate: { color: MainColors.mutedText, fontSize: 11, fontWeight: "800" },
-  historyName: { marginTop: 7, color: MainColors.text, fontSize: 18, fontWeight: "900" },
-  historyMeta: { marginTop: 5, color: MainColors.mutedText, fontSize: 12 },
-  historyAction: { width: 38, height: 38, borderRadius: 19, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
+  historyDate: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
+  historyName: { marginTop: 7, color: colors.text, fontSize: 18, fontWeight: "900" },
+  historyMeta: { marginTop: 5, color: colors.textSecondary, fontSize: 12 },
+  historyAction: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
 });

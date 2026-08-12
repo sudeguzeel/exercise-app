@@ -1,6 +1,8 @@
 import type { ProgramResultGroup } from "@/features/programs/program-domain";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import {
   Modal,
   Pressable,
@@ -28,6 +30,8 @@ export function ProgramResultModal({
   success = false,
   onConfirm,
 }: ProgramResultModalProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Modal
       animationType="fade"
@@ -44,7 +48,7 @@ export function ProgramResultModal({
             <Ionicons
               name={success ? "checkmark" : "information-outline"}
               size={30}
-              color={MainColors.primary}
+              color={colors.primary}
             />
           </View>
 
@@ -98,11 +102,12 @@ export function ProgramResultModal({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   overlay: {
     flex: 1,
     padding: 20,
-    backgroundColor: "rgba(23, 26, 24, 0.42)",
+    backgroundColor: colors.overlay,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -112,23 +117,23 @@ const styles = StyleSheet.create({
     maxHeight: "86%",
     padding: 24,
     borderRadius: 26,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surfaceElevated,
     alignItems: "center",
   },
   icon: {
     width: 58,
     height: 58,
     borderRadius: 20,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   successIcon: {
-    backgroundColor: "#EFF9DA",
+    backgroundColor: colors.primarySoft,
   },
   title: {
     marginTop: 18,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 23,
     lineHeight: 29,
     fontWeight: "900",
@@ -136,7 +141,7 @@ const styles = StyleSheet.create({
   },
   message: {
     marginTop: 9,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",
@@ -151,16 +156,16 @@ const styles = StyleSheet.create({
   group: {
     padding: 14,
     borderRadius: 16,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
   },
   groupTitle: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 14,
     fontWeight: "900",
   },
   programName: {
     marginTop: 5,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 19,
   },
@@ -169,17 +174,18 @@ const styles = StyleSheet.create({
     height: 54,
     marginTop: 22,
     borderRadius: 18,
-    backgroundColor: MainColors.primaryBright,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
   },
   buttonPressed: {
-    backgroundColor: MainColors.primary,
+    backgroundColor: colors.primaryStrong,
   },
   buttonText: {
-    color: MainColors.text,
+    color: colors.onPrimary,
     fontSize: 16,
     fontWeight: "900",
   },
-});
+  });
+}
 

@@ -1,6 +1,8 @@
 import type { UserProgram } from "@/features/programs/types";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type ProgramCardProps = {
@@ -16,6 +18,8 @@ export function ProgramCard({
   selected,
   onPress,
 }: ProgramCardProps) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <Pressable
       aria-checked={selected}
@@ -33,7 +37,7 @@ export function ProgramCard({
         <Ionicons
           name="clipboard-outline"
           size={26}
-          color={selected ? MainColors.primary : MainColors.text}
+          color={selected ? colors.primary : colors.text}
         />
       </View>
 
@@ -56,28 +60,29 @@ export function ProgramCard({
 
       <View style={[styles.selection, selected && styles.selectionSelected]}>
         {selected ? (
-          <Ionicons name="checkmark" size={18} color={MainColors.text} />
+          <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
         ) : null}
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   card: {
     minHeight: 94,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 24,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
   },
   cardSelected: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: "#EFF9DA",
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primarySoft,
   },
   cardPressed: {
     opacity: 0.76,
@@ -86,27 +91,27 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: 18,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   iconBoxSelected: {
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
   },
   content: {
     flex: 1,
     minWidth: 0,
   },
   name: {
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 17,
     lineHeight: 22,
     fontWeight: "900",
   },
   meta: {
     marginTop: 4,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "600",
@@ -115,15 +120,16 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 17,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   selectionSelected: {
-    borderColor: MainColors.primaryBright,
-    backgroundColor: MainColors.primaryBright,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
-});
+  });
+}

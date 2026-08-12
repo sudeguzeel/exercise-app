@@ -6,7 +6,8 @@ import {
 import { saveWorkingWeight } from "@/features/progress/progress-storage";
 import type { ExerciseWeightItem } from "@/features/progress/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -28,6 +29,8 @@ const WEIGHT_STEP_KG = 2.5;
 const ALL_FILTER = "Tümü";
 
 export default function ExerciseWeightsScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const savingIdsRef = useRef(new Set<string>());
   const [items, setItems] = useState<ExerciseWeightItem[]>();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -175,7 +178,7 @@ export default function ExerciseWeightsScreen() {
       <FlatList
         ListEmptyComponent={
           <View style={styles.emptyCard}>
-            <Ionicons name="barbell-outline" size={34} color={MainColors.primary} />
+            <Ionicons name="barbell-outline" size={34} color={colors.primary} />
             <Text style={styles.emptyTitle}>Bu filtrede hareket yok</Text>
             <Text style={styles.emptyDescription}>
               Başka bir kas grubu seçebilir veya programına hareket ekleyebilirsin.
@@ -195,7 +198,7 @@ export default function ExerciseWeightsScreen() {
             </Text>
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
-                <Ionicons name="barbell-outline" size={25} color={MainColors.text} />
+                <Ionicons name="barbell-outline" size={25} color={colors.onPrimary} />
               </View>
               <View style={styles.summaryCopy}>
                 <Text style={styles.summaryTitle}>Çalışma kiloların</Text>
@@ -233,10 +236,10 @@ export default function ExerciseWeightsScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
-            colors={[MainColors.primary]}
+            colors={[colors.primary]}
             onRefresh={() => void load(true)}
             refreshing={refreshing}
-            tintColor={MainColors.primary}
+            tintColor={colors.primary}
           />
         }
         renderItem={({ item }) => {
@@ -248,7 +251,7 @@ export default function ExerciseWeightsScreen() {
             <View style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View style={styles.exerciseIcon}>
-                  <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
+                  <Ionicons name="barbell-outline" size={20} color={colors.textSecondary} />
                 </View>
                 <View style={styles.exerciseCopy}>
                   <Text numberOfLines={2} style={styles.exerciseName}>{item.exerciseName}</Text>
@@ -272,7 +275,7 @@ export default function ExerciseWeightsScreen() {
                   onPress={() => changeWeight(item.programExerciseId, -WEIGHT_STEP_KG)}
                   style={styles.controlButton}
                 >
-                  <Ionicons name="remove" size={25} color={MainColors.text} />
+                  <Ionicons name="remove" size={25} color={colors.text} />
                 </Pressable>
                 <View style={[styles.inputShell, errors[item.programExerciseId] && styles.errorBorder]}>
                   <TextInput
@@ -293,7 +296,7 @@ export default function ExerciseWeightsScreen() {
                   onPress={() => changeWeight(item.programExerciseId, WEIGHT_STEP_KG)}
                   style={styles.controlButton}
                 >
-                  <Ionicons name="add" size={25} color={MainColors.text} />
+                  <Ionicons name="add" size={25} color={colors.text} />
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
@@ -303,7 +306,7 @@ export default function ExerciseWeightsScreen() {
                   style={[styles.updateButton, (!changed || saving) && styles.disabled]}
                 >
                   {saving ? (
-                    <ActivityIndicator color={MainColors.text} />
+                    <ActivityIndicator color={colors.onPrimary} />
                   ) : (
                     <Text style={styles.updateText}>Güncelle</Text>
                   )}
@@ -322,59 +325,61 @@ export default function ExerciseWeightsScreen() {
 }
 
 function ScreenState({ loading, text }: { loading?: boolean; text: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.centerState}>
-        {loading ? <ActivityIndicator color={MainColors.primary} size="large" /> : null}
+        {loading ? <ActivityIndicator color={colors.primary} size="large" /> : null}
         <Text style={styles.stateText}>{text}</Text>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: MainColors.background },
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   listContent: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingBottom: 30 },
   header: { paddingTop: 8, paddingBottom: 18 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  topTitle: { color: MainColors.mutedText, fontSize: 17, fontWeight: "700" },
+  topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },
   headerSpacer: { width: 42 },
-  title: { marginTop: 34, color: MainColors.text, fontSize: 31, lineHeight: 38, fontWeight: "900" },
-  description: { marginTop: 8, color: MainColors.mutedText, fontSize: 17, lineHeight: 25 },
-  summaryCard: { marginTop: 20, minHeight: 120, padding: 18, borderRadius: 24, backgroundColor: "#171B1E", flexDirection: "row", alignItems: "center", gap: 14 },
-  summaryIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
+  title: { marginTop: 34, color: colors.text, fontSize: 31, lineHeight: 38, fontWeight: "900" },
+  description: { marginTop: 8, color: colors.textSecondary, fontSize: 17, lineHeight: 25 },
+  summaryCard: { marginTop: 20, minHeight: 120, padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", gap: 14 },
+  summaryIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
   summaryCopy: { flex: 1 },
-  summaryTitle: { color: "#FFFFFF", fontSize: 19, fontWeight: "900" },
-  summaryDescription: { marginTop: 4, color: "#A9AEAB", fontSize: 12, lineHeight: 18 },
-  summaryCount: { color: "#FFFFFF", fontSize: 28, fontWeight: "900" },
+  summaryTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
+  summaryDescription: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
+  summaryCount: { color: colors.text, fontSize: 28, fontWeight: "900" },
   filterContent: { paddingTop: 16, gap: 10 },
-  filterButton: { minHeight: 48, paddingHorizontal: 22, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 24, backgroundColor: MainColors.surface, alignItems: "center", justifyContent: "center" },
-  filterSelected: { borderColor: MainColors.primaryBright, backgroundColor: MainColors.primaryBright },
-  filterText: { color: MainColors.mutedText, fontSize: 16, fontWeight: "900" },
-  filterTextSelected: { color: MainColors.text },
-  exerciseCard: { marginBottom: 14, padding: 18, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 25, backgroundColor: MainColors.surface },
+  filterButton: { minHeight: 48, paddingHorizontal: 22, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  filterSelected: { borderColor: colors.primaryBright, backgroundColor: colors.primaryBright },
+  filterText: { color: colors.textSecondary, fontSize: 16, fontWeight: "900" },
+  filterTextSelected: { color: colors.onPrimary },
+  exerciseCard: { marginBottom: 14, padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
   exerciseHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
-  exerciseIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: MainColors.paleGreen, alignItems: "center", justifyContent: "center" },
+  exerciseIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   exerciseCopy: { flex: 1, minWidth: 0 },
-  exerciseName: { color: MainColors.text, fontSize: 18, fontWeight: "900" },
-  exerciseMeta: { marginTop: 3, color: MainColors.mutedText, fontSize: 12, lineHeight: 17, fontWeight: "700" },
-  currentBox: { minWidth: 76, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 15, backgroundColor: "#F0F2EC", alignItems: "center" },
-  currentValue: { color: MainColors.text, fontSize: 17, fontWeight: "900" },
-  currentLabel: { marginTop: 2, color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
-  divider: { height: 1, marginVertical: 16, backgroundColor: MainColors.border },
+  exerciseName: { color: colors.text, fontSize: 18, fontWeight: "900" },
+  exerciseMeta: { marginTop: 3, color: colors.textSecondary, fontSize: 12, lineHeight: 17, fontWeight: "700" },
+  currentBox: { minWidth: 76, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 15, backgroundColor: colors.surfaceElevated, alignItems: "center" },
+  currentValue: { color: colors.text, fontSize: 17, fontWeight: "900" },
+  currentLabel: { marginTop: 2, color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
+  divider: { height: 1, marginVertical: 16, backgroundColor: colors.borderSubtle },
   controlRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  controlButton: { width: 48, height: 50, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 15, backgroundColor: MainColors.background, alignItems: "center", justifyContent: "center" },
-  inputShell: { flex: 1, minWidth: 0, height: 50, paddingHorizontal: 10, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 15, flexDirection: "row", alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, minWidth: 0, color: MainColors.text, fontSize: 19, fontWeight: "900", textAlign: "center" },
-  inputSuffix: { color: MainColors.mutedText, fontSize: 11, fontWeight: "800" },
-  updateButton: { minWidth: 104, height: 50, paddingHorizontal: 14, borderRadius: 15, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
-  updateText: { color: MainColors.text, fontSize: 14, fontWeight: "900" },
+  controlButton: { width: 48, height: 50, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
+  inputShell: { flex: 1, minWidth: 0, height: 50, paddingHorizontal: 10, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.inputBackground, flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  input: { flex: 1, minWidth: 0, color: colors.text, fontSize: 19, fontWeight: "900", textAlign: "center" },
+  inputSuffix: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
+  updateButton: { minWidth: 104, height: 50, paddingHorizontal: 14, borderRadius: 15, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
+  updateText: { color: colors.onPrimary, fontSize: 14, fontWeight: "900" },
   disabled: { opacity: 0.45 },
-  errorBorder: { borderColor: "#D14343" },
-  errorText: { marginTop: 8, color: "#D14343", fontSize: 11, textAlign: "center" },
-  emptyCard: { padding: 28, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 24, alignItems: "center" },
-  emptyTitle: { marginTop: 12, color: MainColors.text, fontSize: 18, fontWeight: "900" },
-  emptyDescription: { marginTop: 7, color: MainColors.mutedText, fontSize: 13, lineHeight: 19, textAlign: "center" },
+  errorBorder: { borderColor: colors.error },
+  errorText: { marginTop: 8, color: colors.error, fontSize: 11, textAlign: "center" },
+  emptyCard: { padding: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center" },
+  emptyTitle: { marginTop: 12, color: colors.text, fontSize: 18, fontWeight: "900" },
+  emptyDescription: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center" },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },
-  stateText: { color: MainColors.mutedText, fontSize: 14 },
+  stateText: { color: colors.textSecondary, fontSize: 14 },
 });

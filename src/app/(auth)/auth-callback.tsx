@@ -14,11 +14,15 @@ import {
 } from "react-native";
 
 import { AuthColors, AuthTypography } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 
 const CALLBACK_ERROR_MESSAGE =
   "Doğrulama bağlantısı geçersiz veya süresi dolmuş. Lütfen doğrulama mailini tekrar gönder.";
 
 export default function AuthCallbackScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const linkingUrl = Linking.useLinkingURL();
   const callbackPromiseRef = useRef<Promise<string> | null>(null);
 
@@ -70,7 +74,7 @@ export default function AuthCallbackScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <ActivityIndicator color={AuthColors.primaryDark} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
 
         <Text
           maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
@@ -83,7 +87,7 @@ export default function AuthCallbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AuthColors.background,

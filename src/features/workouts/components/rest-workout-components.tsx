@@ -1,8 +1,10 @@
 import { formatRestDuration } from "@/features/exercises/program-exercise-rest";
 import { MAX_REST_SECONDS } from "@/features/workouts/workout-domain";
 import type { WorkoutSetPosition } from "@/features/workouts/types";
-import { MainColors } from "@/shared/constants/theme";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useMemo } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 const RING_SIZE = 196;
@@ -10,6 +12,7 @@ const RING_RADIUS = 87;
 const RING_SEGMENTS = 48;
 
 export function RestHeaderCard({ completedSetNumber }: { completedSetNumber: number }) {
+  const { styles } = useRestComponentTheme();
   return (
     <View style={styles.headerCard}>
       <Text style={styles.eyebrow}>SET {completedSetNumber} TAMAMLANDI</Text>
@@ -25,6 +28,7 @@ export function RestProgressRing({
   durationSeconds: number;
   remainingSeconds: number;
 }) {
+  const { styles } = useRestComponentTheme();
   const safeRemaining = Math.min(
     MAX_REST_SECONDS,
     Math.max(0, remainingSeconds),
@@ -69,6 +73,7 @@ export function RestProgressRing({
 }
 
 export function NextWorkoutCard({ target }: { target: WorkoutSetPosition }) {
+  const { colors, styles } = useRestComponentTheme();
   return (
     <View
       accessibilityLabel={`Sıradaki: Set ${target.set.setNumber}, ${target.exercise.name}, ${target.set.targetReps} tekrar`}
@@ -76,7 +81,7 @@ export function NextWorkoutCard({ target }: { target: WorkoutSetPosition }) {
       style={styles.nextCard}
     >
       <View style={styles.nextIcon}>
-        <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
+        <Ionicons name="barbell-outline" size={20} color={colors.textSecondary} />
       </View>
       <View style={styles.nextTextWrap}>
         <Text style={styles.nextLabel}>SIRADAKİ</Text>
@@ -89,20 +94,27 @@ export function NextWorkoutCard({ target }: { target: WorkoutSetPosition }) {
   );
 }
 
-const styles = StyleSheet.create({
+function useRestComponentTheme() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return { colors, styles };
+}
+
+function createStyles(colors: AppThemeColors) {
+  return StyleSheet.create({
   headerCard: {
     minHeight: 116,
     paddingHorizontal: 22,
     paddingVertical: 20,
     borderRadius: 24,
-    backgroundColor: "#171B1E",
+    backgroundColor: colors.inverseSurface,
     alignItems: "center",
     justifyContent: "center",
   },
-  eyebrow: { color: "#92979A", fontSize: 11, fontWeight: "800" },
+  eyebrow: { color: colors.inverseText, opacity: 0.68, fontSize: 11, fontWeight: "800" },
   headerTitle: {
     marginTop: 7,
-    color: "#FFFFFF",
+    color: colors.inverseText,
     fontSize: 23,
     lineHeight: 29,
     fontWeight: "900",
@@ -121,11 +133,11 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 3,
   },
-  ringSegmentActive: { backgroundColor: MainColors.primaryBright },
-  ringSegmentInactive: { backgroundColor: MainColors.border },
+  ringSegmentActive: { backgroundColor: colors.primaryBright },
+  ringSegmentInactive: { backgroundColor: colors.disabled },
   timeValue: {
     width: 150,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 38,
     lineHeight: 46,
     fontWeight: "900",
@@ -133,7 +145,7 @@ const styles = StyleSheet.create({
   },
   timeCaption: {
     marginTop: 2,
-    color: MainColors.mutedText,
+    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.8,
@@ -142,9 +154,9 @@ const styles = StyleSheet.create({
     minHeight: 84,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: MainColors.border,
+    borderColor: colors.border,
     borderRadius: 20,
-    backgroundColor: MainColors.surface,
+    backgroundColor: colors.surface,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -153,17 +165,18 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: MainColors.paleGreen,
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
   nextTextWrap: { flex: 1, minWidth: 0 },
-  nextLabel: { color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
+  nextLabel: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
   nextText: {
     marginTop: 4,
-    color: MainColors.text,
+    color: colors.text,
     fontSize: 14,
     lineHeight: 19,
     fontWeight: "800",
   },
-});
+  });
+}

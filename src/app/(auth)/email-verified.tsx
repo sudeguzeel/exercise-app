@@ -16,6 +16,8 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   clearPendingVerificationEmail,
   getEmailVerificationState,
@@ -26,6 +28,8 @@ import {
 } from "@/shared/lib/validation/authValidation";
 
 export default function EmailVerifiedScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const { email: emailParameter } = useLocalSearchParams<{
     email?: string | string[];
   }>();
@@ -82,7 +86,7 @@ export default function EmailVerifiedScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={AuthColors.primaryDark} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -97,7 +101,7 @@ export default function EmailVerifiedScreen() {
         <View style={styles.container}>
           <View style={styles.iconContainer}>
             <Ionicons
-              color={AuthColors.primaryDark}
+              color={colors.primary}
               name="checkmark"
               size={46}
             />
@@ -140,7 +144,7 @@ export default function EmailVerifiedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AuthColors.background,

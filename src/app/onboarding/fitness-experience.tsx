@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Platform,
@@ -13,12 +15,6 @@ import {
 
 import { FitnessPreference, useOnboarding } from "@/providers/OnboardingContext";
 import { saveFitnessPreferences } from "@/shared/lib/services/fitnessPreferencesService";
-
-const GREEN = "#79DE2D";
-const BACKGROUND = "#F7F8F2";
-const BORDER = "#BFDDA9";
-const TEXT = "#1C1C1C";
-const MUTED = "#666A64";
 
 type FitnessOption = {
   id: FitnessPreference;
@@ -49,6 +45,8 @@ const fitnessOptions: FitnessOption[] = [
 ];
 
 export default function FitnessExperienceScreen() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { fitnessPreferences, setFitnessPreferences } = useOnboarding();
 
   const [isSaving, setIsSaving] = useState(false);
@@ -100,7 +98,7 @@ export default function FitnessExperienceScreen() {
       >
         <View style={styles.header}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={20} color={TEXT} />
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
 
           <Text style={styles.stepText}>
@@ -139,7 +137,7 @@ export default function FitnessExperienceScreen() {
                 ]}
               >
                 <View style={styles.iconContainer}>
-                  <Ionicons name={option.icon} size={21} color={TEXT} />
+                  <Ionicons name={option.icon} size={21} color={colors.text} />
                 </View>
 
                 <View style={styles.optionContent}>
@@ -157,7 +155,7 @@ export default function FitnessExperienceScreen() {
                   ]}
                 >
                   {selected ? (
-                    <Ionicons name="checkmark" size={16} color="#111111" />
+                    <Ionicons name="checkmark" size={16} color={colors.onPrimary} />
                   ) : null}
                 </View>
               </Pressable>
@@ -176,7 +174,7 @@ export default function FitnessExperienceScreen() {
           ]}
         >
           {isSaving ? (
-            <ActivityIndicator color="#111111" />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.continueButtonText}>Devam et</Text>
           )}
@@ -186,10 +184,10 @@ export default function FitnessExperienceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BACKGROUND,
+    backgroundColor: colors.background,
   },
   content: {
     flexGrow: 1,
@@ -207,18 +205,18 @@ const styles = StyleSheet.create({
     height: 34,
     borderRadius: 17,
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
   },
   stepText: {
     fontSize: 13,
-    color: MUTED,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   activeStep: {
-    color: GREEN,
+    color: colors.primaryBright,
     fontWeight: "700",
   },
   progressRow: {
@@ -231,21 +229,21 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 4,
     borderRadius: 4,
-    backgroundColor: "#C4D8B6",
+    backgroundColor: colors.disabled,
   },
   progressActive: {
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
   },
   title: {
     fontSize: 23,
     lineHeight: 27,
     fontWeight: "800",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 14,
-    color: MUTED,
+    color: colors.textSecondary,
     marginBottom: 26,
   },
   optionsContainer: {
@@ -256,21 +254,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: BORDER,
+    borderColor: colors.border,
     borderRadius: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.surface,
     paddingHorizontal: 13,
     paddingVertical: 12,
   },
   optionCardSelected: {
-    borderColor: GREEN,
-    backgroundColor: "#EDF8DE",
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primarySoft,
   },
   iconContainer: {
     width: 43,
     height: 43,
     borderRadius: 13,
-    backgroundColor: "#F1F4EC",
+    backgroundColor: colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -282,36 +280,36 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 14,
     fontWeight: "800",
-    color: TEXT,
+    color: colors.text,
     marginBottom: 3,
   },
   optionDescription: {
     fontSize: 11,
     lineHeight: 15,
-    color: MUTED,
+    color: colors.textSecondary,
   },
   selectionCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 1,
-    borderColor: BORDER,
-    backgroundColor: "#FFFFFF",
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   selectionCircleSelected: {
-    borderColor: GREEN,
-    backgroundColor: GREEN,
+    borderColor: colors.primaryBright,
+    backgroundColor: colors.primaryBright,
   },
   continueButton: {
     height: 49,
     borderRadius: 15,
-    backgroundColor: GREEN,
+    backgroundColor: colors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
     marginTop: "auto",
-    shadowColor: GREEN,
+    shadowColor: colors.primary,
     shadowOffset: {
       width: 0,
       height: 7,
@@ -321,18 +319,18 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   continueButtonDisabled: {
-    backgroundColor: "#D6D9D1",
+    backgroundColor: colors.disabled,
     shadowOpacity: 0,
     elevation: 0,
   },
   continueButtonText: {
     fontSize: 16,
     fontWeight: "800",
-    color: "#101010",
+    color: colors.onPrimary,
   },
   errorText: {
     marginTop: 14,
-    color: "#D94B4B",
+    color: colors.error,
     fontSize: 12,
     lineHeight: 16,
     textAlign: "center",

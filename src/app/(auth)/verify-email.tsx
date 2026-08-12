@@ -24,6 +24,8 @@ import {
   AuthLayout,
   AuthTypography,
 } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   getEmailVerificationState,
   rememberPendingVerificationEmail,
@@ -37,6 +39,8 @@ import {
 const MAIL_APP_URL = "mailto:";
 
 export default function VerifyEmailScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const {
     callbackError: callbackErrorParameter,
     email: emailParameter,
@@ -228,7 +232,7 @@ export default function VerifyEmailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color={AuthColors.primaryDark} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -243,12 +247,12 @@ export default function VerifyEmailScreen() {
         <View style={styles.container}>
           <View style={styles.iconContainer}>
             <Ionicons
-              color={AuthColors.primaryDark}
+              color={colors.primary}
               name="mail-outline"
               size={46}
             />
             <Ionicons
-              color={AuthColors.primaryDark}
+              color={colors.primary}
               name="checkmark"
               size={20}
               style={styles.iconCheck}
@@ -289,7 +293,7 @@ export default function VerifyEmailScreen() {
             ]}
           >
             {openingMail ? (
-              <ActivityIndicator color={AuthColors.text} />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text
                 maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
@@ -317,7 +321,7 @@ export default function VerifyEmailScreen() {
             ]}
           >
             {resending ? (
-              <ActivityIndicator color={AuthColors.primaryDark} />
+              <ActivityIndicator color={colors.primary} />
             ) : (
               <Text
                 maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
@@ -377,7 +381,7 @@ export default function VerifyEmailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: AuthColors.background,

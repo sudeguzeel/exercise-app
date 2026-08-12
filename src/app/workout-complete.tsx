@@ -5,6 +5,8 @@ import {
 } from "@/features/workouts/workout-repository";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { MainColors } from "@/shared/constants/theme";
+import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -37,6 +39,8 @@ function getCompletionMessage(completion: WorkoutCompletion) {
 }
 
 export default function WorkoutCompleteScreen() {
+  const { colors } = useAppTheme();
+  const styles = useThemedScreenStyles(baseStyles);
   const params = useLocalSearchParams<{
     workoutSessionId?: string | string[];
   }>();
@@ -93,7 +97,7 @@ export default function WorkoutCompleteScreen() {
       <Stack.Screen options={{ gestureEnabled: false }} />
       {completion === undefined && !loadError ? (
         <View style={styles.centerState}>
-          <ActivityIndicator color={MainColors.primary} size="large" />
+          <ActivityIndicator color={colors.primary} size="large" />
           <Text style={styles.stateText}>Antrenman sonucu hazırlanıyor…</Text>
         </View>
       ) : completion ? (
@@ -102,7 +106,7 @@ export default function WorkoutCompleteScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.successIconWrap}>
-            <Ionicons name="star-outline" size={49} color={MainColors.primary} />
+            <Ionicons name="star-outline" size={49} color={colors.primary} />
           </View>
 
           <Text style={styles.title}>Harika İş!</Text>
@@ -148,7 +152,7 @@ export default function WorkoutCompleteScreen() {
           <Ionicons
             name="alert-circle-outline"
             size={42}
-            color={MainColors.primary}
+            color={colors.primary}
           />
           <Text style={styles.stateTitle}>Sonuç açılamadı</Text>
           <Text style={styles.stateText}>{loadError}</Text>
@@ -169,6 +173,7 @@ export default function WorkoutCompleteScreen() {
 }
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
+  const styles = useThemedScreenStyles(baseStyles);
   return (
     <View
       accessibilityLabel={`${label}: ${value}`}
@@ -183,7 +188,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
   content: {
     flexGrow: 1,
