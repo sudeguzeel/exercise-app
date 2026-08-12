@@ -240,11 +240,7 @@ export default function ProgressScreen() {
               : String(dashboard.periodCompletedCount)
           }
         />
-        <StatCard
-          detail={`en uzun ${dashboard.longestStreak}g`}
-          label="SERİ"
-          value={`${dashboard.currentStreak}g`}
-        />
+        <StatCard label="SERİ" value={`${dashboard.currentStreak}g`} />
       </View>
 
       <View style={styles.card}>

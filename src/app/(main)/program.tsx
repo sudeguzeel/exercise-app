@@ -374,7 +374,7 @@ export default function ProgramScreen() {
 >
   <Ionicons
     name="person-outline"
-    size={22}
+    size={23}
     color={colors.text}
   />
 </Pressable>
@@ -573,11 +573,11 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   greeting: { flex: 1, color: colors.textSecondary, fontSize: 16, fontWeight: "500" },
   greetingName: { color: colors.primary, fontWeight: "800" },
   notificationButton: {
-    width: 42,
-    height: 42,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 23,
     backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
