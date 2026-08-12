@@ -316,9 +316,8 @@ export default function ProgramScreen() {
       (day) => day.dateKey === selectedDateKey,
     )?.day;
     router.push({
-      pathname: "/exercise" as never,
+      pathname: "/program-day-selection" as never,
       params: {
-        selectionMode: "new-program",
         selectedDate: selectedDateKey,
         ...(selectedTrainingDay
           ? { initialTrainingDay: selectedTrainingDay }
