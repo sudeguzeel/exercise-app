@@ -1,31 +1,25 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { FloatingTabBar } from "@/shared/components/floating-tab-bar";
 
 export default function MainLayout() {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const tabBarSpacing = 78 + Math.max(insets.bottom, 10);
 
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        sceneStyle: {
+          paddingBottom: tabBarSpacing,
+        },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: "700",
-          marginTop: 2,
-        },
-        tabBarStyle: {
-          height: 74,
-          marginBottom: 8,
-          paddingTop: 8,
-          paddingBottom: 10,
-          borderTopWidth: 1,
-          borderTopColor: colors.borderSubtle,
-          backgroundColor: colors.tabBar,
-        },
       }}
     >
       <Tabs.Screen
