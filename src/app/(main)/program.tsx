@@ -352,6 +352,7 @@ export default function ProgramScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
       >
         <View style={styles.topRow}>
           <Text numberOfLines={1} style={styles.greeting}>
@@ -463,21 +464,30 @@ export default function ProgramScreen() {
       </ScrollView>
 
       {programs.length > 0 ? <View style={styles.fixedFooter}>
-        <Ionicons name="barbell-outline" size={20} color={MainColors.mutedText} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ disabled: programState === "loading" }}
+          disabled={programState === "loading"}
+          onPress={handleAddWorkout}
+          style={({ pressed }) => [
+            styles.addWorkoutButton,
+            programState === "loading" && styles.startButtonDisabled,
+            pressed && programState !== "loading" && styles.pressed,
+          ]}
+        >
+          <Text style={styles.addWorkoutButtonText}>+ Program ekle</Text>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
-            disabled: navigationBusy || programState === "loading",
+            disabled:
+              !activeProgram || navigationBusy || programState === "loading",
           }}
-          disabled={navigationBusy || programState === "loading"}
-          onPress={
-            activeProgram
-              ? () => void handleStartWorkout()
-              : handleAddWorkout
-          }
+          disabled={!activeProgram || navigationBusy || programState === "loading"}
+          onPress={() => void handleStartWorkout()}
           style={({ pressed }) => [
             styles.startButton,
-            (navigationBusy || programState === "loading") &&
+            (!activeProgram || navigationBusy || programState === "loading") &&
               styles.startButtonDisabled,
             pressed && programState !== "loading" && styles.pressed,
           ]}
@@ -487,12 +497,12 @@ export default function ProgramScreen() {
           ) : (
             <>
               <Ionicons
-                name={activeProgram ? "play" : "add"}
+                name="play"
                 size={18}
                 color={MainColors.text}
               />
               <Text style={styles.startButtonText}>
-                {activeProgram ? "Antrenmana başla" : "Antrenman ekle"}
+                Antrenmana başla
               </Text>
             </>
           )}
@@ -538,12 +548,13 @@ function EmptyCard({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: MainColors.background },
+  scrollView: { flex: 1 },
   content: {
     width: "100%",
     maxWidth: 680,
     alignSelf: "center",
     paddingHorizontal: 18,
-    paddingBottom: 108,
+    paddingBottom: 24,
     gap: 18,
   },
   topRow: {
@@ -635,22 +646,33 @@ const styles = StyleSheet.create({
   retryButton: { minHeight: 40, paddingHorizontal: 18, justifyContent: "center" },
   retryText: { color: MainColors.primary, fontSize: 14, fontWeight: "800" },
   fixedFooter: {
-    position: "absolute",
-    left: 18,
-    right: 18,
-    bottom: 10,
-    height: 66,
+    marginHorizontal: 18,
+    marginTop: 8,
+    marginBottom: 10,
     padding: 8,
     borderWidth: 1.5,
     borderColor: MainColors.border,
     borderRadius: 22,
     backgroundColor: MainColors.surface,
+    gap: 8,
+  },
+  addWorkoutButton: {
+    height: 46,
+    borderWidth: 1.5,
+    borderColor: MainColors.primary,
+    borderRadius: 18,
+    backgroundColor: MainColors.paleGreen,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    justifyContent: "center",
+    gap: 8,
+  },
+  addWorkoutButtonText: {
+    color: MainColors.text,
+    fontSize: 16,
+    fontWeight: "900",
   },
   startButton: {
-    flex: 1,
     height: 50,
     borderRadius: 18,
     backgroundColor: MainColors.primaryBright,
