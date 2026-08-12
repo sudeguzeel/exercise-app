@@ -2,7 +2,6 @@ import {
   EmptyContent,
   HistoryCard,
   PeriodSelector,
-  PersonalRecordRow,
   RoundBackButton,
   SectionTitle,
   StatCard,
@@ -368,23 +367,6 @@ export default function ProgressScreen() {
         </View>
       </View>
 
-      <SectionTitle>KİŞİSEL REKORLAR</SectionTitle>
-      {dashboard.personalRecords.length > 0 ? (
-        <View style={styles.sectionGap}>
-          {dashboard.personalRecords.map((record) => (
-            <PersonalRecordRow key={record.id} record={record} />
-          ))}
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <EmptyContent
-            description="Rekorlar yalnızca tamamlanmış antrenman ve setlerden hesaplanır."
-            icon="trophy-outline"
-            title="Henüz kişisel rekor yok"
-          />
-        </View>
-      )}
-
       <SectionTitle action="Tümünü gör" onAction={() => listRef.current?.scrollToEnd()}>
         GEÇMİŞ
       </SectionTitle>
@@ -567,16 +549,15 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   measurementTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   inputRow: { marginTop: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 },
   inputGroup: { flex: 1, minWidth: 0 },
-  inputLabel: { marginBottom: 6, color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
-  inputShell: { height: 50, paddingHorizontal: 9, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.inputBackground, flexDirection: "row", alignItems: "center" },
-  input: { flex: 1, minWidth: 0, color: colors.text, fontSize: 15, fontWeight: "900", textAlign: "center" },
-  inputSuffix: { color: colors.textSecondary, fontSize: 10, fontWeight: "800" },
-  inputError: { borderColor: colors.error },
-  fieldError: { minHeight: 31, marginTop: 4, color: colors.error, fontSize: 8, lineHeight: 11 },
-  formError: { marginTop: 8, color: colors.error, fontSize: 11, lineHeight: 16, textAlign: "center" },
-  primaryButton: { minHeight: 51, borderRadius: 18, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
-  primaryButtonText: { color: colors.onPrimary, fontSize: 15, fontWeight: "900" },
-  sectionGap: { gap: 10 },
+  inputLabel: { marginBottom: 6, color: MainColors.mutedText, fontSize: 10, fontWeight: "900" },
+  inputShell: { height: 50, paddingHorizontal: 9, borderWidth: 1.5, borderColor: MainColors.border, borderRadius: 15, backgroundColor: MainColors.background, flexDirection: "row", alignItems: "center" },
+  input: { flex: 1, minWidth: 0, color: MainColors.text, fontSize: 15, fontWeight: "900", textAlign: "center" },
+  inputSuffix: { color: MainColors.mutedText, fontSize: 10, fontWeight: "800" },
+  inputError: { borderColor: "#D14343" },
+  fieldError: { minHeight: 31, marginTop: 4, color: "#D14343", fontSize: 8, lineHeight: 11 },
+  formError: { marginTop: 8, color: "#D14343", fontSize: 11, lineHeight: 16, textAlign: "center" },
+  primaryButton: { minHeight: 51, borderRadius: 18, backgroundColor: MainColors.primaryBright, alignItems: "center", justifyContent: "center" },
+  primaryButtonText: { color: MainColors.text, fontSize: 15, fontWeight: "900" },
   historyItem: { marginBottom: 12 },
   footerSpace: { height: 18 },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },

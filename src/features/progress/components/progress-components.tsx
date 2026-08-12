@@ -11,7 +11,6 @@ import {
 import type {
   ExerciseWeightItem,
   ProgressPeriod,
-  ProgressPersonalRecord,
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -179,25 +178,6 @@ export function WeightSummaryRow({ item }: { item: ExerciseWeightItem }) {
   );
 }
 
-export function PersonalRecordRow({ record }: { record: ProgressPersonalRecord }) {
-  const { colors, styles } = useProgressTheme();
-  return (
-    <View style={styles.recordCard}>
-      <View style={styles.recordIcon}>
-        <Ionicons name={record.icon} size={21} color={colors.text} />
-      </View>
-      <View style={styles.recordCopy}>
-        <Text style={styles.recordTitle}>{record.title}</Text>
-        <Text numberOfLines={1} style={styles.recordDetail}>{record.detail}</Text>
-      </View>
-      <View style={styles.recordValueBox}>
-        <Text style={styles.recordValue}>{record.value}</Text>
-        {record.change ? <Text style={styles.recordChange}>{record.change}</Text> : null}
-      </View>
-    </View>
-  );
-}
-
 export function HistoryCard({
   completion,
   onPress,
@@ -295,14 +275,6 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   weightValueBox: { alignItems: "flex-end" },
   weightValue: { color: colors.text, fontSize: 16, fontWeight: "900" },
   weightChange: { marginTop: 3, color: colors.primary, fontSize: 10, fontWeight: "900" },
-  recordCard: { minHeight: 78, paddingHorizontal: 16, paddingVertical: 12, borderWidth: 1.5, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 12 },
-  recordIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
-  recordCopy: { flex: 1, minWidth: 0 },
-  recordTitle: { color: colors.text, fontSize: 15, fontWeight: "900" },
-  recordDetail: { marginTop: 2, color: colors.textSecondary, fontSize: 11 },
-  recordValueBox: { alignItems: "flex-end" },
-  recordValue: { color: colors.text, fontSize: 15, fontWeight: "900" },
-  recordChange: { marginTop: 3, color: colors.primary, fontSize: 11, fontWeight: "900" },
   historyCard: { minHeight: 106, padding: 16, borderWidth: 1.5, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface, flexDirection: "row", alignItems: "center", gap: 8 },
   historyCopy: { flex: 1, minWidth: 0 },
   historyDate: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
@@ -310,3 +282,5 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   historyMeta: { marginTop: 5, color: colors.textSecondary, fontSize: 12 },
   historyAction: { width: 38, height: 38, borderRadius: 19, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
 });
+    
+   

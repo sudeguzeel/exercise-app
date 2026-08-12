@@ -53,6 +53,12 @@ export type ExerciseDetail = ExerciseSummary & {
   equipmentName: string | null;
   targetMuscleName: string | null;
   secondaryMuscleNames: string[];
+  // equipments.is_weight_based — egzersizin ekipmanı harici bir ağırlıkla
+  // (barbell/dumbbell/kettlebell vb.) yapılıyor mu. "Hareket Ağırlıkların"
+  // (bkz. progress-service.loadExerciseWeightItems) sadece bu true olan
+  // egzersizleri listeler — body weight/kardiyo makinesi gibi "kaç kg"
+  // sorusunun anlamsız olduğu ekipmanlar orada görünmez.
+  isWeightBased: boolean;
   // exercise_steps'ten (step_order'a göre sıralı) elde edilen adım adım
   // açıklama listesi.
   steps: string[];
@@ -190,7 +196,7 @@ type ExerciseDetailRow = {
   recommended_sets: number | null;
   recommended_reps: number | null;
   recommended_rest_seconds: number | null;
-  equipments: { name: string } | null;
+  equipments: { name: string; is_weight_based: boolean } | null;
   // exercises tablosunda muscles'a iki ayrı FK var (target_muscle_id,
   // muscle_group_id); Supabase embed'inde hangi ilişkinin kastedildiğini
   // constraint adıyla belirtmek gerekiyor.
@@ -235,7 +241,7 @@ export async function getExerciseDetail(
         "recommended_sets",
         "recommended_reps",
         "recommended_rest_seconds",
-        "equipments(name)",
+        "equipments(name, is_weight_based)",
         "target_muscle:muscles!exercises_target_muscle_id_fkey(name)",
         "exercise_steps(step_order, description)",
         "secondary_muscles(muscles(name))",
@@ -280,6 +286,7 @@ export async function getExerciseDetail(
     imageUrl: buildMediaUrl(row.image),
     exerciseType: translateExerciseType(row.exercise_type),
     equipmentName: translateEquipment(row.equipments?.name),
+    isWeightBased: row.equipments?.is_weight_based ?? false,
     targetMuscleName: translateMuscle(row.target_muscle?.name),
     secondaryMuscleNames,
     steps,
