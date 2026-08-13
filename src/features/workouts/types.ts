@@ -91,6 +91,10 @@ export type CompleteSetInput = {
   weightKg: number | null;
 };
 
+export type CompleteWorkoutOptions = {
+  completeRemainingSets?: boolean;
+};
+
 export type LocalCompletedExerciseRecord = {
   exerciseId: string;
   programExerciseId: string;
@@ -113,7 +117,10 @@ export type WorkoutRepository = {
     seconds?: number,
   ) => Promise<WorkoutSession>;
   finishRest: (workoutSessionId: string) => Promise<WorkoutSession>;
-  completeWorkout: (workoutSessionId: string) => Promise<WorkoutCompletion>;
+  completeWorkout: (
+    workoutSessionId: string,
+    options?: CompleteWorkoutOptions,
+  ) => Promise<WorkoutCompletion>;
   listCompletions: () => Promise<WorkoutCompletion[]>;
   getCompletion: (workoutSessionId: string) => Promise<WorkoutCompletion | null>;
   getCompletionForProgramDate: (
