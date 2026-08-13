@@ -6,8 +6,8 @@ import { supabase } from "@/shared/lib/supabase";
 
 type Destination = "/login" | "/(main)" | "/onboarding/personal-info";
 
-const MINIMUM_SPLASH_DURATION = 2200;
-const EXIT_ANIMATION_DURATION = 700;
+const MINIMUM_SPLASH_DURATION = 3200;
+const EXIT_ANIMATION_DURATION = 900;
 
 export default function Index() {
   const [isLeavingSplash, setIsLeavingSplash] = useState(false);
