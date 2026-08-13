@@ -31,23 +31,24 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
-      "expo-web-browser",
-      "@react-native-community/datetimepicker"
-    ],
+"plugins": [
+  "expo-router",
+  [
+    "expo-splash-screen",
+    {
+      "image": "./assets/images/splash-icon.png",
+      "imageWidth": 200,
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F7F2",
+      "dark": {
+        "image": "./assets/images/fitrehber_logo_dark_icon_2.png",
+        "backgroundColor": "#1A1C19"
+      }
+    }
+  ],
+  "expo-web-browser",
+  "@react-native-community/datetimepicker"
+],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

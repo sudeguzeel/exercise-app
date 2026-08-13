@@ -121,22 +121,64 @@ export function SplashScreen({ isLeaving }: SplashScreenProps) {
     </>
   );
 
-  if (isDark) {
-    return (
-      <View style={darkStyles.container}>
-        <StatusBar style="light" />
-        <Animated.View style={[styles.content, { opacity: contentOpacity }]}>
-          <View style={darkStyles.brandPanel}>{logo}</View>
-          <Animated.View
+if (isDark) {
+  return (
+    <View style={styles.container}>
+      <StatusBar style="light" />
+
+      <ImageBackground
+        source={require("../../../assets/images/fitrehber_splash_dark_background.png")}
+        style={styles.background}
+        resizeMode="cover"
+      >
+      <Animated.View
+          style={[
+            styles.content,
+            {
+              opacity: contentOpacity,
+            },
+          ]}
+        >
+      <Animated.Image
+          source={require("../../../assets/images/fitrehber_logo_dark_icon_2.png")}
             style={[
-              darkStyles.loadingRing,
-              { opacity: ringOpacity, transform: [{ rotate: ringRotate }] },
+              styles.logoIcon,
+              {
+                opacity: logoOpacity,
+                transform: [{ scale: logoScale }],
+              },
             ]}
+            resizeMode="contain"
+          />
+
+          <Animated.Image
+            source={require("../../../assets/images/fitrehber_logo_dark_text.png")}
+            style={[
+              styles.logoText,
+              {
+                opacity: textOpacity,
+                transform: [{ translateY: textTranslateY }],
+              },
+            ]}
+            resizeMode="contain"
+          />
+
+          <Animated.Image
+            source={require("../../../assets/images/fitrehber_logo_dark_loading_ring.png")}
+            style={[
+              styles.loadingRing,
+              {
+                opacity: ringOpacity,
+                transform: [{ rotate: ringRotate }],
+              },
+            ]}
+            resizeMode="contain"
           />
         </Animated.View>
-      </View>
-    );
-  }
+      </ImageBackground>
+    </View>
+  );
+}
 
   return (
     <View style={styles.container}>
