@@ -97,16 +97,15 @@ export function ExerciseMedia({
   mediaUrl: string | null;
 }) {
   const { colors, styles } = useWorkoutComponentTheme();
-  const [state, setState] = useState<"idle" | "loading" | "playing" | "error">(
-    "idle",
+  const [state, setState] = useState<"loading" | "playing" | "error">(
+    "loading",
   );
 
-  useEffect(() => setState("idle"), [mediaUrl]);
+  useEffect(() => setState("loading"), [mediaUrl]);
 
-  const canPlay = Boolean(mediaUrl);
   return (
     <View style={styles.mediaCard}>
-      {mediaUrl && state !== "idle" && state !== "error" ? (
+      {mediaUrl && state !== "error" ? (
         <View style={styles.mediaFrame}>
           <Image
             accessibilityLabel={`${exerciseName} hareket animasyonu`}
@@ -125,34 +124,15 @@ export function ExerciseMedia({
           ) : null}
         </View>
       ) : (
-        <View style={styles.mediaPlaceholder}>
-          <Pressable
-            accessibilityLabel="Hareketin doğru yapılışını oynat"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !canPlay }}
-            disabled={!canPlay}
-            onPress={() => setState("loading")}
-            style={({ pressed }) => [
-              styles.playButton,
-              !canPlay && styles.playButtonDisabled,
-              pressed && canPlay && styles.pressed,
-            ]}
-          >
-            {state === "loading" ? (
-              <ActivityIndicator color={colors.onPrimary} />
-            ) : (
-              <Ionicons name="play" size={27} color={colors.onPrimary} />
-            )}
-          </Pressable>
-        </View>
+        <View style={styles.mediaPlaceholder} />
       )}
-      <Text style={styles.mediaCaption}>
-        {state === "error"
-          ? "Hareket videosu yüklenemedi"
-          : canPlay
-            ? "Hareketin doğru yapılışını izle"
+      {state === "error" || !mediaUrl ? (
+        <Text style={styles.mediaCaption}>
+          {state === "error"
+            ? "Hareket videosu yüklenemedi"
             : "Bu hareket için medya bulunmuyor"}
-      </Text>
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -170,6 +150,7 @@ export function SetSelector({
       horizontal
       contentContainerStyle={styles.setContent}
       showsHorizontalScrollIndicator={false}
+      style={styles.setSelector}
     >
       {sets.map((set) => {
         const completed = Boolean(set.completedAt);
@@ -308,12 +289,13 @@ function createStyles(colors: AppThemeColors) {
   elapsedLabel: { flex: 1, color: colors.textSecondary, fontSize: 13, textAlign: "center" },
   elapsedValue: { color: colors.primaryBright, fontWeight: "900" },
   infoCard: {
+    minHeight: 170,
     padding: 20,
     borderRadius: 24,
     backgroundColor: colors.surfaceElevated,
   },
   infoEyebrow: { color: colors.textSecondary, fontSize: 12, fontWeight: "800" },
-  exerciseTitle: { marginTop: 9, color: colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900" },
+  exerciseTitle: { marginTop: 9, color: colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900", textTransform: "capitalize" },
   exerciseDetail: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
   mediaCard: {
     borderWidth: 1.5,
@@ -322,15 +304,14 @@ function createStyles(colors: AppThemeColors) {
     backgroundColor: colors.surface,
     overflow: "hidden",
   },
-  mediaFrame: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, backgroundColor: colors.primarySoft },
+  mediaFrame: { width: "100%", maxHeight: 320, aspectRatio: 3 / 2, backgroundColor: colors.primarySoft },
   mediaImage: { width: "100%", height: "100%" },
   mediaLoading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
-  mediaPlaceholder: { width: "100%", maxHeight: 280, aspectRatio: 16 / 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
-  playButton: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
-  playButtonDisabled: { backgroundColor: colors.disabled, opacity: 0.7 },
+  mediaPlaceholder: { width: "100%", maxHeight: 320, aspectRatio: 3 / 2, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
   mediaCaption: { paddingHorizontal: 14, paddingVertical: 12, color: colors.textSecondary, fontSize: 12 },
-  setContent: { gap: 8 },
-  setPill: { minWidth: 78, minHeight: 42, paddingHorizontal: 14, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  setSelector: { height: 112 },
+  setContent: { flexGrow: 1, gap: 8, alignItems: "stretch" },
+  setPill: { flexGrow: 1, flexBasis: 0, minWidth: 78, height: 112, paddingHorizontal: 14, borderWidth: 1.5, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   completedSet: { borderColor: colors.primaryBright, backgroundColor: colors.primarySoft },
   activeSet: { borderColor: colors.primaryBright, backgroundColor: colors.primaryBright },
   pendingSet: { opacity: 0.52 },
