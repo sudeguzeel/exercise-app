@@ -17,6 +17,7 @@ import {
   workoutRepository,
 } from "@/features/workouts/workout-repository";
 import type { WorkoutSession } from "@/features/workouts/types";
+import { getRestMascotMessage } from "@/shared/lib/mascot-messages";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
 import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
 import { MainColors } from "@/shared/constants/theme";
@@ -309,7 +310,14 @@ export default function WorkoutRestScreen() {
           onBack={() => void goBackOneStep()}
           onExit={requestExit}
         />
-        <RestHeaderCard completedSetNumber={completedPosition.set.setNumber} />
+        <RestHeaderCard
+          completedSetNumber={completedPosition.set.setNumber}
+          mascotMessage={getRestMascotMessage({
+            durationSeconds,
+            remainingSeconds,
+          })}
+          phaseKey={session.lastCompletedSetId ?? workoutSessionId}
+        />
         <RestProgressRing
           durationSeconds={durationSeconds}
           remainingSeconds={remainingSeconds}

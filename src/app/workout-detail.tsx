@@ -16,9 +16,12 @@ import type {
   WorkoutExerciseSnapshot,
 } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
+import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
+import { WORKOUT_DETAIL_MASCOTS } from "@/shared/constants/mascot-assets";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -27,6 +30,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -35,9 +39,39 @@ function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+const WORKOUT_DETAIL_MESSAGES = [
+  "Harika bir antrenmandı! 💪",
+  "Bugün de tamam! ✨",
+  "Emeğinin karşılığı geliyor! 🌱",
+] as const;
+
+function getStableWorkoutDetailIndex(workoutSessionId: string) {
+  let hash = 0;
+  for (let index = 0; index < workoutSessionId.length; index += 1) {
+    hash = (hash * 31 + workoutSessionId.charCodeAt(index)) >>> 0;
+  }
+  return hash % WORKOUT_DETAIL_MESSAGES.length;
+}
+
+function getWorkoutDetailResult(workoutSessionId: string) {
+  const index = getStableWorkoutDetailIndex(workoutSessionId);
+  return {
+    message: WORKOUT_DETAIL_MESSAGES[index],
+    mascot:
+      index === 0
+        ? WORKOUT_DETAIL_MASCOTS.shakerThumbsUp
+        : WORKOUT_DETAIL_MASCOTS.standing,
+  };
+}
+
 export default function WorkoutDetailScreen() {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompactWidth = windowWidth < 430;
+  const styles = useMemo(
+    () => createStyles(colors, isCompactWidth),
+    [colors, isCompactWidth],
+  );
   const params = useLocalSearchParams<{ workoutSessionId?: string | string[] }>();
   const workoutSessionId = singleParam(params.workoutSessionId)?.trim() ?? "";
   const [completion, setCompletion] = useState<WorkoutCompletion | null>();
@@ -73,6 +107,9 @@ export default function WorkoutDetailScreen() {
       ) ?? 0,
     [completion],
   );
+  const mascotResult = completion
+    ? getWorkoutDetailResult(workoutSessionId)
+    : null;
 
   if (completion === undefined && !loadError) {
     return (
@@ -145,6 +182,20 @@ export default function WorkoutDetailScreen() {
               value={String(completion.completedExerciseCount)}
             />
             <SummaryMetric label="TOPLAM SET" value={String(completedSetCount)} />
+          </View>
+          <View pointerEvents="none" style={styles.summaryMascotArea}>
+            <MascotSpeechBubble
+              compact
+              message={mascotResult?.message ?? ""}
+              tailDirection="bottom-right"
+              style={styles.summarySpeechBubble}
+            />
+            <Image
+              accessibilityLabel="Antrenman sonucu FitRehber tavşan maskotu"
+              contentFit="contain"
+              source={mascotResult?.mascot}
+              style={styles.summaryMascot}
+            />
           </View>
         </View>
 
@@ -223,19 +274,28 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
   );
 }
 
-const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30, gap: 18 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },
   headerSpacer: { width: 42 },
-  summaryCard: { marginTop: 10, padding: 22, borderRadius: 25, backgroundColor: colors.inverseSurface },
-  summaryDate: { color: colors.inverseText, opacity: 0.62, fontSize: 12, fontWeight: "900" },
-  summaryName: { marginTop: 9, color: colors.inverseText, fontSize: 27, fontWeight: "900" },
+  summaryCard: { marginTop: 10, padding: 22, borderWidth: 1, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surfaceElevated, overflow: "hidden" },
+  summaryDate: { maxWidth: isCompactWidth ? "45%" : "52%", color: colors.textSecondary, fontSize: 12, fontWeight: "900" },
+  summaryName: { maxWidth: isCompactWidth ? "48%" : "55%", marginTop: 9, color: colors.text, fontSize: 27, fontWeight: "900" },
   summaryStats: { marginTop: 22, flexDirection: "row", gap: 16 },
   summaryMetric: { flex: 1, minWidth: 0 },
-  summaryMetricValue: { color: colors.inverseText, fontSize: 19, fontWeight: "900" },
-  summaryMetricLabel: { marginTop: 4, color: colors.inverseText, opacity: 0.58, fontSize: 10, fontWeight: "900" },
+  summaryMetricValue: { color: colors.text, fontSize: 19, fontWeight: "900" },
+  summaryMetricLabel: { marginTop: 4, color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
+  summaryMascotArea: isCompactWidth
+    ? { position: "absolute", top: 8, right: 8, width: 211, height: 112 }
+    : { position: "absolute", top: 8, right: 10, width: 276, height: 136 },
+  summarySpeechBubble: isCompactWidth
+    ? { position: "absolute", top: 0, left: 0, width: 126, maxWidth: 126, zIndex: 2 }
+    : { position: "absolute", top: 2, left: 0, width: 158, maxWidth: 158, zIndex: 2 },
+  summaryMascot: isCompactWidth
+    ? { position: "absolute", right: 0, bottom: 0, width: 101, height: 101 }
+    : { position: "absolute", right: 0, bottom: 0, width: 128, height: 128 },
   sectionTitle: { marginTop: 2, color: colors.textSecondary, fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
   exerciseCard: { padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface },
   exerciseHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },

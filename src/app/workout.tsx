@@ -14,6 +14,7 @@ import {
   getWorkoutProgress,
   resolveDefaultExerciseIndex,
 } from "@/features/workouts/workout-domain";
+import { getWorkoutMascotMessage } from "@/shared/lib/mascot-messages";
 import {
   isValidWorkoutSessionId,
   workoutRepository,
@@ -194,13 +195,10 @@ export default function WorkoutScreen() {
     setViewedExerciseIndex(resolveDefaultExerciseIndex(session) ?? 0);
   }, [session, viewedExerciseIndex]);
 
-  useEffect(() => {
-    if (viewedExerciseIndex === null) return;
-    pagerRef.current?.scrollToIndex({
-      animated: true,
-      index: viewedExerciseIndex,
-    });
-  }, [viewedExerciseIndex]);
+  const selectExercise = useCallback((index: number) => {
+    setViewedExerciseIndex(index);
+    pagerRef.current?.scrollToIndex({ animated: true, index });
+  }, []);
 
   const { requestExit, exitDialogVisible, cancelExit, confirmExit } = useWorkoutExit({
     sessionRef,
@@ -435,6 +433,12 @@ export default function WorkoutScreen() {
               <ExerciseInfoCard
                 exercise={item}
                 exerciseIndex={index}
+                mascotMessage={getWorkoutMascotMessage({
+                  exerciseIndex: index,
+                  exerciseCount: session.exercises.length,
+                  setIndex,
+                  setCount: item.sets.length,
+                })}
                 totalExercises={session.exercises.length}
               />
               <ExerciseMedia exerciseName={item.name} mediaUrl={item.mediaUrl} />
@@ -465,7 +469,7 @@ export default function WorkoutScreen() {
         <ExerciseDotPagination
           activeIndex={viewedExerciseIndex}
           count={session.exercises.length}
-          onSelect={setViewedExerciseIndex}
+          onSelect={selectExercise}
         />
       </View>
 
@@ -527,7 +531,6 @@ const baseStyles = StyleSheet.create({
     paddingTop: 8,
   },
   pageContent: {
-    flexGrow: 1,
     paddingBottom: 24,
     gap: 12,
   },
