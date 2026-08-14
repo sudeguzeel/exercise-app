@@ -1,4 +1,7 @@
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { RandomMascot } from "@/shared/components/random-mascot";
+import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
+import { WORKOUT_MASCOTS } from "@/shared/constants/mascot-assets";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import type {
   WorkoutExerciseSnapshot,
@@ -13,6 +16,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -61,12 +65,16 @@ export function ExerciseInfoCard({
   exercise,
   exerciseIndex,
   totalExercises,
+  mascotMessage,
 }: {
   exercise: WorkoutExerciseSnapshot;
   exerciseIndex: number;
   totalExercises: number;
+  mascotMessage: string;
 }) {
   const { styles } = useWorkoutComponentTheme();
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompactWidth = windowWidth < 430;
   const detail = [
     exercise.muscleGroupName,
     `${exercise.targetSets} set × ${exercise.targetReps} tekrar`,
@@ -76,15 +84,36 @@ export function ExerciseInfoCard({
 
   return (
     <View style={styles.infoCard}>
-      <Text style={styles.infoEyebrow}>
-        HAREKET {exerciseIndex + 1} / {totalExercises}
-      </Text>
-      <Text numberOfLines={3} style={styles.exerciseTitle}>
-        {exercise.name}
-      </Text>
-      <Text numberOfLines={2} style={styles.exerciseDetail}>
-        {detail}
-      </Text>
+      <View style={styles.infoAccent} />
+      <View style={styles.infoCopy}>
+        <Text style={styles.infoEyebrow}>
+          HAREKET {exerciseIndex + 1} / {totalExercises}
+        </Text>
+        <Text numberOfLines={3} style={styles.exerciseTitle}>
+          {exercise.name}
+        </Text>
+        <Text numberOfLines={2} style={styles.exerciseDetail}>
+          {detail}
+        </Text>
+      </View>
+      <View pointerEvents="none" style={styles.infoMascotSlot}>
+        <RandomMascot
+          accessibilityLabel="Antrenman tavşan maskotu"
+          sources={WORKOUT_MASCOTS}
+          style={styles.infoMascot}
+        />
+      </View>
+      <MascotSpeechBubble
+        compact
+        message={mascotMessage}
+        tailDirection="bottom-right"
+        style={[
+          styles.infoSpeechBubble,
+          isCompactWidth
+            ? styles.infoSpeechBubbleCompact
+            : styles.infoSpeechBubbleWide,
+        ]}
+      />
     </View>
   );
 }
@@ -293,7 +322,17 @@ function createStyles(colors: AppThemeColors) {
     padding: 20,
     borderRadius: 24,
     backgroundColor: colors.surfaceElevated,
+    flexDirection: "row",
+    alignItems: "center",
+    overflow: "hidden",
   },
+  infoAccent: { position: "absolute", right: -35, bottom: -55, width: 190, height: 130, borderRadius: 95, backgroundColor: colors.primarySoft, opacity: 0.32 },
+  infoCopy: { flex: 1, minWidth: 0, paddingRight: 8 },
+  infoMascotSlot: { width: 82, height: 82, flexShrink: 0, alignItems: "center", justifyContent: "center" },
+  infoMascot: { width: "100%", aspectRatio: 1 },
+  infoSpeechBubble: { position: "absolute", zIndex: 2 },
+  infoSpeechBubbleCompact: { right: 90, top: 8, width: 120, maxWidth: 120 },
+  infoSpeechBubbleWide: { right: 78, top: 9, width: 156, maxWidth: 156 },
   infoEyebrow: { color: colors.textSecondary, fontSize: 12, fontWeight: "800" },
   exerciseTitle: { marginTop: 9, color: colors.text, fontSize: 24, lineHeight: 29, fontWeight: "900", textTransform: "capitalize" },
   exerciseDetail: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 18 },
