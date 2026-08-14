@@ -5,12 +5,15 @@ import {
   saveProfilePersonalInfo,
 } from "@/shared/lib/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -27,7 +30,15 @@ const EMPTY: PersonalInfo = {
   currentWeight: "", targetWeight: "", goal: "",
 };
 
+type SelectionType = "gender" | "goal";
+type PhotoTransform = { x: number; y: number; scale: number };
+const PROFILE_IMAGE_STORAGE_KEY = "profile-image-data-uri";
+const PROFILE_IMAGE_TRANSFORM_KEY = "profile-image-transform";
+const PROFILE_EDITOR_SIZE = 280;
+
 export default function ProfilePersonalInfoScreen() {
+  const { section } = useLocalSearchParams<{ section?: string }>();
+  const goalsOnly = section === "goals";
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { setPersonalInfo } = useOnboarding();
@@ -35,6 +46,9 @@ export default function ProfilePersonalInfoScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [selectionType, setSelectionType] = useState<SelectionType | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [photoTransform, setPhotoTransform] = useState<PhotoTransform>({ x: 0, y: 0, scale: 1 });
 
   useEffect(() => {
     let active = true;
@@ -47,23 +61,43 @@ export default function ProfilePersonalInfoScreen() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void Promise.all([
+      AsyncStorage.getItem(PROFILE_IMAGE_STORAGE_KEY),
+      AsyncStorage.getItem(PROFILE_IMAGE_TRANSFORM_KEY),
+    ]).then(([storedImage, storedTransform]) => {
+      if (!active) return;
+      setProfileImage(storedImage);
+      if (storedTransform) setPhotoTransform(JSON.parse(storedTransform));
+    });
+    return () => { active = false; };
+  }, []);
+
   const update = (field: keyof PersonalInfo, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const chooseGender = () => Alert.alert("Cinsiyet", "Seçiminizi yapın.", [
-    { text: "Kadın", onPress: () => update("gender", "female") },
-    { text: "Erkek", onPress: () => update("gender", "male") },
-    { text: "Belirtmek istemiyorum", onPress: () => update("gender", "other") },
-    { text: "Vazgeç", style: "cancel" },
-  ]);
+  const chooseGender = () => setSelectionType("gender");
+  const chooseGoal = () => setSelectionType("goal");
 
-  const chooseGoal = () => Alert.alert("Fitness Hedefi", "Seçiminizi yapın.", [
-    { text: "Kas Kazanımı", onPress: () => update("goal", "build-muscle") },
-    { text: "Yağ Yakımı", onPress: () => update("goal", "lose-weight") },
-    { text: "Genel Fitness", onPress: () => update("goal", "stay-fit") },
-    { text: "Vazgeç", style: "cancel" },
-  ]);
+  const selectionOptions = selectionType === "gender"
+    ? [
+        { label: "Kadın", value: "female" },
+        { label: "Erkek", value: "male" },
+        { label: "Cinsiyet belirtmek istemiyorum", value: "other" },
+      ]
+    : [
+        { label: "Kas Kazanımı", value: "build-muscle" },
+        { label: "Yağ Yakımı", value: "lose-weight" },
+        { label: "Genel Fitness", value: "stay-fit" },
+      ];
+
+  const selectOption = (value: string) => {
+    if (selectionType === "gender") update("gender", value);
+    if (selectionType === "goal") update("goal", value);
+    setSelectionType(null);
+  };
 
   const handleSave = async () => {
     if (saving) return;
@@ -86,15 +120,39 @@ export default function ProfilePersonalInfoScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Header title="Kişisel Bilgilerim" />
+          <Header title={goalsOnly ? "Hedeflerim" : "Kişisel Bilgilerim"} />
           <View style={styles.introRow}>
-            <View style={styles.avatar}><Text style={styles.avatarText}>P</Text></View>
-            <Text style={styles.introText}>Bilgilerini güncel tutmak, sana daha iyi bir deneyim sunmamıza yardımcı olur.</Text>
+            <View style={styles.avatar}>
+              {profileImage ? (
+                <Image
+                  resizeMode="cover"
+                  source={{ uri: profileImage }}
+                  style={[
+                    styles.avatarImage,
+                    {
+                      transform: [
+                        { translateX: photoTransform.x * (66 / PROFILE_EDITOR_SIZE) },
+                        { translateY: photoTransform.y * (66 / PROFILE_EDITOR_SIZE) },
+                        { scale: photoTransform.scale },
+                      ],
+                    },
+                  ]}
+                />
+              ) : <Text style={styles.avatarText}>P</Text>}
+            </View>
+            <Text style={styles.introText}>{goalsOnly ? "Fitness ve kilo hedeflerini buradan güncelleyebilirsin." : "Bilgilerini güncel tutmak, sana daha iyi bir deneyim sunmamıza yardımcı olur."}</Text>
           </View>
 
           {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
 
           <View style={styles.formCard}>
+            {goalsOnly ? (
+              <>
+                <Field icon="locate-outline" label="Hedef Kilo (kg)" value={form.targetWeight} keyboardType="decimal-pad" onChangeText={(v) => update("targetWeight", v)} />
+                <SelectField icon="trophy-outline" label="Fitness Hedefi" value={goalLabel(form.goal)} onPress={chooseGoal} />
+              </>
+            ) : (
+              <>
             <Field icon="person-outline" label="Ad Soyad" value={form.fullName} onChangeText={(v) => update("fullName", v)} />
             <Field icon="calendar-outline" label="Doğum Tarihi" value={form.birthDate} placeholder="GG/AA/YYYY" keyboardType="number-pad" onChangeText={(v) => update("birthDate", v)} />
             <SelectField icon="person-outline" label="Cinsiyet" value={genderLabel(form.gender)} onPress={chooseGender} />
@@ -104,6 +162,8 @@ export default function ProfilePersonalInfoScreen() {
             </View>
             <Field icon="locate-outline" label="Hedef Kilo (kg)" value={form.targetWeight} keyboardType="decimal-pad" onChangeText={(v) => update("targetWeight", v)} />
             <SelectField icon="trophy-outline" label="Fitness Hedefi" value={goalLabel(form.goal)} onPress={chooseGoal} />
+              </>
+            )}
           </View>
 
           <Pressable disabled={saving || Boolean(loadError)} onPress={() => void handleSave()} style={({ pressed }) => [styles.saveButton, pressed && styles.pressed, (saving || Boolean(loadError)) && styles.disabled]}>
@@ -112,6 +172,18 @@ export default function ProfilePersonalInfoScreen() {
           <View style={styles.privateNote}><Ionicons name="lock-closed-outline" size={16} color={colors.primary} /><Text style={styles.privateText}>Bilgilerin sadece senin tarafından görülebilir ve güvenle saklanır.</Text></View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <Modal transparent animationType="fade" visible={selectionType !== null} onRequestClose={() => setSelectionType(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setSelectionType(null)}>
+          <Pressable style={styles.selectionSheet} onPress={(event) => event.stopPropagation()}>
+            <Text style={styles.selectionTitle}>{selectionType === "gender" ? "Cinsiyet" : "Fitness Hedefi"}</Text>
+            {selectionOptions.map((option) => {
+              const selected = selectionType === "gender" ? form.gender === option.value : form.goal === option.value;
+              return <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected }} onPress={() => selectOption(option.value)} style={({ pressed }) => [styles.optionRow, pressed && styles.pressed]}><Text style={styles.optionText}>{option.label}</Text><Ionicons name={selected ? "radio-button-on" : "radio-button-off"} size={22} color={colors.primary} /></Pressable>;
+            })}
+            <Pressable onPress={() => setSelectionType(null)} style={styles.cancelSelection}><Text style={styles.cancelSelectionText}>İptal</Text></Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -143,7 +215,8 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   back: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   headerTitle: { color: colors.text, fontSize: 19, fontWeight: "900" }, headerSpacer: { width: 38 },
   introRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  avatar: { width: 66, height: 66, borderRadius: 33, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  avatar: { width: 66, height: 66, overflow: "hidden", borderRadius: 33, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
+  avatarImage: { width: 66, height: 66, borderRadius: 33 },
   avatarText: { color: colors.primary, fontSize: 27, fontWeight: "900" }, introText: { flex: 1, marginLeft: 16, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
   formCard: { padding: 16, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 20, backgroundColor: colors.surface },
   fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 }, fieldContent: { flex: 1, marginLeft: 12 }, label: { marginBottom: 6, color: colors.text, fontSize: 12, fontWeight: "700" },
@@ -153,4 +226,11 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   saveButton: { height: 50, marginTop: 12, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colors.primary }, saveText: { color: colors.onPrimary, fontSize: 16, fontWeight: "900" },
   privateNote: { flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 16, paddingHorizontal: 18 }, privateText: { flexShrink: 1, marginLeft: 9, color: colors.textSecondary, fontSize: 11, lineHeight: 16 },
   errorText: { marginBottom: 12, color: colors.error, fontSize: 13, textAlign: "center" }, pressed: { opacity: 0.72 }, disabled: { opacity: 0.55 },
+  modalBackdrop: { flex: 1, justifyContent: "flex-end", padding: 18, backgroundColor: colors.overlay },
+  selectionSheet: { padding: 18, borderRadius: 22, backgroundColor: colors.surface },
+  selectionTitle: { marginBottom: 8, color: colors.text, fontSize: 19, fontWeight: "900" },
+  optionRow: { minHeight: 56, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
+  optionText: { color: colors.text, fontSize: 16 },
+  cancelSelection: { height: 48, marginTop: 12, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: colors.surfaceElevated },
+  cancelSelectionText: { color: colors.text, fontSize: 15, fontWeight: "800" },
 });
