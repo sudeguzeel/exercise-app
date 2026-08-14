@@ -22,6 +22,10 @@ import type {
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
+import { RandomMascot } from "@/shared/components/random-mascot";
+import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
+import { PROGRESS_MASCOTS } from "@/shared/constants/mascot-assets";
+import { getProgressMascotMessage } from "@/shared/lib/mascot-messages";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -39,6 +43,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -57,7 +62,12 @@ const EMPTY_MEASUREMENT: MeasurementFields = {
 
 export default function ProgressScreen() {
   const { colors } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompactWidth = windowWidth < 430;
+  const styles = useMemo(
+    () => createStyles(colors, isCompactWidth),
+    [colors, isCompactWidth],
+  );
   const listRef = useRef<FlatList<WorkoutCompletion>>(null);
   const [period, setPeriod] = useState<ProgressPeriod>("week");
   const [dashboard, setDashboard] = useState<ProgressDashboard>();
@@ -205,6 +215,7 @@ export default function ProgressScreen() {
   }
 
   const body = dashboard.bodyProgress;
+  const progressMascotMessage = getProgressMascotMessage(body);
   const difference =
     body.currentWeightKg !== null && body.targetWeightKg !== null
       ? body.currentWeightKg - body.targetWeightKg
@@ -298,24 +309,39 @@ export default function ProgressScreen() {
           </Pressable>
         </View>
         <View style={styles.bodySummary}>
-          <Text style={styles.bodyEyebrow}>GÜNCEL KİLON</Text>
-          <View style={styles.currentWeightRow}>
-            <Text style={styles.currentWeight}>{formatDecimal(body.currentWeightKg)}</Text>
-            <Text style={styles.currentWeightUnit}>kg</Text>
-            <View style={styles.targetSummary}>
-              <Text style={styles.targetSummaryText}>Hedef {formatDecimal(body.targetWeightKg)} kg</Text>
-              <Text style={styles.targetDifference}>
-                {difference === null
-                  ? "Hedef farkı yok"
-                  : `${difference > 0 ? "-" : "+"}${formatDecimal(Math.abs(difference))} kg değişim`}
-              </Text>
+          <View style={styles.bodySummaryContent}>
+            <Text style={styles.bodyEyebrow}>GÜNCEL KİLON</Text>
+            <View style={styles.currentWeightRow}>
+              <Text style={styles.currentWeight}>{formatDecimal(body.currentWeightKg)}</Text>
+              <Text style={styles.currentWeightUnit}>kg</Text>
+              <View style={styles.targetSummary}>
+                <Text style={styles.targetSummaryText}>Hedef {formatDecimal(body.targetWeightKg)} kg</Text>
+                <Text style={styles.targetDifference}>
+                  {difference === null
+                    ? "Hedef farkı yok"
+                    : `${difference > 0 ? "-" : "+"}${formatDecimal(Math.abs(difference))} kg değişim`}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.bodyMetricsRow}>
+              <BodyMetric label="BAŞLANGIÇ" value={`${formatDecimal(body.startingWeightKg)} kg`} />
+              <BodyMetric label="YAĞ ORANI" value={`${formatDecimal(body.bodyFatPercentage)} %`} />
+              <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
             </View>
           </View>
-          <View style={styles.bodyMetricsRow}>
-            <BodyMetric label="BAŞLANGIÇ" value={`${formatDecimal(body.startingWeightKg)} kg`} />
-            <BodyMetric label="YAĞ ORANI" value={`${formatDecimal(body.bodyFatPercentage)} %`} />
-            <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
+          <View pointerEvents="none" style={styles.bodyMascotSlot}>
+            <RandomMascot
+              accessibilityLabel="Vücut ilerleme tavşan maskotu"
+              sources={PROGRESS_MASCOTS}
+              style={styles.bodyMascot}
+            />
           </View>
+          <MascotSpeechBubble
+            compact
+            message={progressMascotMessage}
+            tailDirection="bottom-right"
+            style={styles.bodySpeechBubble}
+          />
         </View>
 
         <View style={styles.measurementSection}>
@@ -509,7 +535,7 @@ function MeasurementInput({
   );
 }
 
-const createStyles = (colors: AppThemeColors) => StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSheet.create({
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: colors.background },
   listContent: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22 },
@@ -527,7 +553,15 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   bodyHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   targetButton: { marginTop: 2, minHeight: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   targetButtonText: { color: colors.primary, fontSize: 11, fontWeight: "900" },
-  bodySummary: { marginTop: 16, padding: 17, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated },
+  bodySummary: { marginTop: 16, paddingHorizontal: 14, paddingVertical: 13, paddingRight: 7, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", overflow: "hidden" },
+  bodySummaryContent: { flex: 1, minWidth: 0, paddingRight: isCompactWidth ? 0 : 5, zIndex: 1 },
+  bodyMascotSlot: isCompactWidth
+    ? { position: "absolute", right: 7, bottom: 5, width: 60, opacity: 0.22, alignItems: "center", justifyContent: "center" }
+    : { width: 68, alignItems: "center", justifyContent: "center" },
+  bodyMascot: { width: "100%", aspectRatio: 1 },
+  bodySpeechBubble: isCompactWidth
+    ? { position: "absolute", right: 86, top: 5, width: 120, maxWidth: 120, zIndex: 2 }
+    : { position: "absolute", right: 50, top: 14, width: 145, maxWidth: 145, zIndex: 2 },
   bodyEyebrow: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
   currentWeightRow: { marginTop: 6, flexDirection: "row", alignItems: "flex-end" },
   currentWeight: { color: colors.text, fontSize: 34, fontWeight: "900" },

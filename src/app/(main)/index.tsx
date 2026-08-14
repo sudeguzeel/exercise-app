@@ -2,6 +2,10 @@ import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashbo
 import { toDateKey } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { DataErrorState } from "@/shared/components/data-error-state";
+import { RandomMascot } from "@/shared/components/random-mascot";
+import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
+import { HOME_MASCOTS } from "@/shared/constants/mascot-assets";
+import { getHomeMascotMessage } from "@/shared/lib/mascot-messages";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -16,6 +20,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +30,12 @@ const CHART_HEIGHT = 120;
 
 export default function HomeScreen() {
   const { colors, isDark } = useAppTheme();
-  const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark]);
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompactWidth = windowWidth < 430;
+  const styles = useMemo(
+    () => createStyles(colors, isDark, isCompactWidth),
+    [colors, isDark, isCompactWidth],
+  );
   const { trainingDays } = useOnboarding();
   const { isOffline } = useConnectivity();
   const scrollRef = useRef<ScrollView>(null);
@@ -109,6 +119,14 @@ export default function HomeScreen() {
     (day) => day.id === selectedDay,
   );
   const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
+  const homeMascotMessage = dashboard
+    ? getHomeMascotMessage({
+        isRestDay: dashboard.isRestDay,
+        todayExerciseStatuses: dashboard.todayProgram.map((item) => item.status),
+        weeklyTotal: dashboard.weeklyTotal,
+        streakDays: dashboard.streakDays,
+      })
+    : "";
 
   if (loadState === "loading" && !dashboard && !isRetrying) {
     return (
@@ -167,6 +185,21 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.summaryCard}>
+          <View pointerEvents="none" style={styles.summaryDecorations}>
+            <View style={[styles.summaryHill, styles.summaryHillBack]} />
+            <View style={[styles.summaryHill, styles.summaryHillFront]} />
+            <View style={[styles.summaryTree, styles.summaryTreeLeft]}>
+              <View style={styles.summaryTreeTop} />
+              <View style={styles.summaryTreeTrunk} />
+            </View>
+            <View style={[styles.summaryTree, styles.summaryTreeRight]}>
+              <View style={styles.summaryTreeTop} />
+              <View style={styles.summaryTreeTrunk} />
+            </View>
+            <View style={[styles.summaryLeaf, styles.summaryLeafOne]} />
+            <View style={[styles.summaryLeaf, styles.summaryLeafTwo]} />
+            <View style={[styles.summaryLeaf, styles.summaryLeafThree]} />
+          </View>
           <View style={styles.summaryContent}>
             <Text
               style={styles.summaryLabel}
@@ -178,6 +211,19 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.summaryValue}>{dashboard.weeklyTotal}</Text>
           </View>
+          <View pointerEvents="none" style={styles.summaryMascotSlot}>
+            <RandomMascot
+              accessibilityLabel="FitRehber tavşan maskotu"
+              sources={HOME_MASCOTS}
+              style={styles.summaryMascot}
+            />
+          </View>
+          <MascotSpeechBubble
+            compact
+            message={homeMascotMessage}
+            tailDirection="bottom-left"
+            style={styles.summarySpeechBubble}
+          />
           <View style={styles.streakBadge}>
             <Text style={styles.streakText}>
               🔥 {dashboard.streakDays} günlük seri
@@ -405,7 +451,7 @@ const sectionTitleBase = { marginTop: 27, marginBottom: 12, fontSize: 17, fontWe
 const emptyCardBase = { padding: 20, borderWidth: 1, borderRadius: 18 };
 const emptyTextBase = { fontSize: 14, textAlign: "center" as const };
 
-const createStyles = (colors: AppThemeColors, isDark: boolean) => StyleSheet.create({
+const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: boolean) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -462,13 +508,96 @@ const createStyles = (colors: AppThemeColors, isDark: boolean) => StyleSheet.cre
     padding: 24,
     borderRadius: 28,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     backgroundColor: isDark ? colors.surfaceElevated : colors.inverseSurface,
+    overflow: "hidden",
+  },
+  summaryDecorations: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
+  summaryHill: {
+    position: "absolute",
+    bottom: -54,
+    height: 92,
+    borderRadius: 999,
+    backgroundColor: isDark ? "#17331F" : "#DDEDD0",
+    opacity: isDark ? 0.5 : 0.72,
+  },
+  summaryHillBack: {
+    left: "17%",
+    width: "62%",
+    transform: [{ rotate: "-4deg" }],
+  },
+  summaryHillFront: {
+    right: "-8%",
+    width: "58%",
+    bottom: -63,
+    backgroundColor: isDark ? "#24452A" : "#ECF5E4",
+    transform: [{ rotate: "5deg" }],
+  },
+  summaryTree: {
+    position: "absolute",
+    bottom: 13,
+    width: 20,
+    height: 38,
+    alignItems: "center",
+    opacity: isDark ? 0.36 : 0.48,
+  },
+  summaryTreeLeft: { left: "31%" },
+  summaryTreeRight: { right: "22%", transform: [{ scale: 0.78 }] },
+  summaryTreeTop: {
+    width: 19,
+    height: 26,
+    borderRadius: 10,
+    backgroundColor: isDark ? "#426A33" : "#A8CF87",
+  },
+  summaryTreeTrunk: {
+    width: 3,
+    height: 13,
+    backgroundColor: isDark ? "#466044" : "#A6B68E",
+  },
+  summaryLeaf: {
+    position: "absolute",
+    width: 11,
+    height: 5,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+    opacity: isDark ? 0.28 : 0.34,
+  },
+  summaryLeafOne: { left: "43%", top: 34, transform: [{ rotate: "-24deg" }] },
+  summaryLeafTwo: { left: "57%", top: 55, transform: [{ rotate: "18deg" }] },
+  summaryLeafThree: { right: "30%", top: 27, transform: [{ rotate: "-12deg" }] },
+  summaryMascotSlot: {
+    position: "absolute",
+    top: 4,
+    bottom: 3,
+    left: "34%",
+    width: "34%",
+    maxWidth: 150,
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  summaryMascot: {
+    width: "100%",
+    height: "100%",
+  },
+  summarySpeechBubble: {
+    position: "absolute",
+    left: isCompactWidth ? undefined : "43%",
+    right: isCompactWidth ? 8 : undefined,
+    top: isCompactWidth ? 10 : 8,
+    width: isCompactWidth ? 142 : 166,
+    maxWidth: isCompactWidth ? 142 : 166,
+    zIndex: 3,
   },
   summaryContent: {
     flex: 1,
     minWidth: 0,
+    maxWidth: "42%",
+    alignSelf: "flex-start",
+    zIndex: 2,
   },
   summaryLabel: {
     flexShrink: 1,
@@ -486,15 +615,18 @@ const createStyles = (colors: AppThemeColors, isDark: boolean) => StyleSheet.cre
     fontWeight: "900",
   },
   streakBadge: {
-    marginLeft: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 24,
+    position: "absolute",
+    right: isCompactWidth ? 10 : 16,
+    bottom: isCompactWidth ? 10 : 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 18,
     backgroundColor: colors.primarySoft,
+    zIndex: 2,
   },
   streakText: {
     color: colors.primary,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
   },
   sectionTitle: {
