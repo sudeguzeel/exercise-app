@@ -4,19 +4,25 @@ import {
   workoutRepository,
 } from "@/features/workouts/workout-repository";
 import type { WorkoutCompletion } from "@/features/workouts/types";
+import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
+import { WORKOUT_COMPLETE_MASCOT } from "@/shared/constants/mascot-assets";
 import { MainColors } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   BackHandler,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -41,6 +47,9 @@ function getCompletionMessage(completion: WorkoutCompletion) {
 export default function WorkoutCompleteScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompactWidth = windowWidth < 430;
+  const celebrationEntrance = useRef(new Animated.Value(0)).current;
   const params = useLocalSearchParams<{
     workoutSessionId?: string | string[];
   }>();
@@ -82,6 +91,31 @@ export default function WorkoutCompleteScreen() {
   }, [loadCompletion]);
 
   useEffect(() => {
+    if (!completion) return;
+    celebrationEntrance.setValue(0);
+    Animated.sequence([
+      Animated.timing(celebrationEntrance, {
+        toValue: 1,
+        duration: 340,
+        easing: Easing.out(Easing.back(1.35)),
+        useNativeDriver: true,
+      }),
+      Animated.timing(celebrationEntrance, {
+        toValue: 2,
+        duration: 160,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(celebrationEntrance, {
+        toValue: 3,
+        duration: 180,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [celebrationEntrance, completion]);
+
+  useEffect(() => {
     const subscription = BackHandler.addEventListener(
       "hardwareBackPress",
       () => {
@@ -105,11 +139,48 @@ export default function WorkoutCompleteScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.successIconWrap}>
-            <Ionicons name="star-outline" size={49} color={colors.primary} />
-          </View>
+          <Animated.View
+            style={[
+              styles.successHero,
+              isCompactWidth && styles.successHeroCompact,
+              {
+                opacity: celebrationEntrance.interpolate({
+                  inputRange: [0, 0.55, 3],
+                  outputRange: [0, 1, 1],
+                }),
+                transform: [
+                  {
+                    translateY: celebrationEntrance.interpolate({
+                      inputRange: [0, 1, 2, 3],
+                      outputRange: [12, 0, -6, 0],
+                    }),
+                  },
+                  {
+                    scale: celebrationEntrance.interpolate({
+                      inputRange: [0, 1, 2, 3],
+                      outputRange: [0.88, 1, 1, 1],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <MascotSpeechBubble
+              message="Harika iş!"
+              tailDirection="bottom-right"
+              style={styles.successSpeechBubble}
+            />
+            <Image
+              accessibilityLabel="Kutlama yapan FitRehber tavşan maskotu"
+              contentFit="contain"
+              source={WORKOUT_COMPLETE_MASCOT}
+              style={[
+                styles.successMascot,
+                isCompactWidth && styles.successMascotCompact,
+              ]}
+            />
+          </Animated.View>
 
-          <Text style={styles.title}>Harika İş!</Text>
           <Text style={styles.description}>{getCompletionMessage(completion)}</Text>
 
           <View style={styles.summaryRow}>
@@ -200,24 +271,31 @@ const baseStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  successIconWrap: {
-    width: 92,
-    height: 92,
-    borderRadius: 28,
-    backgroundColor: "#EEF6D9",
-    alignItems: "center",
-    justifyContent: "center",
+  successHero: {
+    position: "relative",
+    width: 310,
+    height: 210,
   },
-  title: {
-    marginTop: 22,
-    color: MainColors.text,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "900",
+  successHeroCompact: { width: 244, height: 172 },
+  successSpeechBubble: {
+    position: "absolute",
+    top: 12,
+    left: 8,
+    width: 126,
+    maxWidth: 126,
+    zIndex: 2,
   },
+  successMascot: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 190,
+    height: 190,
+  },
+  successMascotCompact: { width: 150, height: 150 },
   description: {
     maxWidth: 400,
-    marginTop: 10,
+    marginTop: 12,
     color: MainColors.mutedText,
     fontSize: 14,
     lineHeight: 21,

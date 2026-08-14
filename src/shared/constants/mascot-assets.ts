@@ -28,3 +28,5 @@ export const WORKOUT_DETAIL_MASCOTS = {
   standing: PROGRESS_MASCOTS[2],
   shakerThumbsUp: require("../../../assets/images/mascots/workout-detail/harika_antrenman_bunny.png"),
 } as const satisfies Record<string, ImageSourcePropType>;
+
+export const WORKOUT_COMPLETE_MASCOT: ImageSourcePropType = require("../../../assets/images/mascots/workout-complete/bunny_celebration.png");

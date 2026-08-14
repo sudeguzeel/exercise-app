@@ -27,6 +27,7 @@ import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-d
 import { WorkoutFinishDialog } from "@/features/workouts/components/workout-finish-dialog";
 import { MainColors } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
+import { getWorkoutMascotMessage } from "@/shared/lib/mascot-messages";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
