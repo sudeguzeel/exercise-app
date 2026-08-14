@@ -4,7 +4,7 @@ import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 const GREEN="#70C900";
 const ITEMS=[
   ["Gizlilik Politikası","Kişisel verilerinin nasıl işlendiğini oku."],
@@ -41,9 +41,14 @@ export default function ProfilePrivacyScreen(){
   };
   const confirmDeleteAccount=()=>{
     if(deleting)return;
+    const message="Bu işlem geri alınamaz. Hesabın ve tüm verilerin kalıcı olarak silinecek.";
+    if(Platform.OS==="web"){
+      if(window.confirm(`Hesabını silmek istediğine emin misin?\n\n${message}`))void deleteAccount();
+      return;
+    }
     Alert.alert(
       "Hesabını silmek istediğine emin misin?",
-      "Bu işlem geri alınamaz. Hesabın ve tüm verilerin kalıcı olarak silinecek.",
+      message,
       [
         {text:"Vazgeç",style:"cancel"},
         {text:"Hesabımı sil",style:"destructive",onPress:()=>void deleteAccount()},
