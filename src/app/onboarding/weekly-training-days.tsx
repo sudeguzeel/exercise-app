@@ -15,6 +15,7 @@ import {
 
 
 import { TrainingDay, useOnboarding } from "@/providers/OnboardingContext";
+import { saveWeeklyTrainingDays } from "@/shared/lib/services/weeklyTrainingDaysService";
 
 type DayOption = {
   id: TrainingDay;
@@ -30,16 +31,6 @@ const dayOptions: DayOption[] = [
   { id: "saturday", label: "Cmt" },
   { id: "sunday", label: "Paz" },
 ];
-
-const dayToApiCode: Record<TrainingDay, string> = {
-  monday: "mon",
-  tuesday: "tue",
-  wednesday: "wed",
-  thursday: "thu",
-  friday: "fri",
-  saturday: "sat",
-  sunday: "sun",
-};
 
 export default function WeeklyTrainingDaysScreen() {
   const { colors } = useAppTheme();
@@ -68,10 +59,14 @@ export default function WeeklyTrainingDaysScreen() {
     }
 
     setIsCreating(true);
+    setSaveError("");
 
     try {
-      // Backend bağlantısı eklenene kadar geçici işlem.
-      await new Promise((resolve) => setTimeout(resolve, 900));
+      const result = await saveWeeklyTrainingDays(trainingDays);
+      if (!result.success) {
+        setSaveError(result.message);
+        return;
+      }
 
       // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
       router.replace("/(main)");
