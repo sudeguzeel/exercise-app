@@ -95,6 +95,10 @@ export default function ProfileScreen() {
   };
 
   const confirmSignOut = () => {
+    if (Platform.OS === "web") {
+      if (globalThis.confirm("Hesabından çıkış yapmak istediğine emin misin?")) void handleSignOut();
+      return;
+    }
     Alert.alert(
       "Çıkış yap",
       "Hesabından çıkış yapmak istediğine emin misin?",
