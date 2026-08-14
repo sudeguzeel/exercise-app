@@ -3,7 +3,6 @@ import {
   ExerciseInfoCard,
   ExerciseMedia,
   SetSelector,
-  TargetRepetitionCard,
   WorkoutTopBar,
 } from "@/features/workouts/components/active-workout-components";
 import {
@@ -11,10 +10,13 @@ import {
   findMostRecentlyCompletedPosition,
   formatElapsedDuration,
   getElapsedDurationMs,
+  getTrainingDayForDateKey,
   getWorkoutProgress,
   resolveDefaultExerciseIndex,
 } from "@/features/workouts/workout-domain";
-import { getWorkoutMascotMessage } from "@/shared/lib/mascot-messages";
+import { programRepository } from "@/features/programs/program-repository";
+import { getProgramCompletion } from "@/features/programs/program-dashboard";
+import { getProgramCompletionRecords } from "@/features/programs/program-screen-service";
 import {
   isValidWorkoutSessionId,
   workoutRepository,
@@ -22,6 +24,7 @@ import {
 import type { WorkoutSession } from "@/features/workouts/types";
 import { useWorkoutExit } from "@/features/workouts/use-workout-exit";
 import { WorkoutExitDialog } from "@/features/workouts/components/workout-exit-dialog";
+import { WorkoutFinishDialog } from "@/features/workouts/components/workout-finish-dialog";
 import { MainColors } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -69,6 +72,7 @@ export default function WorkoutScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [finishDialogVisible, setFinishDialogVisible] = useState(false);
   // Kullanıcının o an kaydırarak baktığı hareket — sette olduğu gibi hareket
   // sırası artık zorunlu değil, kullanıcı istediği harekete geçip
   // (ör. alet doluysa) sonra geri dönebilir. bkz. resolveDefaultExerciseIndex.
@@ -81,9 +85,64 @@ export default function WorkoutScreen() {
   const completionNavigationRef = useRef(false);
   const pagerRef = useRef<FlatList<WorkoutSession["exercises"][number]>>(null);
 
-  const replaceWithCompletion = useCallback(() => {
+  const navigateAfterCompletion = useCallback(async () => {
     if (completionNavigationRef.current) return;
     completionNavigationRef.current = true;
+
+    const currentSession = sessionRef.current;
+    const trainingDay = currentSession
+      ? getTrainingDayForDateKey(currentSession.workoutDate)
+      : null;
+    if (currentSession && trainingDay) {
+      try {
+        const programs = await programRepository.listPrograms();
+        const otherPrograms = programs.filter(
+          (program) =>
+            program.id !== currentSession.programId &&
+            program.trainingDays.includes(trainingDay),
+        );
+        const completionRecords = await getProgramCompletionRecords(
+          currentSession.workoutDate,
+          currentSession.workoutDate,
+        );
+        const programStatuses = await Promise.all(
+          otherPrograms.map(async (program) => ({
+            program,
+            completion: await workoutRepository.getCompletionForProgramDate(
+              program.id,
+              currentSession.workoutDate,
+            ),
+          })),
+        );
+        const remainingProgram = programStatuses.find(
+          ({ program, completion }) =>
+            !completion &&
+            getProgramCompletion(
+              program,
+              completionRecords,
+              currentSession.workoutDate,
+            ) < 100,
+        )?.program;
+        if (remainingProgram) {
+          const nextSession = await workoutRepository.startOrResumeSession(
+            remainingProgram.id,
+            currentSession.workoutDate,
+          );
+          router.replace({
+            pathname: "/workout",
+            params: { workoutSessionId: nextSession.id },
+          });
+          return;
+        }
+      } catch {
+        completionNavigationRef.current = false;
+        router.replace({
+          pathname: "/(main)/program",
+          params: { selectedDate: currentSession.workoutDate },
+        });
+        return;
+      }
+    }
     router.replace({
       pathname: "/workout-complete",
       params: { workoutSessionId },
@@ -96,6 +155,16 @@ export default function WorkoutScreen() {
       params: { workoutSessionId },
     });
   }, [workoutSessionId]);
+
+  const replaceWithProgram = useCallback((currentSession: WorkoutSession) => {
+    router.replace({
+      pathname: "/(main)/program",
+      params: {
+        activeProgramId: currentSession.programId,
+        selectedDate: currentSession.workoutDate,
+      },
+    });
+  }, []);
 
   const loadSession = useCallback(async () => {
     if (!isValidWorkoutSessionId(workoutSessionId)) {
@@ -121,7 +190,7 @@ export default function WorkoutScreen() {
       ) {
         const completion = await workoutRepository.getCompletion(workoutSessionId);
         if (completion && getWorkoutProgress(nextSession.exercises).canFinalize) {
-          replaceWithCompletion();
+          void navigateAfterCompletion();
           return;
         }
         setSession(null);
@@ -164,7 +233,7 @@ export default function WorkoutScreen() {
         "Antrenman yüklenemedi. Bağlantını kontrol edip yeniden dene.",
       );
     }
-  }, [replaceWithCompletion, replaceWithRest, workoutSessionId]);
+  }, [navigateAfterCompletion, replaceWithRest, workoutSessionId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -249,7 +318,7 @@ export default function WorkoutScreen() {
     try {
       await workoutRepository.completeWorkout(workoutSessionId);
       setSaveStatus("saved");
-      replaceWithCompletion();
+      await navigateAfterCompletion();
     } catch {
       setSaveStatus("error");
       setActionError(
@@ -259,7 +328,32 @@ export default function WorkoutScreen() {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [replaceWithCompletion, workoutSessionId]);
+  }, [navigateAfterCompletion, workoutSessionId]);
+
+  const finishIncompleteWorkout = useCallback(async () => {
+    if (transitionInProgressRef.current) return;
+    if (!sessionRef.current) return;
+
+    transitionInProgressRef.current = true;
+    setIsTransitioning(true);
+    setSaveStatus("saving");
+    setActionError(null);
+    try {
+      await workoutRepository.completeWorkout(workoutSessionId, {
+        completeRemainingSets: true,
+      });
+      setSaveStatus("saved");
+      await navigateAfterCompletion();
+    } catch {
+      setSaveStatus("error");
+      setActionError(
+        "Antrenman tamamlanamadı. İlerlemen korunuyor; yeniden deneyebilirsin.",
+      );
+    } finally {
+      transitionInProgressRef.current = false;
+      if (mountedRef.current) setIsTransitioning(false);
+    }
+  }, [navigateAfterCompletion, workoutSessionId]);
 
   const completeCurrentSet = useCallback(async () => {
     if (transitionInProgressRef.current) return;
@@ -288,12 +382,14 @@ export default function WorkoutScreen() {
       sessionRef.current = updated;
       if (mountedRef.current) setSession(updated);
 
+      const workoutIsComplete = getWorkoutProgress(updated.exercises).canFinalize;
+
       if (updated.phase === "rest") {
         replaceWithRest();
         return;
       }
 
-      if (!getWorkoutProgress(updated.exercises).canFinalize) {
+      if (!workoutIsComplete) {
         // Bu hareket bitti ama antrenmanda başka tamamlanmamış hareket var —
         // ekranda kal, kullanıcı kaydırarak devam edeceği harekete geçsin.
         return;
@@ -303,7 +399,7 @@ export default function WorkoutScreen() {
       setSaveStatus("saving");
       await workoutRepository.completeWorkout(workoutSessionId);
       setSaveStatus("saved");
-      replaceWithCompletion();
+      await navigateAfterCompletion();
     } catch {
       if (finalizing) {
         setSaveStatus("error");
@@ -319,7 +415,7 @@ export default function WorkoutScreen() {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [replaceWithCompletion, replaceWithRest, viewedExerciseIndex, workoutSessionId]);
+  }, [navigateAfterCompletion, replaceWithRest, viewedExerciseIndex, workoutSessionId]);
 
   if (session === undefined && !loadError) {
     return (
@@ -395,6 +491,14 @@ export default function WorkoutScreen() {
         onConfirm={confirmExit}
         visible={exitDialogVisible}
       />
+      <WorkoutFinishDialog
+        visible={finishDialogVisible}
+        onCancel={() => setFinishDialogVisible(false)}
+        onConfirm={() => {
+          setFinishDialogVisible(false);
+          void finishIncompleteWorkout();
+        }}
+      />
       <View style={styles.topBarRow}>
         <WorkoutTopBar
           elapsed={elapsed}
@@ -443,12 +547,7 @@ export default function WorkoutScreen() {
               />
               <ExerciseMedia exerciseName={item.name} mediaUrl={item.mediaUrl} />
               <SetSelector activeSetId={targetSet?.id ?? null} sets={item.sets} />
-              {targetSet ? (
-                <View style={styles.fieldGroup}>
-                  <Text style={styles.fieldLabel}>HEDEF TEKRAR</Text>
-                  <TargetRepetitionCard value={targetSet.targetReps} />
-                </View>
-              ) : (
+              {!targetSet ? (
                 <View style={styles.doneCard}>
                   <Ionicons
                     name="checkmark-circle"
@@ -457,7 +556,7 @@ export default function WorkoutScreen() {
                   />
                   <Text style={styles.doneText}>Bu hareket tamamlandı</Text>
                 </View>
-              )}
+              ) : null}
             </ScrollView>
           );
         }}
@@ -484,6 +583,18 @@ export default function WorkoutScreen() {
             {actionError}
           </Text>
         ) : null}
+        <Pressable
+          accessibilityRole="button"
+          disabled={isTransitioning}
+          onPress={() => setFinishDialogVisible(true)}
+          style={({ pressed }) => [
+            styles.finishButton,
+            isTransitioning && styles.disabledButton,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Text style={styles.finishButtonText}>Antrenmanı bitir</Text>
+        </Pressable>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{
@@ -533,6 +644,7 @@ const baseStyles = StyleSheet.create({
   pageContent: {
     paddingBottom: 24,
     gap: 12,
+    justifyContent: "space-between",
   },
   dotRow: {
     paddingVertical: 12,
@@ -552,13 +664,6 @@ const baseStyles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
   },
-  fieldGroup: { marginTop: 2 },
-  fieldLabel: {
-    marginBottom: 10,
-    color: MainColors.mutedText,
-    fontSize: 13,
-    fontWeight: "700",
-  },
   stickyFooter: {
     width: "100%",
     maxWidth: 680,
@@ -577,11 +682,26 @@ const baseStyles = StyleSheet.create({
     textAlign: "center",
   },
   completeButton: {
-    minHeight: 54,
+    minHeight: 60,
     borderRadius: 18,
     backgroundColor: MainColors.primaryBright,
     alignItems: "center",
     justifyContent: "center",
+  },
+  finishButton: {
+    minHeight: 58,
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: MainColors.primary,
+    borderRadius: 18,
+    backgroundColor: MainColors.paleGreen,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  finishButtonText: {
+    color: MainColors.text,
+    fontSize: 15,
+    fontWeight: "900",
   },
   disabledButton: { opacity: 0.48 },
   completeButtonText: {

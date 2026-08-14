@@ -325,7 +325,10 @@ export default function PersonalInfoScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.replace("/login")}
+          >
             <Ionicons name="chevron-back" size={20} color={colors.text} />
           </Pressable>
 

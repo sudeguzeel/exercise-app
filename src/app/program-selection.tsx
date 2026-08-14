@@ -44,11 +44,19 @@ type ResultModalState = {
   success: boolean;
 };
 
+type ProgramSelectionRouteParams = ProgramSelectionSearchParams & {
+  exerciseName?: string | string[];
+};
+
+function getRouteParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[value.length - 1] : value;
+}
+
 export default function ProgramSelectionScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const searchParams =
-    useLocalSearchParams<ProgramSelectionSearchParams>();
+    useLocalSearchParams<ProgramSelectionRouteParams>();
   const selection = useMemo(
     () => parseProgramSelectionParams(searchParams),
     [searchParams],
@@ -57,7 +65,12 @@ export default function ProgramSelectionScreen() {
     () => parseInitialTrainingDay(searchParams),
     [searchParams],
   );
-  const [exercise, setExercise] = useState<ExerciseSummary | null>(null);
+  const preparedExerciseName = getRouteParam(searchParams.exerciseName)?.trim();
+  const [exercise, setExercise] = useState<ExerciseSummary | null | undefined>(
+    selection && preparedExerciseName
+      ? ({ id: selection.exerciseId, name: preparedExerciseName } as ExerciseSummary)
+      : undefined,
+  );
   const [categories, setCategories] = useState<BodyPartOption[]>([]);
   const categoryNames = useMemo(
     () => new Map(categories.map((category) => [category.id, category.name])),
@@ -66,7 +79,14 @@ export default function ProgramSelectionScreen() {
 
   useEffect(() => {
     if (!selection) {
-      setExercise(null);
+      setExercise(undefined);
+      return;
+    }
+    if (preparedExerciseName) {
+      setExercise({
+        id: selection.exerciseId,
+        name: preparedExerciseName,
+      } as ExerciseSummary);
       return;
     }
     let mounted = true;
@@ -76,7 +96,7 @@ export default function ProgramSelectionScreen() {
     return () => {
       mounted = false;
     };
-  }, [selection]);
+  }, [preparedExerciseName, selection]);
 
   useEffect(() => {
     void getBodyParts().then(setCategories);
@@ -372,7 +392,7 @@ export default function ProgramSelectionScreen() {
                   </Text>
                 </Pressable>
               </>
-            ) : (
+            ) : exercise === null ? (
               <View style={styles.invalidCard}>
                 <Ionicons
                   name="alert-circle-outline"
@@ -402,7 +422,7 @@ export default function ProgramSelectionScreen() {
                   </Text>
                 </Pressable>
               </View>
-            )}
+            ) : null}
           </View>
         </ScrollView>
 
