@@ -18,6 +18,7 @@ import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
 import {
   getExerciseDetail,
+  getExerciseSummary,
   type ExerciseDetail,
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
@@ -153,6 +154,8 @@ export default function ExerciseDetailScreen() {
     undefined,
   );
   const [loadError, setLoadError] = useState(false);
+  const [isPreparingProgramSelection, setIsPreparingProgramSelection] =
+    useState(false);
   const [gifFailed, setGifFailed] = useState(false);
   const [useCustomValues, setUseCustomValues] = useState(false);
   const [customValues, setCustomValues] = useState<CustomExerciseValues>(
@@ -284,8 +287,8 @@ export default function ExerciseDetailScreen() {
     [exercise],
   );
 
-  const handleAddToProgram = useCallback(() => {
-    if (!exercise) return;
+  const handleAddToProgram = useCallback(async () => {
+    if (!exercise || isPreparingProgramSelection) return;
 
     let payload: ProgramSelectionPayload;
 
@@ -366,10 +369,19 @@ export default function ExerciseDetailScreen() {
       return;
     }
 
-    router.push({
-      pathname: "/program-selection",
-      params: serializeProgramSelectionPayload(payload, initialTrainingDay),
-    });
+    setIsPreparingProgramSelection(true);
+    try {
+      const exerciseSummary = await getExerciseSummary(payload.exerciseId);
+      router.push({
+        pathname: "/program-selection",
+        params: {
+          ...serializeProgramSelectionPayload(payload, initialTrainingDay),
+          ...(exerciseSummary ? { exerciseName: exerciseSummary.name } : {}),
+        },
+      });
+    } finally {
+      setIsPreparingProgramSelection(false);
+    }
   }, [
     customValues,
     exercise,
@@ -378,6 +390,7 @@ export default function ExerciseDetailScreen() {
     normalizedSelectedDate,
     normalizedSelectionMode,
     initialTrainingDay,
+    isPreparingProgramSelection,
     useCustomValues,
   ]);
 
@@ -751,15 +764,21 @@ export default function ExerciseDetailScreen() {
 
                 <Pressable
                   accessibilityRole="button"
-                  onPress={handleAddToProgram}
+                  accessibilityState={{ busy: isPreparingProgramSelection }}
+                  disabled={isPreparingProgramSelection}
+                  onPress={() => void handleAddToProgram()}
                   style={({ pressed }) => [
                     styles.addButton,
                     pressed && styles.addButtonPressed,
                   ]}
                 >
-                  <Text maxFontSizeMultiplier={1.3} style={styles.addButtonText}>
-                    Programa Ekle
-                  </Text>
+                  {isPreparingProgramSelection ? (
+                    <ActivityIndicator color={colors.onPrimary} />
+                  ) : (
+                    <Text maxFontSizeMultiplier={1.3} style={styles.addButtonText}>
+                      Programa Ekle
+                    </Text>
+                  )}
                 </Pressable>
               </>
             ) : (
