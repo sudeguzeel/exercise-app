@@ -1,5 +1,7 @@
+import { useAppTheme } from "@/providers/AppThemeContext";
 import type { PersonalInfo } from "@/providers/OnboardingContext";
 import { useOnboarding } from "@/providers/OnboardingContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import {
   loadProfilePersonalInfo,
   saveProfilePersonalInfo,
@@ -23,8 +25,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 const EMPTY: PersonalInfo = {
   fullName: "", gender: "", birthDate: "", height: "",
   currentWeight: "", targetWeight: "", goal: "",
@@ -39,7 +39,7 @@ const PROFILE_EDITOR_SIZE = 280;
 export default function ProfilePersonalInfoScreen() {
   const { section } = useLocalSearchParams<{ section?: string }>();
   const goalsOnly = section === "goals";
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { setPersonalInfo } = useOnboarding();
   const [form, setForm] = useState<PersonalInfo>(EMPTY);
@@ -121,27 +121,46 @@ export default function ProfilePersonalInfoScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Header title={goalsOnly ? "Hedeflerim" : "Kişisel Bilgilerim"} />
-          <View style={styles.introRow}>
+         <View style={styles.introRow}>
             <View style={styles.avatar}>
               {profileImage ? (
-                <Image
-                  resizeMode="cover"
-                  source={{ uri: profileImage }}
-                  style={[
-                    styles.avatarImage,
-                    {
-                      transform: [
-                        { translateX: photoTransform.x * (66 / PROFILE_EDITOR_SIZE) },
-                        { translateY: photoTransform.y * (66 / PROFILE_EDITOR_SIZE) },
-                        { scale: photoTransform.scale },
-                      ],
-                    },
-                  ]}
-                />
-              ) : <Text style={styles.avatarText}>P</Text>}
-            </View>
-            <Text style={styles.introText}>{goalsOnly ? "Fitness ve kilo hedeflerini buradan güncelleyebilirsin." : "Bilgilerini güncel tutmak, sana daha iyi bir deneyim sunmamıza yardımcı olur."}</Text>
-          </View>
+           <Image
+               resizeMode="cover"
+                source={{ uri: profileImage }}
+             style={[
+            styles.avatarImage,
+         {
+          transform: [
+         { translateX: photoTransform.x * (66 / PROFILE_EDITOR_SIZE) },
+         { translateY: photoTransform.y * (66 / PROFILE_EDITOR_SIZE) },
+         { scale: photoTransform.scale },
+        ],
+       },
+      ]}
+     />
+    ) : (
+      <Image
+        source={
+          isDark
+            ? require("../../../assets/images/fitrehber_dark_profil_icon_sn.png")
+            : require("../../../assets/images/fitrehber_light_profil_icon_sn_1.png")
+        }
+        resizeMode="contain"
+        style={styles.defaultAvatarImage}
+      />
+    )}
+  </View>
+
+  <View style={styles.introContent}>
+    <Text style={styles.userName}>{form.fullName || "Sporcu"}</Text>
+
+    <Text style={styles.introText}>
+      {goalsOnly
+        ? "Fitness ve kilo hedeflerini buradan güncelleyebilirsin."
+        : "Bilgilerini güncel tutmak, sana daha iyi bir deneyim sunmamıza yardımcı olur."}
+    </Text>
+  </View>
+</View>
 
           {loadError ? <Text style={styles.errorText}>{loadError}</Text> : null}
 
@@ -217,7 +236,28 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   introRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
   avatar: { width: 66, height: 66, overflow: "hidden", borderRadius: 33, alignItems: "center", justifyContent: "center", backgroundColor: colors.primarySoft },
   avatarImage: { width: 66, height: 66, borderRadius: 33 },
-  avatarText: { color: colors.primary, fontSize: 27, fontWeight: "900" }, introText: { flex: 1, marginLeft: 16, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
+  defaultAvatarImage: {
+  width: 62,
+  height: 62,
+  borderRadius: 31,
+},
+  introContent: {
+  flex: 1,
+  marginLeft: 16,
+},
+
+userName: {
+  marginBottom: 4,
+  color: colors.text,
+  fontSize: 16,
+  fontWeight: "800",
+},
+
+introText: {
+  color: colors.textSecondary,
+  fontSize: 13,
+  lineHeight: 19,
+},
   formCard: { padding: 16, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 20, backgroundColor: colors.surface },
   fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 }, fieldContent: { flex: 1, marginLeft: 12 }, label: { marginBottom: 6, color: colors.text, fontSize: 12, fontWeight: "700" },
   input: { height: 42, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 11, color: colors.text, backgroundColor: colors.inputBackground },
