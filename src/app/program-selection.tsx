@@ -16,9 +16,9 @@ import {
 import { programRepository } from "@/features/programs/program-repository";
 import type { UserProgram } from "@/features/programs/types";
 import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
+import { useAppTheme } from "@/providers/AppThemeContext";
 import { MainColors } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
-import { useAppTheme } from "@/providers/AppThemeContext";
 import {
   getBodyParts,
   getExerciseSummary,
@@ -58,13 +58,31 @@ export default function ProgramSelectionScreen() {
   const searchParams =
     useLocalSearchParams<ProgramSelectionRouteParams>();
   const selection = useMemo(
-    () => parseProgramSelectionParams(searchParams),
-    [searchParams],
-  );
-  const initialTrainingDay = useMemo(
-    () => parseInitialTrainingDay(searchParams),
-    [searchParams],
-  );
+  () =>
+    parseProgramSelectionParams({
+      exerciseId: searchParams.exerciseId,
+      sets: searchParams.sets,
+      reps: searchParams.reps,
+      restSeconds: searchParams.restSeconds,
+      weightKg: searchParams.weightKg,
+      initialTrainingDay: searchParams.initialTrainingDay,
+    }),
+  [
+    searchParams.exerciseId,
+    searchParams.sets,
+    searchParams.reps,
+    searchParams.restSeconds,
+    searchParams.weightKg,
+    searchParams.initialTrainingDay,
+  ],
+);
+ const initialTrainingDay = useMemo(
+  () =>
+    parseInitialTrainingDay({
+      initialTrainingDay: searchParams.initialTrainingDay,
+    }),
+  [searchParams.initialTrainingDay],
+);
   const preparedExerciseName = getRouteParam(searchParams.exerciseName)?.trim();
   const [exercise, setExercise] = useState<ExerciseSummary | null | undefined>(
     selection && preparedExerciseName
