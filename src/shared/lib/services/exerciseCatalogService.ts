@@ -19,20 +19,23 @@ export type BodyPartOption = {
   icon: IconName;
 };
 
-// exercises.image / exercises.gif_url DB'de "images/0001-2gPfomN.jpg" gibi
-// göreli bir yol olarak duruyor. Bu, veri setinin kaynağı olan
-// hasaneyldrm/exercises-dataset (GitHub) reposundaki dosya yoluyla birebir
-// aynı — o repo bu dosyaları "raw" olarak public servis ediyor, bu yüzden
-// yolu bu base URL ile birleştirip doğrudan gösterebiliyoruz.
-// Not: görsel/gif'ler © Gym visual'a ait, repo bunları "izinle" yeniden
-// dağıtıyor; kendi ticari kullanımınız için gymvisual.com'un şartlarından
-// ayrıca izin/lisans almanız gerekir (bkz. repo NOTICE.md).
-const EXERCISE_MEDIA_BASE_URL =
+// exercises.image / exercises.gif_url artık Supabase Storage'daki
+// "exercise-media" bucket'ının tam public URL'ini tutuyor (bkz.
+// scripts/migrate-exercise-media.js). Eski göreli path'ler
+// image_original_path / gif_url_original_path kolonlarında yedekli duruyor.
+// Not: görsel/gif'ler © Gym visual'a ait, kaynak repo (hasaneyldrm/
+// exercises-dataset) bunları "izinle" dağıtıyor; ticari kullanım için
+// gymvisual.com'un şartlarından ayrıca izin/lisans almanız gerekir (bkz.
+// repo NOTICE.md).
+const LEGACY_EXERCISE_MEDIA_BASE_URL =
   "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/";
 
 export function buildMediaUrl(relativePath: string | null | undefined): string | null {
   if (!relativePath) return null;
-  return `${EXERCISE_MEDIA_BASE_URL}${relativePath}`;
+  if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
+    return relativePath;
+  }
+  return `${LEGACY_EXERCISE_MEDIA_BASE_URL}${relativePath}`;
 }
 
 export type ExerciseSummary = {
