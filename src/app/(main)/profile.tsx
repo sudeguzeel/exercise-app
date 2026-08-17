@@ -1,7 +1,9 @@
+import { useAppTheme } from "@/providers/AppThemeContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { loadProfilePersonalInfo } from "@/shared/lib/services/profileService";
 import { supabase } from "@/shared/lib/supabase";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,8 +22,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 
 type MenuItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -36,7 +36,7 @@ type PhotoTransform = { x: number; y: number; scale: number };
 const DEFAULT_TRANSFORM: PhotoTransform = { x: 0, y: 0, scale: 1 };
 
 export default function ProfileScreen() {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -305,11 +305,32 @@ export default function ProfileScreen() {
               style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
             >
               <View style={styles.avatarClip}>
-                {profileImage ? (
-                  <Image source={{ uri: profileImage }} resizeMode="cover" style={[styles.avatarImage, { transform: [{ translateX: photoTransform.x * (82 / EDITOR_SIZE) }, { translateY: photoTransform.y * (82 / EDITOR_SIZE) }, { scale: photoTransform.scale }] }]} />
-                ) : (
-                  <Text style={styles.avatarText}>{initials}</Text>
-                )}
+              {profileImage ? (
+  <Image
+    source={{ uri: profileImage }}
+    resizeMode="cover"
+    style={[
+      styles.avatarImage,
+      {
+        transform: [
+          { translateX: photoTransform.x * (82 / EDITOR_SIZE) },
+          { translateY: photoTransform.y * (82 / EDITOR_SIZE) },
+          { scale: photoTransform.scale },
+        ],
+      },
+    ]}
+  />
+) : (
+  <Image
+  source={
+    isDark
+      ? require("../../../assets/images/fitrehber_dark_profil_icon_sn.png")
+      : require("../../../assets/images/fitrehber_light_profil_icon_sn_1.png")
+  }
+  resizeMode="contain"
+  style={styles.defaultAvatarImage}
+/>
+)}
               </View>
               <View style={styles.cameraBadge}>
                 <Ionicons name="camera" size={13} color={colors.onPrimary} />
@@ -594,6 +615,11 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   avatarClip: { width: 82, height: 82, overflow: "hidden", borderRadius: 41, alignItems: "center", justifyContent: "center" },
   avatarText: { color: colors.primary, fontSize: 27, fontWeight: "900" },
   avatarImage: { width: "100%", height: "100%", borderRadius: 41 },
+  defaultAvatarImage: {
+  width: 76,
+  height: 76,
+  borderRadius: 38,
+},
   cameraBadge: {
     position: "absolute", right: -1, bottom: 1, width: 26, height: 26,
     borderRadius: 13, borderWidth: 2, borderColor: colors.background,
