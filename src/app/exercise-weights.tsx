@@ -188,21 +188,17 @@ export default function ExerciseWeightsScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.topBar}>
-              <RoundBackButton onPress={() => router.back()} />
+              <RoundBackButton onPress={() => router.replace("/progress" as never)} />
               <Text style={styles.topTitle}>İlerlemen</Text>
               <View style={styles.headerSpacer} />
             </View>
             <Text style={styles.title}>Hareket Kilolarını Güncelle</Text>
-            <Text style={styles.description}>
-              Programındaki hareketlerde şu an kullandığın çalışma kilosunu doğrudan değiştir.
-            </Text>
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
                 <Ionicons name="barbell-outline" size={25} color={colors.onPrimary} />
               </View>
               <View style={styles.summaryCopy}>
                 <Text style={styles.summaryTitle}>Çalışma kiloların</Text>
-                <Text style={styles.summaryDescription}>Değişiklikler bir sonraki yeni antrenmanına uygulanır.</Text>
               </View>
               <Text style={styles.summaryCount}>{items.length}</Text>
             </View>
@@ -345,12 +341,10 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },
   headerSpacer: { width: 42 },
   title: { marginTop: 34, color: colors.text, fontSize: 31, lineHeight: 38, fontWeight: "900" },
-  description: { marginTop: 8, color: colors.textSecondary, fontSize: 17, lineHeight: 25 },
   summaryCard: { marginTop: 20, minHeight: 120, padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", gap: 14 },
   summaryIcon: { width: 58, height: 58, borderRadius: 18, backgroundColor: colors.primaryBright, alignItems: "center", justifyContent: "center" },
   summaryCopy: { flex: 1 },
   summaryTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
-  summaryDescription: { marginTop: 4, color: colors.textSecondary, fontSize: 12, lineHeight: 18 },
   summaryCount: { color: colors.text, fontSize: 28, fontWeight: "900" },
   filterContent: { paddingTop: 16, gap: 10 },
   filterButton: { minHeight: 48, paddingHorizontal: 22, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },

@@ -1,5 +1,6 @@
 import {
   calculateWorkoutStreaks,
+  countScheduledTrainingDays,
   countScheduledWorkouts,
   filterCompletedWorkoutsByPeriod,
   getLatestCompletedWeights,
@@ -113,6 +114,7 @@ export async function loadProgressDashboard(
     totalCompletedCount: completions.length,
     periodCompletedCount: history.length,
     periodTargetCount: countScheduledWorkouts(programs, period, referenceDate),
+    periodTargetDayCount: countScheduledTrainingDays(programs, period, referenceDate),
     currentStreak,
     longestStreak,
     exerciseWeights: exerciseWeights.filter((item) => item.hasWeightRecord),
