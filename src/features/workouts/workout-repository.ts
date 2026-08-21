@@ -1370,51 +1370,22 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
   async getCompletion(workoutSessionId: string) {
     if (!isValidWorkoutSessionId(workoutSessionId)) return null;
     const userId = await requireUserId();
-    const [completion, session] = await Promise.all([
-      getCompletionBySessionId(userId, workoutSessionId),
-      getSessionForUser(userId, workoutSessionId),
-    ]);
-    if (
-      !session ||
-      !isValidLocalDateKey(session.workoutDate) ||
-      session.status !== "completed" ||
-      session.phase !== "completed"
-    ) {
-      return null;
-    }
-    if (!completion || !isCompletionConsistentWithSession(completion, session)) {
-      return null;
-    }
-    return clone(completion);
+    const completion = await getCompletionBySessionId(userId, workoutSessionId);
+    return completion ? clone(completion) : null;
   }
 
   async listCompletions() {
     const userId = await requireUserId();
-    const [completions, sessions] = await Promise.all([
-      readCompletions(userId),
-      readSessions(userId),
-    ]);
-    const completedSessionsById = new Map(
-      sessions
-        .filter(
-          (session) =>
-            session.userId === userId &&
-            session.status === "completed" &&
-            session.phase === "completed",
-        )
-        .map((session) => [session.id, session]),
-    );
+    const completions = await readCompletions(userId);
+
+    // Tamamlanmış antrenman geçmişinin kalıcı kaynağı Supabase'dir. Yerel
+    // session yalnızca aktif antrenmanı sürdürür; cihaz değişince veya yerel
+    // veri temizlenince sunucudaki geçmişi gizlememelidir.
     const unique = new Map<string, WorkoutCompletion>();
     for (const completion of completions) {
-      const session = completedSessionsById.get(completion.workoutSessionId);
-      if (
-        completion.userId !== userId ||
-        !session ||
-        !isCompletionConsistentWithSession(completion, session)
-      ) {
-        continue;
+      if (completion.userId === userId) {
+        unique.set(completion.workoutSessionId, completion);
       }
-      unique.set(completion.id, completion);
     }
     return [...unique.values()]
       .sort((left, right) => right.completedAt.localeCompare(left.completedAt))

@@ -24,9 +24,13 @@ export type BodyMeasurementRecord = {
 export type BodyProgress = {
   currentWeightKg: number | null;
   targetWeightKg: number | null;
+  targetBodyFatPercentage: number | null;
+  targetMusclePercentage: number | null;
   startingWeightKg: number | null;
   bodyFatPercentage: number | null;
   musclePercentage: number | null;
+  previousBodyFatPercentage: number | null;
+  previousMusclePercentage: number | null;
   updatedAt: string | null;
 };
 
@@ -53,6 +57,7 @@ export type ProgressDashboard = {
   totalCompletedCount: number;
   periodCompletedCount: number;
   periodTargetCount: number;
+  periodTargetDayCount: number;
   currentStreak: number;
   longestStreak: number;
   exerciseWeights: ExerciseWeightItem[];

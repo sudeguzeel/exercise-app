@@ -114,6 +114,27 @@ export function countScheduledWorkouts(
   return count;
 }
 
+export function countScheduledTrainingDays(
+  programs: readonly UserProgram[],
+  period: ProgressPeriod,
+  referenceDate = new Date(),
+) {
+  const bounds = getProgressPeriodBounds(period, referenceDate);
+  let count = 0;
+
+  for (
+    let cursor = new Date(bounds.start);
+    cursor <= bounds.end;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
+    const trainingDay = TRAINING_DAY_BY_INDEX[cursor.getDay()];
+    if (programs.some((program) => program.trainingDays.includes(trainingDay))) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
 function dateFromKey(key: string) {
   const [year, month, day] = key.split("-").map(Number);
   return new Date(year, month - 1, day, 12);
@@ -202,6 +223,18 @@ export function formatDecimal(value: number | null, maximumFractionDigits = 1) {
   return new Intl.NumberFormat("tr-TR", {
     maximumFractionDigits,
   }).format(value);
+}
+
+export function calculatePercentageChange(current: number | null, previous: number | null) {
+  if (current === null || previous === null || !Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+export function formatSignedPercentageChange(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return null;
+  const normalized = Math.abs(value) < 0.05 ? 0 : value;
+  const sign = normalized > 0 ? "+" : normalized < 0 ? "-" : "";
+  return `${sign}%${formatDecimal(Math.abs(normalized))}`;
 }
 
 export function formatWeightKg(value: number | null | undefined) {
@@ -312,4 +345,11 @@ export function parsePositiveWeight(value: string) {
   return Number.isFinite(parsed) && parsed > 0 && parsed <= 500
     ? parsed
     : null;
+}
+
+export function parseBodyRatio(value: string) {
+  const normalized = normalizeDecimalInput(value);
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
 }
