@@ -1,9 +1,9 @@
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
+import { loadAvatar, removeAvatar, saveAvatar } from "@/shared/lib/services/avatarService";
 import { loadProfilePersonalInfo } from "@/shared/lib/services/profileService";
 import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -29,8 +29,6 @@ type MenuItemProps = {
   value?: string;
 };
 
-const PROFILE_IMAGE_STORAGE_KEY = "profile-image-data-uri";
-const PROFILE_IMAGE_TRANSFORM_KEY = "profile-image-transform";
 const EDITOR_SIZE = 280;
 type PhotoTransform = { x: number; y: number; scale: number };
 const DEFAULT_TRANSFORM: PhotoTransform = { x: 0, y: 0, scale: 1 };
@@ -50,20 +48,20 @@ export default function ProfileScreen() {
   const dragOrigin = useRef({ x: 0, y: 0 });
   const pinchOrigin = useRef({ distance: 0, scale: 1 });
   const [signingOut, setSigningOut] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     let active = true;
     void Promise.all([
       supabase.auth.getUser(),
       loadProfilePersonalInfo(),
-      AsyncStorage.getItem(PROFILE_IMAGE_STORAGE_KEY),
-      AsyncStorage.getItem(PROFILE_IMAGE_TRANSFORM_KEY),
+      loadAvatar(),
     ]).then(
-      ([{ data }, profileResult, storedImage, storedTransform]) => {
+      ([{ data }, profileResult, avatar]) => {
         if (!active) return;
         setEmail(data.user?.email ?? "");
-        setProfileImage(storedImage);
-        if (storedTransform) setPhotoTransform(JSON.parse(storedTransform));
+        setProfileImage(avatar.url);
+        if (avatar.transform) setPhotoTransform(avatar.transform);
         if (profileResult.success) {
           setFullName(profileResult.personalInfo.fullName);
         }
@@ -235,14 +233,18 @@ export default function ProfileScreen() {
   };
 
   const applyProfileImage = async () => {
-    if (!editorImage) return;
-    setProfileImage(editorImage);
-    setPhotoTransform(editorTransform);
-    setEditorImage(null);
-    await Promise.all([
-      AsyncStorage.setItem(PROFILE_IMAGE_STORAGE_KEY, editorImage),
-      AsyncStorage.setItem(PROFILE_IMAGE_TRANSFORM_KEY, JSON.stringify(editorTransform)),
-    ]);
+    if (!editorImage || uploadingPhoto) return;
+    setUploadingPhoto(true);
+    try {
+      const url = await saveAvatar(editorImage, editorTransform);
+      setProfileImage(url);
+      setPhotoTransform(editorTransform);
+      setEditorImage(null);
+    } catch {
+      Alert.alert("Fotoğraf kaydedilemedi", "Lütfen tekrar deneyin.");
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const removeProfileImage = () => {
@@ -251,10 +253,14 @@ export default function ProfileScreen() {
   };
 
   const confirmRemoveProfileImage = async () => {
-    setProfileImage(null);
-    setPhotoTransform(DEFAULT_TRANSFORM);
     setRemoveConfirmVisible(false);
-    await AsyncStorage.multiRemove([PROFILE_IMAGE_STORAGE_KEY, PROFILE_IMAGE_TRANSFORM_KEY]);
+    try {
+      await removeAvatar();
+      setProfileImage(null);
+      setPhotoTransform(DEFAULT_TRANSFORM);
+    } catch {
+      Alert.alert("Fotoğraf kaldırılamadı", "Lütfen tekrar deneyin.");
+    }
   };
 
   const panResponder = useMemo(() => PanResponder.create({
@@ -495,7 +501,9 @@ export default function ProfileScreen() {
               {editorImage ? <Image source={{ uri: editorImage }} resizeMode="cover" style={[styles.cropImage, { transform: [{ translateX: editorTransform.x }, { translateY: editorTransform.y }, { scale: editorTransform.scale }] }]} /> : null}
             </View>
           </View>
-          <Pressable onPress={() => void applyProfileImage()} style={styles.applyButton}><Text style={styles.applyText}>Uygula</Text></Pressable>
+          <Pressable disabled={uploadingPhoto} onPress={() => void applyProfileImage()} style={styles.applyButton}>
+            {uploadingPhoto ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.applyText}>Uygula</Text>}
+          </Pressable>
         </SafeAreaView>
       </Modal>
     </SafeAreaView>
