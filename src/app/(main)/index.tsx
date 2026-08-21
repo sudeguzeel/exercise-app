@@ -2,10 +2,7 @@ import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashbo
 import { toDateKey } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { RandomMascot } from "@/shared/components/random-mascot";
-import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
-import { HOME_MASCOTS } from "@/shared/constants/mascot-assets";
-import { getHomeMascotMessage } from "@/shared/lib/mascot-messages";
+import { RaccoonMascot } from "@/shared/components/raccoon-mascot";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -119,14 +116,6 @@ export default function HomeScreen() {
     (day) => day.id === selectedDay,
   );
   const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
-  const homeMascotMessage = dashboard
-    ? getHomeMascotMessage({
-        isRestDay: dashboard.isRestDay,
-        todayExerciseStatuses: dashboard.todayProgram.map((item) => item.status),
-        weeklyTotal: dashboard.weeklyTotal,
-        streakDays: dashboard.streakDays,
-      })
-    : "";
 
   if (loadState === "loading" && !dashboard && !isRetrying) {
     return (
@@ -211,18 +200,10 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.summaryValue}>{dashboard.weeklyTotal}</Text>
           </View>
-          <View pointerEvents="none" style={styles.summaryMascotSlot}>
-            <RandomMascot
-              accessibilityLabel="FitRehber tavşan maskotu"
-              sources={HOME_MASCOTS}
-              style={styles.summaryMascot}
-            />
-          </View>
-          <MascotSpeechBubble
-            compact
-            message={homeMascotMessage}
-            tailDirection="bottom-left"
-            style={styles.summarySpeechBubble}
+          <RaccoonMascot
+            size={isCompactWidth ? 126 : 150}
+            streak={dashboard.streakDays}
+            style={styles.summaryMascot}
           />
           <View style={styles.streakBadge}>
             <Text style={styles.streakText}>
@@ -569,35 +550,17 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
   summaryLeafOne: { left: "43%", top: 34, transform: [{ rotate: "-24deg" }] },
   summaryLeafTwo: { left: "57%", top: 55, transform: [{ rotate: "18deg" }] },
   summaryLeafThree: { right: "30%", top: 27, transform: [{ rotate: "-12deg" }] },
-  summaryMascotSlot: {
-    position: "absolute",
-    top: 4,
-    bottom: 3,
-    left: "34%",
-    width: "34%",
-    maxWidth: 150,
-    alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  summaryMascot: {
-    width: "100%",
-    height: "100%",
-  },
-  summarySpeechBubble: {
-    position: "absolute",
-    left: isCompactWidth ? undefined : "43%",
-    right: isCompactWidth ? 8 : undefined,
-    top: isCompactWidth ? 10 : 8,
-    width: isCompactWidth ? 142 : 166,
-    maxWidth: isCompactWidth ? 142 : 166,
-    zIndex: 3,
-  },
   summaryContent: {
     flex: 1,
     minWidth: 0,
     maxWidth: "42%",
     alignSelf: "flex-start",
     zIndex: 2,
+  },
+  summaryMascot: {
+    position: "absolute",
+    right: isCompactWidth ? 2 : 14,
+    top: isCompactWidth ? 5 : 0,
   },
   summaryLabel: {
     flexShrink: 1,

@@ -22,10 +22,6 @@ import type {
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { RandomMascot } from "@/shared/components/random-mascot";
-import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
-import { PROGRESS_MASCOTS } from "@/shared/constants/mascot-assets";
-import { getProgressMascotMessage } from "@/shared/lib/mascot-messages";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -215,7 +211,6 @@ export default function ProgressScreen() {
   }
 
   const body = dashboard.bodyProgress;
-  const progressMascotMessage = getProgressMascotMessage(body);
   const difference =
     body.currentWeightKg !== null && body.targetWeightKg !== null
       ? body.currentWeightKg - body.targetWeightKg
@@ -329,19 +324,6 @@ export default function ProgressScreen() {
               <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
             </View>
           </View>
-          <View pointerEvents="none" style={styles.bodyMascotSlot}>
-            <RandomMascot
-              accessibilityLabel="Vücut ilerleme tavşan maskotu"
-              sources={PROGRESS_MASCOTS}
-              style={styles.bodyMascot}
-            />
-          </View>
-          <MascotSpeechBubble
-            compact
-            message={progressMascotMessage}
-            tailDirection="bottom-right"
-            style={styles.bodySpeechBubble}
-          />
         </View>
 
         <View style={styles.measurementSection}>
@@ -555,13 +537,6 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   targetButtonText: { color: colors.primary, fontSize: 11, fontWeight: "900" },
   bodySummary: { marginTop: 16, paddingHorizontal: 14, paddingVertical: 13, paddingRight: 7, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", overflow: "hidden" },
   bodySummaryContent: { flex: 1, minWidth: 0, paddingRight: isCompactWidth ? 0 : 5, zIndex: 1 },
-  bodyMascotSlot: isCompactWidth
-    ? { position: "absolute", right: 7, bottom: 5, width: 60, opacity: 0.22, alignItems: "center", justifyContent: "center" }
-    : { width: 68, alignItems: "center", justifyContent: "center" },
-  bodyMascot: { width: "100%", aspectRatio: 1 },
-  bodySpeechBubble: isCompactWidth
-    ? { position: "absolute", right: 86, top: 5, width: 120, maxWidth: 120, zIndex: 2 }
-    : { position: "absolute", right: 50, top: 14, width: 145, maxWidth: 145, zIndex: 2 },
   bodyEyebrow: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
   currentWeightRow: { marginTop: 6, flexDirection: "row", alignItems: "flex-end" },
   currentWeight: { color: colors.text, fontSize: 34, fontWeight: "900" },
