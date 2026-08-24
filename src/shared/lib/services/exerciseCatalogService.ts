@@ -18,6 +18,10 @@ export type BodyPartOption = {
   name: string;
   icon: IconName;
 };
+export type ExerciseFilterOption = {
+  id: string;
+  name: string;
+};
 
 // exercises.image / exercises.gif_url artık Supabase Storage'daki
 // "exercise-media" bucket'ının tam public URL'ini tutuyor (bkz.
@@ -110,9 +114,27 @@ export async function getBodyParts(): Promise<BodyPartOption[]> {
     .sort((a, b) => a.name.localeCompare(b.name, "tr-TR"));
 }
 
+export async function getEquipments(): Promise<ExerciseFilterOption[]> {
+  const { data, error } = await supabase
+    .from("equipments")
+    .select("id, name");
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data
+    .map((row) => ({
+      id: row.id as string,
+      name: translateEquipment(row.name as string) ?? (row.name as string),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "tr-TR"));
+}
+
 export type SearchExercisesParams = {
   search?: string;
   bodyPartId?: string | null;
+  equipmentId?: string | null;
   offset: number;
   limit?: number;
 };
@@ -139,6 +161,7 @@ type ExerciseListRow = {
 export async function searchExercises({
   search,
   bodyPartId,
+  equipmentId,
   offset,
   limit = EXERCISE_PAGE_SIZE,
 }: SearchExercisesParams): Promise<SearchExercisesResult> {
@@ -163,6 +186,9 @@ export async function searchExercises({
     query = query.eq("body_part_id", bodyPartId);
   }
 
+if (equipmentId) {
+  query = query.eq("equipment_id", equipmentId);
+}
   const { data, error, count } = await query;
 
   if (error || !data) {
