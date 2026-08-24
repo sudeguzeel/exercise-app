@@ -10,6 +10,7 @@ import * as AuthSession from 'expo-auth-session';
 import { router } from "expo-router";
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -27,6 +28,7 @@ import {
 export default function LoginScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
@@ -79,7 +81,7 @@ export default function LoginScreen() {
 
         const { data: sessionData } = await supabase.auth.getSession();
         if (!sessionData.session) {
-          throw new Error("Oturum oluşturulamadı.");
+          throw new Error(t("login.sessionNotCreated"));
         }
 
         if (cancelled) return;
@@ -117,15 +119,15 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setEmailError("E-posta alanı boş bırakılamaz.");
+      setEmailError(t("login.emailRequired"));
       isValid = false;
     } else if (!isValidEmail(trimmedEmail)) {
-      setEmailError("Geçerli bir e-posta adresi gir.");
+      setEmailError(t("login.emailInvalid"));
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError("Şifre alanı boş bırakılamaz.");
+      setPasswordError(t("login.passwordRequired"));
       isValid = false;
     }
 
@@ -153,16 +155,16 @@ export default function LoginScreen() {
 
       if (error) {
         if (error.code === "invalid_credentials") {
-          setAuthError("E-posta veya şifre hatalı.");
+          setAuthError(t("login.invalidCredentials"));
         } else if (error.name === "AuthRetryableFetchError") {
           Alert.alert(
-            "Bağlantı hatası",
-            "İnternet bağlantını kontrol edip tekrar dene.",
+            t("login.connectionErrorTitle"),
+            t("login.connectionErrorMessage"),
           );
         } else {
           Alert.alert(
-            "Giriş yapılamadı",
-            "Şu anda giriş yapılamıyor. Lütfen daha sonra tekrar dene.",
+            t("login.loginFailedTitle"),
+            t("login.loginFailedMessage"),
           );
         }
         return;
@@ -170,8 +172,8 @@ export default function LoginScreen() {
 
       if (!data.session) {
         Alert.alert(
-          "Giriş yapılamadı",
-          "Şu anda giriş yapılamıyor. Lütfen daha sonra tekrar dene.",
+          t("login.loginFailedTitle"),
+          t("login.loginFailedMessage"),
         );
         return;
       }
@@ -183,7 +185,7 @@ export default function LoginScreen() {
         onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
       );
     } catch {
-      Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
+      Alert.alert(t("login.genericErrorTitle"), t("login.genericErrorMessage"));
     } finally {
       setLoading(false);
     }
@@ -253,7 +255,7 @@ const handleGoogleLogin = async () => {
         const refreshToken = parameters.get('refresh_token');
 
         if (!accessToken || !refreshToken) {
-          throw new Error('Google girişinden geçerli bir oturum bilgisi alınamadı.');
+          throw new Error(t('login.googleSessionMissing'));
         }
 
         const { error: sessionError } = await supabase.auth.setSession({
@@ -266,7 +268,7 @@ const handleGoogleLogin = async () => {
         const { data: sessionData } = await supabase.auth.getSession();
 
         if (!sessionData.session) {
-          throw new Error('Oturum oluşturulamadı.');
+          throw new Error(t('login.sessionNotCreated'));
         }
 
         const onboardingCompleted =
@@ -276,7 +278,7 @@ const handleGoogleLogin = async () => {
       }
     }
   } catch (error: any) {
-    Alert.alert('Google Giriş Hatası', error.message);
+    Alert.alert(t('login.googleErrorTitle'), error.message);
   } finally {
     setLoading(false);
   }
@@ -298,8 +300,8 @@ const handleGoogleLogin = async () => {
       // Kullanıcı Apple onay ekranını kendisi kapattıysa hata gösterme.
       if (error?.code === "ERR_REQUEST_CANCELED") return;
       Alert.alert(
-        "Apple Giriş Hatası",
-        error?.message ?? "Giriş tamamlanamadı.",
+        t("login.appleErrorTitle"),
+        error?.message ?? t("login.appleErrorMessage"),
       );
     } finally {
       setLoading(false);
@@ -322,13 +324,13 @@ const handleGoogleLogin = async () => {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.container}>
-            <Text style={styles.title}>Hoş geldin</Text>
+            <Text style={styles.title}>{t("login.title")}</Text>
 
             <Text style={styles.subtitle}>
-              Programına devam etmek için giriş yap.
+              {t("login.subtitle")}
             </Text>
 
-            <Text style={styles.label}>E-POSTA</Text>
+            <Text style={styles.label}>{t("login.emailLabel")}</Text>
 
             <View
               style={[
@@ -348,7 +350,7 @@ const handleGoogleLogin = async () => {
                     setEmailError("");
                   }
                 }}
-                placeholder="ornek@eposta.com"
+                placeholder={t("login.emailPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -363,7 +365,7 @@ const handleGoogleLogin = async () => {
               <Text style={styles.errorText}>{emailError}</Text>
             ) : null}
 
-            <Text style={styles.label}>ŞİFRE</Text>
+            <Text style={styles.label}>{t("login.passwordLabel")}</Text>
 
             <View
               style={[
@@ -383,7 +385,7 @@ const handleGoogleLogin = async () => {
                     setPasswordError("");
                   }
                 }}
-                placeholder="••••••••"
+                placeholder={t("login.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
@@ -413,7 +415,7 @@ const handleGoogleLogin = async () => {
               onPress={() => router.push("/forgot-password")}
               style={styles.forgotPasswordButton}
             >
-              <Text style={styles.forgotPasswordText}>Şifremi unuttum</Text>
+              <Text style={styles.forgotPasswordText}>{t("login.forgotPassword")}</Text>
             </Pressable>
 
             <Pressable
@@ -428,13 +430,13 @@ const handleGoogleLogin = async () => {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.loginButtonText}>Giriş yap</Text>
+                <Text style={styles.loginButtonText}>{t("login.submit")}</Text>
               )}
             </Pressable>
 
             <View style={styles.dividerContainer}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>VEYA</Text>
+              <Text style={styles.dividerText}>{t("login.divider")}</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -448,7 +450,7 @@ const handleGoogleLogin = async () => {
                 ]}
               >
                 <Text style={styles.googleLetter}>G</Text>
-                <Text style={styles.socialButtonText}>Google</Text>
+                <Text style={styles.socialButtonText}>{t("login.google")}</Text>
               </Pressable>
 
               {appleAvailable ? (
@@ -461,16 +463,16 @@ const handleGoogleLogin = async () => {
                   ]}
                 >
                   <Ionicons name="logo-apple" size={19} color={colors.text} />
-                  <Text style={styles.socialButtonText}>Apple</Text>
+                  <Text style={styles.socialButtonText}>{t("login.apple")}</Text>
                 </Pressable>
               ) : null}
             </View>
 
             <View style={styles.registerRow}>
-              <Text style={styles.registerQuestion}>Hesabın yok mu? </Text>
+              <Text style={styles.registerQuestion}>{t("login.noAccount")}</Text>
 
               <Pressable disabled={loading} onPress={handleRegister}>
-                <Text style={styles.registerLink}>Kayıt ol</Text>
+                <Text style={styles.registerLink}>{t("login.register")}</Text>
               </Pressable>
             </View>
           </View>

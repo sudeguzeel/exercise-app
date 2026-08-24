@@ -12,6 +12,7 @@ import {
   AppThemeProvider,
   useAppTheme,
 } from "@/providers/AppThemeContext";
+import { LanguageProvider, useLanguage } from "@/providers/LanguageContext";
 import { OnboardingProvider } from "@/providers/OnboardingContext";
 import { FavoritesProvider } from "@/providers/FavoritesContext";
 
@@ -19,14 +20,18 @@ void NativeSplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   return (
-    <AppThemeProvider>
-      <RootNavigator />
-    </AppThemeProvider>
+    <LanguageProvider>
+      <AppThemeProvider>
+        <RootNavigator />
+      </AppThemeProvider>
+    </LanguageProvider>
   );
 }
 
 function RootNavigator() {
-  const { colors, isDark, isHydrated } = useAppTheme();
+  const { colors, isDark, isHydrated: isThemeHydrated } = useAppTheme();
+  const { isHydrated: isLanguageHydrated } = useLanguage();
+  const isHydrated = isThemeHydrated && isLanguageHydrated;
   const navigationTheme = useMemo(
     () => ({
       ...DefaultTheme,
