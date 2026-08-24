@@ -201,7 +201,7 @@ export default function HomeScreen() {
             <Text style={styles.summaryValue}>{dashboard.weeklyTotal}</Text>
           </View>
           <RaccoonMascot
-            size={isCompactWidth ? 126 : 150}
+            size={isCompactWidth ? 142 : 168}
             streak={dashboard.streakDays}
             style={styles.summaryMascot}
           />
@@ -559,8 +559,8 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
   },
   summaryMascot: {
     position: "absolute",
-    right: isCompactWidth ? 2 : 14,
-    top: isCompactWidth ? 5 : 0,
+    right: isCompactWidth ? -4 : 6,
+    top: isCompactWidth ? -1 : -8,
   },
   summaryLabel: {
     flexShrink: 1,

@@ -12,20 +12,14 @@ const SLEEPY_FRAMES = [
   require("../../../assets/images/mascots/raccoon/sleepy/sleepy-06.png"),
 ] as const;
 
-const TIRED_DAY_FRAME_SETS = {
-  1: [
-    require("../../../assets/images/mascots/raccoon/tired/tired-01.png"),
-    require("../../../assets/images/mascots/raccoon/tired/tired-day-01-mouth-closed.png"),
-  ],
-  2: [
-    require("../../../assets/images/mascots/raccoon/tired/tired-day-02.png"),
-    require("../../../assets/images/mascots/raccoon/tired/tired-day-02-mouth-closed.png"),
-  ],
-  3: [
-    require("../../../assets/images/mascots/raccoon/tired/tired-day-03-mouth-open.png"),
-    require("../../../assets/images/mascots/raccoon/tired/tired-day-03.png"),
-  ],
-} as const;
+const TIRED_FRAMES = [
+  require("../../../assets/images/mascots/raccoon/tired/tired-01.png"),
+  require("../../../assets/images/mascots/raccoon/tired/tired-02.png"),
+  require("../../../assets/images/mascots/raccoon/tired/tired-03.png"),
+  require("../../../assets/images/mascots/raccoon/tired/tired-04.png"),
+  require("../../../assets/images/mascots/raccoon/tired/tired-05.png"),
+  require("../../../assets/images/mascots/raccoon/tired/tired-06.png"),
+] as const;
 
 const GETTING_USED_FRAMES = [
   require("../../../assets/images/mascots/raccoon/getting-used/getting-used-01.png"),
@@ -33,7 +27,7 @@ const GETTING_USED_FRAMES = [
 
 const FRAME_SETS = {
   sleepy: SLEEPY_FRAMES,
-  tired: TIRED_DAY_FRAME_SETS[1],
+  tired: TIRED_FRAMES,
   getting_used: GETTING_USED_FRAMES,
 } as const;
 
@@ -78,16 +72,6 @@ function getActiveAnimationState(mood: RaccoonMood): ActiveAnimationState {
   return "tired";
 }
 
-function getTiredDay(streak: number): 1 | 2 | 3 {
-  const safeStreak = Number.isFinite(streak)
-    ? Math.max(1, Math.floor(streak))
-    : 1;
-
-  if (safeStreak === 1) return 1;
-  if (safeStreak === 2) return 2;
-  return 3;
-}
-
 function selectAnimationState(
   previousMood: RaccoonMood,
   mood: RaccoonMood,
@@ -109,10 +93,7 @@ export function RaccoonMascot({
     () => getActiveAnimationState(mood),
   );
   const [frameIndex, setFrameIndex] = useState(0);
-  const frames =
-    animationState === "tired"
-      ? TIRED_DAY_FRAME_SETS[getTiredDay(streak)]
-      : FRAME_SETS[animationState];
+  const frames = FRAME_SETS[animationState];
 
   useEffect(() => {
     setAnimationState(selectAnimationState(previousMoodRef.current, mood));
