@@ -9,8 +9,15 @@ import {
   saveProfilePersonalInfo,
 } from "@/shared/lib/services/profileService";
 import { supabase } from "@/shared/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const weightUpdateLocks = new Set<string>();
+const BODY_TARGETS_KEY_PREFIX = "progress:body-targets:";
+
+type StoredBodyTargets = {
+  bodyFatPercentage: number | null;
+  musclePercentage: number | null;
+};
 
 async function requireUserId() {
   const {
@@ -175,20 +182,39 @@ function parseOptionalNumber(value: string) {
 }
 
 export async function loadBodyProgress(): Promise<BodyProgress> {
-  const [profileResult, measurements] = await Promise.all([
+  const userId = await requireUserId();
+  const [profileResult, measurements, storedTargets] = await Promise.all([
     loadProfilePersonalInfo(),
     readBodyMeasurements(),
+    AsyncStorage.getItem(`${BODY_TARGETS_KEY_PREFIX}${userId}`),
   ]);
   const latest = measurements.at(-1) ?? null;
+  const previous = measurements.at(-2) ?? null;
   const profile = profileResult.success ? profileResult.personalInfo : null;
   const profileWeight = profile ? parseOptionalNumber(profile.currentWeight) : null;
+  let targets: StoredBodyTargets = { bodyFatPercentage: null, musclePercentage: null };
+  if (storedTargets) {
+    try {
+      const parsed = JSON.parse(storedTargets) as Partial<StoredBodyTargets>;
+      targets = {
+        bodyFatPercentage: typeof parsed.bodyFatPercentage === "number" ? parsed.bodyFatPercentage : null,
+        musclePercentage: typeof parsed.musclePercentage === "number" ? parsed.musclePercentage : null,
+      };
+    } catch {
+      // Bozuk/eski yerel hedef verisi ekranın açılmasını engellemez.
+    }
+  }
 
   return {
     currentWeightKg: latest?.weightKg ?? profileWeight,
     targetWeightKg: profile ? parseOptionalNumber(profile.targetWeight) : null,
+    targetBodyFatPercentage: targets.bodyFatPercentage,
+    targetMusclePercentage: targets.musclePercentage,
     startingWeightKg: measurements[0]?.weightKg ?? profileWeight,
     bodyFatPercentage: latest?.bodyFatPercentage ?? null,
     musclePercentage: latest?.musclePercentage ?? null,
+    previousBodyFatPercentage: previous?.bodyFatPercentage ?? null,
+    previousMusclePercentage: previous?.musclePercentage ?? null,
     updatedAt: latest?.recordedAt ?? null,
   };
 }
@@ -241,4 +267,40 @@ export async function saveTargetWeight(targetWeightKg: number) {
     targetWeight: String(targetWeightKg),
   });
   if (!saveResult.success) throw new Error(saveResult.message);
+}
+
+export async function saveBodyTargets(input: {
+  targetWeightKg?: number;
+  bodyFatPercentage?: number;
+  musclePercentage?: number;
+}) {
+  if (
+    (input.bodyFatPercentage !== undefined &&
+      (!Number.isFinite(input.bodyFatPercentage) || input.bodyFatPercentage < 0 || input.bodyFatPercentage > 100)) ||
+    (input.musclePercentage !== undefined &&
+      (!Number.isFinite(input.musclePercentage) || input.musclePercentage < 0 || input.musclePercentage > 100))
+  ) {
+    throw new Error("Yağ ve kas hedefleri 0 ile 100 arasında olmalıdır.");
+  }
+  if (input.targetWeightKg !== undefined) {
+    await saveTargetWeight(input.targetWeightKg);
+  }
+  const userId = await requireUserId();
+  const storageKey = `${BODY_TARGETS_KEY_PREFIX}${userId}`;
+  let existing: StoredBodyTargets = { bodyFatPercentage: null, musclePercentage: null };
+  const storedTargets = await AsyncStorage.getItem(storageKey);
+  if (storedTargets) {
+    try {
+      existing = { ...existing, ...(JSON.parse(storedTargets) as Partial<StoredBodyTargets>) };
+    } catch {
+      // Bozuk hedef verisinin üzerine geçerli değerler güvenle yazılır.
+    }
+  }
+  await AsyncStorage.setItem(
+    storageKey,
+    JSON.stringify({
+      bodyFatPercentage: input.bodyFatPercentage ?? existing.bodyFatPercentage,
+      musclePercentage: input.musclePercentage ?? existing.musclePercentage,
+    } satisfies StoredBodyTargets),
+  );
 }

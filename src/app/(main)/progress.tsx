@@ -7,13 +7,17 @@ import {
   WeightSummaryRow,
 } from "@/features/progress/components/progress-components";
 import {
+  calculatePercentageChange,
+  calculateWorkoutStreaks,
   formatDecimal,
+  formatSignedPercentageChange,
+  parseBodyRatio,
   parsePositiveWeight,
   validateBodyMeasurement,
 } from "@/features/progress/progress-domain";
 import {
   saveBodyMeasurement,
-  saveTargetWeight,
+  saveBodyTargets,
 } from "@/features/progress/progress-storage";
 import { loadProgressDashboard } from "@/features/progress/progress-service";
 import type {
@@ -22,10 +26,6 @@ import type {
 } from "@/features/progress/types";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { RandomMascot } from "@/shared/components/random-mascot";
-import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
-import { PROGRESS_MASCOTS } from "@/shared/constants/mascot-assets";
-import { getProgressMascotMessage } from "@/shared/lib/mascot-messages";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,11 +54,25 @@ type MeasurementFields = {
   muscle: string;
 };
 
+type TargetField = "all" | "weight" | "bodyFat" | "muscle";
+
 const EMPTY_MEASUREMENT: MeasurementFields = {
   weight: "",
   bodyFat: "",
   muscle: "",
 };
+
+const STEP_DAY_LABELS = ["P", "S", "Ç", "P", "C", "C", "P"];
+const STEP_DAY_NAMES = [
+  "Pazartesi",
+  "Salı",
+  "Çarşamba",
+  "Perşembe",
+  "Cuma",
+  "Cumartesi",
+  "Pazar",
+];
+const STEP_CHART_VALUES = [4820, 6350, 5210, 6842, 7480, 5930, 6910];
 
 export default function ProgressScreen() {
   const { colors } = useAppTheme();
@@ -81,7 +95,10 @@ export default function ProgressScreen() {
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [savingMeasurement, setSavingMeasurement] = useState(false);
   const [targetModalVisible, setTargetModalVisible] = useState(false);
+  const [targetField, setTargetField] = useState<TargetField>("weight");
   const [targetWeight, setTargetWeight] = useState("");
+  const [targetBodyFat, setTargetBodyFat] = useState("");
+  const [targetMuscle, setTargetMuscle] = useState("");
   const [targetError, setTargetError] = useState<string | null>(null);
   const [savingTarget, setSavingTarget] = useState(false);
 
@@ -134,12 +151,25 @@ export default function ProgressScreen() {
     router.push("/exercise-weights" as never);
   }, []);
 
-  const openTargetModal = useCallback(() => {
+  const openTargetModal = useCallback((field: TargetField) => {
+    setTargetField(field);
     setTargetWeight(
       dashboard?.bodyProgress.targetWeightKg === null ||
         dashboard?.bodyProgress.targetWeightKg === undefined
         ? ""
         : String(dashboard.bodyProgress.targetWeightKg),
+    );
+    setTargetBodyFat(
+      dashboard?.bodyProgress.targetBodyFatPercentage === null ||
+        dashboard?.bodyProgress.targetBodyFatPercentage === undefined
+        ? ""
+        : String(dashboard.bodyProgress.targetBodyFatPercentage),
+    );
+    setTargetMuscle(
+      dashboard?.bodyProgress.targetMusclePercentage === null ||
+        dashboard?.bodyProgress.targetMusclePercentage === undefined
+        ? ""
+        : String(dashboard.bodyProgress.targetMusclePercentage),
     );
     setTargetError(null);
     setTargetModalVisible(true);
@@ -147,15 +177,38 @@ export default function ProgressScreen() {
 
   const submitTarget = useCallback(async () => {
     if (savingTarget) return;
-    const parsed = parsePositiveWeight(targetWeight);
-    if (parsed === null) {
-      setTargetError("0 ile 500 kg arasında geçerli bir hedef girin.");
+    const parsedWeight = parsePositiveWeight(targetWeight);
+    const parsedBodyFat = parseBodyRatio(targetBodyFat);
+    const parsedMuscle = parseBodyRatio(targetMuscle);
+    if (
+      ((targetField === "all" || targetField === "weight") && parsedWeight === null) ||
+      ((targetField === "all" || targetField === "bodyFat") && parsedBodyFat === null) ||
+      ((targetField === "all" || targetField === "muscle") && parsedMuscle === null)
+    ) {
+      setTargetError(
+        targetField === "all"
+          ? "Kilo 0–500; yağ ve kas hedefleri 0–100 arasında olmalıdır."
+          : targetField === "weight"
+          ? "Kilo hedefi 0–500 arasında olmalıdır."
+          : targetField === "bodyFat"
+            ? "Yağ hedefi 0–100 arasında olmalıdır."
+            : targetField === "muscle"
+              ? "Kas hedefi 0–100 arasında olmalıdır."
+              : "Geçerli bir hedef girin.",
+      );
       return;
     }
     setSavingTarget(true);
     setTargetError(null);
     try {
-      await saveTargetWeight(parsed);
+      await saveBodyTargets({
+        targetWeightKg:
+          targetField === "all" || targetField === "weight" ? parsedWeight! : undefined,
+        bodyFatPercentage:
+          targetField === "all" || targetField === "bodyFat" ? parsedBodyFat! : undefined,
+        musclePercentage:
+          targetField === "all" || targetField === "muscle" ? parsedMuscle! : undefined,
+      });
       setTargetModalVisible(false);
       await load(true);
     } catch (error) {
@@ -165,7 +218,7 @@ export default function ProgressScreen() {
     } finally {
       setSavingTarget(false);
     }
-  }, [load, savingTarget, targetWeight]);
+  }, [load, savingTarget, targetBodyFat, targetField, targetMuscle, targetWeight]);
 
   const submitMeasurement = useCallback(async () => {
     if (savingMeasurement) return;
@@ -215,15 +268,28 @@ export default function ProgressScreen() {
   }
 
   const body = dashboard.bodyProgress;
-  const progressMascotMessage = getProgressMascotMessage(body);
-  const difference =
-    body.currentWeightKg !== null && body.targetWeightKg !== null
-      ? body.currentWeightKg - body.targetWeightKg
-      : null;
-  const remaining = Math.max(
-    0,
-    dashboard.periodTargetCount - dashboard.periodCompletedCount,
+  const bodyFatChange = formatSignedPercentageChange(
+    calculatePercentageChange(body.bodyFatPercentage, body.previousBodyFatPercentage),
   );
+  const muscleChange = formatSignedPercentageChange(
+    calculatePercentageChange(body.musclePercentage, body.previousMusclePercentage),
+  );
+  const activeDayCount = new Set(
+    dashboard.history.map((completion) => completion.completedDate),
+  ).size;
+  const remainingActiveDays = Math.max(
+    0,
+    dashboard.periodTargetDayCount - activeDayCount,
+  );
+  const activeMonthCount = new Set(
+    dashboard.history.map((completion) => completion.completedDate.slice(0, 7)),
+  ).size;
+  const periodLongestStreak = calculateWorkoutStreaks(
+    dashboard.history,
+  ).longestStreak;
+  const elapsedWeekCount = Math.max(1, Math.ceil(new Date().getDate() / 7));
+  const monthlyWeeklyAverage =
+    dashboard.periodCompletedCount / elapsedWeekCount;
 
   const header = (
     <View style={styles.headerContent}>
@@ -232,28 +298,61 @@ export default function ProgressScreen() {
 
       <View style={styles.statsRow}>
         <StatCard
-          detail={`+${dashboard.periodCompletedCount} bu dönem`}
-          label="TOPLAM"
-          value={String(dashboard.totalCompletedCount)}
-        />
-        <StatCard
           detail={
-            dashboard.periodTargetCount === 0
-              ? "hedef bulunmuyor"
-              : remaining > 0
-                ? `hedefe ${remaining} kaldı`
-                : "hedef tamamlandı"
+            period === "week"
+              ? "bu hafta"
+              : period === "month"
+                ? "bu ay"
+                : "bu yıl"
           }
-          label={dashboard.periodLabel}
-          value={
-            dashboard.periodTargetCount > 0
-              ? `${dashboard.periodCompletedCount}/${dashboard.periodTargetCount}`
-              : String(dashboard.periodCompletedCount)
-          }
+          label="ANTRENMAN"
+          value={String(dashboard.periodCompletedCount)}
         />
-        <StatCard label="SERİ" value={`${dashboard.currentStreak}g`} />
+        {period === "year" ? (
+          <StatCard
+            detail="12 ay içinde"
+            label="AKTİF AY"
+            value={`${activeMonthCount}/12`}
+          />
+        ) : (
+          <StatCard
+            detail={
+              period === "week" && dashboard.periodTargetDayCount > 0
+                ? remainingActiveDays > 0
+                  ? `hedefe ${remainingActiveDays} gün kaldı`
+                  : "hedef tamamlandı"
+                : period === "week"
+                  ? "bu hafta"
+                  : "bu ay"
+            }
+            label="AKTİF GÜN"
+            value={`${activeDayCount} gün`}
+          />
+        )}
+        {period === "week" ? (
+          <StatCard
+            detail={dashboard.currentStreak > 0 ? "Seriyi koru" : "Bugün başlat"}
+            highlight
+            label="SERİ"
+            value={`${dashboard.currentStreak} gün`}
+          />
+        ) : period === "month" ? (
+          <StatCard
+            detail="antrenman / hafta"
+            label="HAFTALIK ORT."
+            value={formatDecimal(monthlyWeeklyAverage)}
+          />
+        ) : (
+          <StatCard
+            detail="bu yıl"
+            highlight
+            label="EN UZUN SERİ"
+            value={`${periodLongestStreak} gün`}
+          />
+        )}
       </View>
 
+      <View style={styles.progressCards}>
       <View style={styles.card}>
         <Pressable
           accessibilityRole="button"
@@ -262,9 +361,6 @@ export default function ProgressScreen() {
         >
           <View style={styles.cardHeaderCopy}>
             <Text style={styles.cardTitle}>Hareket Ağırlıkların</Text>
-            <Text style={styles.cardDescription}>
-              Programındaki hareketlerde kullandığın güncel çalışma kiloları.
-            </Text>
           </View>
           <View style={styles.arrowButton}>
             <Ionicons name="chevron-forward" size={18} color={colors.text} />
@@ -287,7 +383,6 @@ export default function ProgressScreen() {
         ) : (
           <>
             <EmptyContent
-              description="Hareketlerini açıp ilk çalışma kilonu kaydedebilirsin."
               icon="barbell-outline"
               title="Henüz çalışma kilosu yok"
             />
@@ -298,55 +393,53 @@ export default function ProgressScreen() {
         )}
       </View>
 
+      {period === "week" ? <StepsChartCard /> : null}
+
       <View style={styles.card}>
         <View style={styles.bodyHeader}>
           <View style={styles.cardHeaderCopy}>
             <Text style={styles.cardTitle}>Vücut İlerlemen</Text>
-            <Text style={styles.cardDescription}>Güncel ölçümlerin ve belirlediğin hedef.</Text>
           </View>
-          <Pressable onPress={openTargetModal} style={styles.targetButton}>
-            <Text style={styles.targetButtonText}>Hedefi değiştir</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => openTargetModal("all")}
+            style={({ pressed }) => [styles.bodyTargetButton, pressed && styles.pressed]}
+          >
+            <Ionicons color={colors.primary} name="flag-outline" size={13} />
+            <Text style={styles.bodyTargetButtonText}>Hedef</Text>
           </Pressable>
         </View>
         <View style={styles.bodySummary}>
-          <View style={styles.bodySummaryContent}>
-            <Text style={styles.bodyEyebrow}>GÜNCEL KİLON</Text>
-            <View style={styles.currentWeightRow}>
-              <Text style={styles.currentWeight}>{formatDecimal(body.currentWeightKg)}</Text>
-              <Text style={styles.currentWeightUnit}>kg</Text>
-              <View style={styles.targetSummary}>
-                <Text style={styles.targetSummaryText}>Hedef {formatDecimal(body.targetWeightKg)} kg</Text>
-                <Text style={styles.targetDifference}>
-                  {difference === null
-                    ? "Hedef farkı yok"
-                    : `${difference > 0 ? "-" : "+"}${formatDecimal(Math.abs(difference))} kg değişim`}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.bodyMetricsRow}>
-              <BodyMetric label="BAŞLANGIÇ" value={`${formatDecimal(body.startingWeightKg)} kg`} />
-              <BodyMetric label="YAĞ ORANI" value={`${formatDecimal(body.bodyFatPercentage)} %`} />
-              <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
-            </View>
-          </View>
-          <View pointerEvents="none" style={styles.bodyMascotSlot}>
-            <RandomMascot
-              accessibilityLabel="Vücut ilerleme tavşan maskotu"
-              sources={PROGRESS_MASCOTS}
-              style={styles.bodyMascot}
+          <View style={styles.targetCardsRow}>
+            <ProgressTargetCard
+              current={body.currentWeightKg}
+              icon="scale-outline"
+              label="KİLO"
+              onPress={() => openTargetModal("weight")}
+              target={body.targetWeightKg}
+              unit="kg"
+            />
+            <ProgressTargetCard
+              change={bodyFatChange}
+              current={body.bodyFatPercentage}
+              icon="water-outline"
+              label="YAĞ"
+              onPress={() => openTargetModal("bodyFat")}
+              target={body.targetBodyFatPercentage}
+            />
+            <ProgressTargetCard
+              change={muscleChange}
+              current={body.musclePercentage}
+              icon="fitness-outline"
+              label="KAS"
+              onPress={() => openTargetModal("muscle")}
+              target={body.targetMusclePercentage}
             />
           </View>
-          <MascotSpeechBubble
-            compact
-            message={progressMascotMessage}
-            tailDirection="bottom-right"
-            style={styles.bodySpeechBubble}
-          />
         </View>
 
         <View style={styles.measurementSection}>
           <Text style={styles.measurementTitle}>Yeni ölçüm ekle</Text>
-          <Text style={styles.cardDescription}>Bugünkü kilo, yağ ve kas oranını birlikte kaydet.</Text>
           <View style={styles.inputRow}>
             <MeasurementInput
               error={measurementErrors.weight}
@@ -359,14 +452,12 @@ export default function ProgressScreen() {
               error={measurementErrors.bodyFat}
               label="YAĞ"
               onChangeText={(bodyFat) => setMeasurement((current) => ({ ...current, bodyFat }))}
-              suffix="%"
               value={measurement.bodyFat}
             />
             <MeasurementInput
               error={measurementErrors.muscle}
               label="KAS"
               onChangeText={(muscle) => setMeasurement((current) => ({ ...current, muscle }))}
-              suffix="%"
               value={measurement.muscle}
             />
           </View>
@@ -385,6 +476,7 @@ export default function ProgressScreen() {
             )}
           </Pressable>
         </View>
+      </View>
       </View>
 
       <SectionTitle action="Tümünü gör" onAction={() => listRef.current?.scrollToEnd()}>
@@ -449,9 +541,18 @@ export default function ProgressScreen() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Hedef kilonu değiştir</Text>
-            <Text style={styles.modalDescription}>Yeni hedef kilo değerini kilogram olarak gir.</Text>
-            <TextInput
+            <Text style={styles.modalTitle}>
+              {targetField === "weight"
+                ? "Kilo hedefini değiştir"
+                : targetField === "bodyFat"
+                  ? "Yağ hedefini değiştir"
+                  : targetField === "muscle"
+                    ? "Kas hedefini değiştir"
+                    : "Vücut hedeflerini değiştir"}
+            </Text>
+            {targetField === "all" || targetField === "weight" ? <>
+              <Text style={styles.modalInputLabel}>HEDEF KİLO (KG)</Text>
+              <TextInput
               accessibilityLabel="Hedef kilo"
               editable={!savingTarget}
               inputMode="decimal"
@@ -461,7 +562,36 @@ export default function ProgressScreen() {
               placeholderTextColor={colors.placeholder}
               style={[styles.modalInput, targetError && styles.inputError]}
               value={targetWeight}
-            />
+              />
+            </> : null}
+            {targetField === "all" || targetField === "bodyFat" ? <>
+              <Text style={styles.modalInputLabel}>HEDEF YAĞ ORANI</Text>
+              <TextInput
+              accessibilityLabel="Hedef yağ oranı"
+              editable={!savingTarget}
+              inputMode="decimal"
+              keyboardType="decimal-pad"
+              onChangeText={setTargetBodyFat}
+              placeholder="Örn. 18"
+              placeholderTextColor={colors.placeholder}
+              style={[styles.modalInput, targetError && styles.inputError]}
+              value={targetBodyFat}
+              />
+            </> : null}
+            {targetField === "all" || targetField === "muscle" ? <>
+              <Text style={styles.modalInputLabel}>HEDEF KAS ORANI</Text>
+              <TextInput
+              accessibilityLabel="Hedef kas oranı"
+              editable={!savingTarget}
+              inputMode="decimal"
+              keyboardType="decimal-pad"
+              onChangeText={setTargetMuscle}
+              placeholder="Örn. 35"
+              placeholderTextColor={colors.placeholder}
+              style={[styles.modalInput, targetError && styles.inputError]}
+              value={targetMuscle}
+              />
+            </> : null}
             {targetError ? <Text style={styles.formError}>{targetError}</Text> : null}
             <View style={styles.modalActions}>
               <Pressable
@@ -490,13 +620,123 @@ export default function ProgressScreen() {
   );
 }
 
-function BodyMetric({ label, value }: { label: string; value: string }) {
+function ProgressTargetCard({
+  label,
+  icon,
+  current,
+  target,
+  unit,
+  change,
+  onPress,
+}: {
+  label: string;
+  icon: "scale-outline" | "water-outline" | "fitness-outline";
+  current: number | null;
+  target: number | null;
+  unit?: string;
+  change?: string | null;
+  onPress: () => void;
+}) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const distance =
+    current !== null && target !== null ? Math.abs(current - target) : null;
   return (
-    <View style={styles.bodyMetric}>
-      <Text style={styles.bodyMetricLabel}>{label}</Text>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.bodyMetricValue}>{value}</Text>
+    <Pressable
+      accessibilityLabel={`${label} hedefini düzenle`}
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [styles.progressTargetCard, pressed && styles.pressed]}
+    >
+      <View style={styles.targetCardTopRow}>
+        <View style={styles.targetCardIcon}>
+          <Ionicons color={colors.primary} name={icon} size={15} />
+        </View>
+        <Ionicons color={colors.textSecondary} name="pencil-outline" size={12} />
+      </View>
+      <Text style={styles.targetCardLabel}>{label}</Text>
+      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.targetCardValue}>
+        {formatDecimal(current)}{unit ? ` ${unit}` : ""}
+      </Text>
+      <View style={styles.targetCardDivider} />
+      <Text numberOfLines={1} style={styles.targetCardGoal}>
+        Hedef {formatDecimal(target)}{unit ? ` ${unit}` : ""}
+      </Text>
+      <Text numberOfLines={1} style={styles.targetCardChange}>
+        {change ?? (distance === null ? "Hedef belirle" : `Hedefe ${formatDecimal(distance)}${unit ? ` ${unit}` : ""}`)}
+      </Text>
+    </Pressable>
+  );
+}
+
+function StepsChartCard() {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const todayIndex = (new Date().getDay() + 6) % 7;
+  const stepCounts = STEP_CHART_VALUES.map((value, index) =>
+    index <= todayIndex ? value : 0,
+  );
+  const elapsedCounts = stepCounts.slice(0, todayIndex + 1).filter(
+    (value): value is number => value !== null,
+  );
+  const maximum = Math.max(1, ...elapsedCounts);
+  const formatSteps = (value: number) =>
+    new Intl.NumberFormat("tr-TR").format(value);
+  const displayDayIndex = selectedDayIndex ?? todayIndex;
+  const displaySteps = stepCounts[displayDayIndex] ?? 0;
+
+  return (
+    <View style={styles.stepsCard}>
+      <View style={styles.stepsWidgetHeader}>
+        <Text style={styles.stepsTitle}>Günlük Hareket</Text>
+      </View>
+
+      <View style={styles.stepsWidgetMain}>
+        <View style={styles.stepsRing}>
+          <View style={styles.stepsRingAccent} />
+          <View style={styles.stepsRingCenter}>
+            <Ionicons color={colors.text} name="walk" size={20} />
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.stepsRingValue}>
+              {formatSteps(displaySteps)}
+            </Text>
+          </View>
+        </View>
+        <View accessibilityLabel="Haftalık adım grafiği" style={styles.stepsMiniChart}>
+          {stepCounts.map((value, index) => {
+            const isSelected = index === displayDayIndex;
+            const isFuture = index > todayIndex;
+            return (
+              <Pressable
+                accessibilityLabel={`${STEP_DAY_NAMES[index]} ${formatSteps(value)} adım`}
+                accessibilityRole="button"
+                key={`${STEP_DAY_LABELS[index]}-${index}`}
+                onPress={() => setSelectedDayIndex(index)}
+                style={({ pressed }) => [
+                  styles.stepsMiniColumn,
+                  isFuture && styles.stepsMiniColumnFuture,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <View style={styles.stepsMiniTrack}>
+                  <View
+                    style={[
+                      styles.stepsMiniBar,
+                      { height: isFuture ? 8 : 8 + (value / maximum) * 50 },
+                      isSelected && styles.stepsMiniBarActive,
+                      isFuture && styles.stepsMiniBarFuture,
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.stepsMiniDay, isSelected && styles.stepsMiniDayActive]}>
+                  {STEP_DAY_LABELS[index]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
     </View>
   );
 }
@@ -509,7 +749,7 @@ function MeasurementInput({
   onChangeText,
 }: {
   label: string;
-  suffix: string;
+  suffix?: string;
   value: string;
   error?: string;
   onChangeText: (value: string) => void;
@@ -528,7 +768,7 @@ function MeasurementInput({
           style={styles.input}
           value={value}
         />
-        <Text style={styles.inputSuffix}>{suffix}</Text>
+        {suffix ? <Text style={styles.inputSuffix}>{suffix}</Text> : null}
       </View>
       <Text numberOfLines={2} style={styles.fieldError}>{error ?? " "}</Text>
     </View>
@@ -542,38 +782,66 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   headerContent: { paddingTop: 8, paddingBottom: 14, gap: 22 },
   title: { color: colors.text, fontSize: 31, lineHeight: 37, fontWeight: "900" },
   statsRow: { flexDirection: "row", gap: 10 },
+  progressCards: { flexDirection: "column-reverse", gap: 22 },
   card: { padding: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
+  stepsCard: { padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
+  stepsWidgetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stepsWidgetMain: { marginTop: 14, flexDirection: "row", alignItems: "center", gap: 14 },
+  stepsRing: { width: 92, height: 92, borderWidth: 7, borderColor: colors.borderSubtle, borderRadius: 46, alignItems: "center", justifyContent: "center" },
+  stepsRingAccent: { position: "absolute", width: 92, height: 92, borderWidth: 7, borderLeftColor: colors.primaryBright, borderTopColor: colors.primaryBright, borderRightColor: colors.primaryBright, borderBottomColor: "transparent", borderRadius: 46, transform: [{ rotate: "-35deg" }] },
+  stepsRingCenter: { width: 70, height: 70, borderRadius: 35, backgroundColor: colors.surfaceElevated, alignItems: "center", justifyContent: "center" },
+  stepsRingValue: { maxWidth: 64, marginTop: 2, color: colors.text, fontSize: 16, fontWeight: "900" },
+  stepsMiniChart: { flex: 1, height: 86, paddingHorizontal: 2, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-around" },
+  stepsMiniColumn: { flex: 1, height: "100%", alignItems: "center", justifyContent: "flex-end" },
+  stepsMiniColumnFuture: { opacity: 0.35 },
+  stepsMiniTrack: { height: 62, justifyContent: "flex-end" },
+  stepsMiniBar: { width: 11, minHeight: 8, borderRadius: 7, backgroundColor: colors.border },
+  stepsMiniBarActive: { width: 15, backgroundColor: colors.primaryBright },
+  stepsMiniBarFuture: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.textSecondary },
+  stepsMiniDay: { marginTop: 6, color: colors.textSecondary, fontSize: 8, fontWeight: "900" },
+  stepsMiniDayActive: { color: colors.primaryBright },
+  stepsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stepsTitleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  stepsIconBox: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  stepsTitle: { color: colors.text, fontSize: 18, fontWeight: "900" },
+  stepsTodayValue: { marginTop: 3, color: colors.primaryBright, fontSize: 13, fontWeight: "900" },
+  stepsExpandButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  selectedStepsPanel: { marginTop: 14, paddingHorizontal: 13, paddingVertical: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 15, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  selectedStepsDay: { color: colors.textSecondary, fontSize: 11, fontWeight: "900" },
+  selectedStepsValue: { color: colors.primaryBright, fontSize: 15, fontWeight: "900" },
+  stepsChart: { height: 122, marginTop: 17, paddingHorizontal: 4, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  stepsBarColumn: { flex: 1, height: "100%", alignItems: "center", justifyContent: "flex-end" },
+  stepsDay: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
+  stepsDayActive: { color: colors.primaryBright },
+  stepsBarTrack: { height: 80, marginTop: 7, justifyContent: "flex-end" },
+  stepsBar: { width: 12, minHeight: 10, borderRadius: 7, backgroundColor: colors.border },
+  stepsBarActive: { width: 16, backgroundColor: colors.primaryBright },
+  stepsBarSelected: { borderWidth: 2, borderColor: colors.text },
+  stepsDayDot: { width: 4, height: 4, marginTop: 6, borderRadius: 2, backgroundColor: "transparent" },
+  stepsDayDotActive: { backgroundColor: colors.primaryBright },
+  stepsFooter: { marginTop: 14, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stepsFooterLabel: { color: colors.textSecondary, fontSize: 9, fontWeight: "900" },
+  stepsFooterValue: { marginTop: 3, color: colors.text, fontSize: 19, fontWeight: "900" },
   cardHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   cardHeaderCopy: { flex: 1, minWidth: 0 },
   cardTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
-  cardDescription: { marginTop: 4, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
   arrowButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   secondaryButton: { minHeight: 50, marginTop: 12, paddingHorizontal: 16, borderRadius: 18, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   secondaryButtonText: { color: colors.text, fontSize: 14, fontWeight: "900" },
   bodyHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
-  targetButton: { marginTop: 2, minHeight: 30, paddingHorizontal: 12, borderRadius: 15, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
-  targetButtonText: { color: colors.primary, fontSize: 11, fontWeight: "900" },
-  bodySummary: { marginTop: 16, paddingHorizontal: 14, paddingVertical: 13, paddingRight: 7, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated, flexDirection: "row", alignItems: "center", overflow: "hidden" },
-  bodySummaryContent: { flex: 1, minWidth: 0, paddingRight: isCompactWidth ? 0 : 5, zIndex: 1 },
-  bodyMascotSlot: isCompactWidth
-    ? { position: "absolute", right: 7, bottom: 5, width: 60, opacity: 0.22, alignItems: "center", justifyContent: "center" }
-    : { width: 68, alignItems: "center", justifyContent: "center" },
-  bodyMascot: { width: "100%", aspectRatio: 1 },
-  bodySpeechBubble: isCompactWidth
-    ? { position: "absolute", right: 86, top: 5, width: 120, maxWidth: 120, zIndex: 2 }
-    : { position: "absolute", right: 50, top: 14, width: 145, maxWidth: 145, zIndex: 2 },
-  bodyEyebrow: { color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
-  currentWeightRow: { marginTop: 6, flexDirection: "row", alignItems: "flex-end" },
-  currentWeight: { color: colors.text, fontSize: 34, fontWeight: "900" },
-  currentWeightUnit: { marginLeft: 6, marginBottom: 5, color: colors.textSecondary, fontSize: 12, fontWeight: "800" },
-  targetSummary: { marginLeft: "auto", alignItems: "flex-end" },
-  targetSummaryText: { color: colors.text, fontSize: 12, fontWeight: "800" },
-  targetDifference: { marginTop: 3, color: colors.primaryBright, fontSize: 11, fontWeight: "900" },
-  bodyMetricsRow: { marginTop: 15, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, flexDirection: "row", gap: 10 },
-  bodyMetric: { flex: 1, minWidth: 0 },
-  bodyMetricLabel: { color: colors.textSecondary, fontSize: 8, fontWeight: "800" },
-  bodyMetricValue: { marginTop: 5, color: colors.text, fontSize: 13, fontWeight: "900" },
-  measurementSection: { marginTop: 18, paddingTop: 17, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
+  bodyTargetButton: { minHeight: 30, paddingHorizontal: 11, borderRadius: 15, backgroundColor: colors.primarySoft, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  bodyTargetButtonText: { color: colors.primary, fontSize: 10, fontWeight: "900" },
+  bodySummary: { marginTop: 16, padding: 12, borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: 22, backgroundColor: colors.surfaceElevated, overflow: "hidden" },
+  targetCardsRow: { flexDirection: "row", gap: isCompactWidth ? 6 : 9 },
+  progressTargetCard: { flex: 1, minWidth: 0, minHeight: 148, padding: isCompactWidth ? 9 : 11, borderWidth: 1, borderColor: colors.border, borderRadius: 18, backgroundColor: colors.surface },
+  targetCardTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  targetCardIcon: { width: 28, height: 28, borderRadius: 10, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
+  targetCardLabel: { marginTop: 10, color: colors.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  targetCardValue: { marginTop: 4, color: colors.text, fontSize: isCompactWidth ? 16 : 19, fontWeight: "900" },
+  targetCardDivider: { marginVertical: 9, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  targetCardGoal: { color: colors.textSecondary, fontSize: isCompactWidth ? 9 : 10, fontWeight: "800" },
+  targetCardChange: { marginTop: 5, color: colors.primaryBright, fontSize: isCompactWidth ? 9 : 10, fontWeight: "900" },
+  measurementSection: { marginTop: 12, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   measurementTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   inputRow: { marginTop: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 },
   inputGroup: { flex: 1, minWidth: 0 },
@@ -593,8 +861,8 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   modalBackdrop: { flex: 1, padding: 24, backgroundColor: colors.overlay, alignItems: "center", justifyContent: "center" },
   modalCard: { width: "100%", maxWidth: 420, padding: 22, borderRadius: 24, backgroundColor: colors.surfaceElevated },
   modalTitle: { color: colors.text, fontSize: 22, fontWeight: "900" },
-  modalDescription: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 19 },
-  modalInput: { height: 54, marginTop: 18, paddingHorizontal: 16, borderWidth: 1.5, borderColor: colors.border, borderRadius: 17, backgroundColor: colors.inputBackground, color: colors.text, fontSize: 17, fontWeight: "800" },
+  modalInputLabel: { marginTop: 14, color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
+  modalInput: { height: 54, marginTop: 6, paddingHorizontal: 16, borderWidth: 1.5, borderColor: colors.border, borderRadius: 17, backgroundColor: colors.inputBackground, color: colors.text, fontSize: 17, fontWeight: "800" },
   modalActions: { marginTop: 18, flexDirection: "row", gap: 10 },
   modalSecondary: { flex: 1, minHeight: 50, borderWidth: 1.5, borderColor: colors.border, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   modalSecondaryText: { color: colors.text, fontSize: 14, fontWeight: "800" },
