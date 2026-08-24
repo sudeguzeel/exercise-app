@@ -82,18 +82,30 @@ export function StatCard({
   label,
   value,
   detail,
+  highlight = false,
 }: {
   label: string;
   value: string;
   detail?: string;
+  highlight?: boolean;
 }) {
   const { styles } = useProgressTheme();
+
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>
-        {value}
-      </Text>
+      <View style={styles.statLabelRow}>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+      <View style={styles.statValueRow}>
+        <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statValue}>
+          {value}
+        </Text>
+        {highlight ? (
+          <View accessibilityLabel="Alev" style={styles.streakFlame}>
+            <Text style={styles.streakFlameEmoji}>🔥</Text>
+          </View>
+        ) : null}
+      </View>
       {detail ? (
         <Text adjustsFontSizeToFit numberOfLines={1} style={styles.statDetail}>
           {detail}
@@ -132,7 +144,7 @@ export function EmptyContent({
 }: {
   icon: ComponentProps<typeof Ionicons>["name"];
   title: string;
-  description: string;
+  description?: string;
 }) {
   const { colors, styles } = useProgressTheme();
   return (
@@ -140,7 +152,7 @@ export function EmptyContent({
       <Ionicons name={icon} size={28} color={colors.primary} />
       <View style={styles.emptyCopy}>
         <Text style={styles.emptyTitle}>{title}</Text>
-        <Text style={styles.emptyDescription}>{description}</Text>
+        {description ? <Text style={styles.emptyDescription}>{description}</Text> : null}
       </View>
     </View>
   );
@@ -259,9 +271,13 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     backgroundColor: colors.surface,
     alignItems: "center",
   },
+  statLabelRow: { minHeight: 17, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
   statLabel: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
-  statValue: { marginTop: 5, color: colors.text, fontSize: 21, fontWeight: "900" },
+  statValueRow: { marginTop: 4, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
+  statValue: { color: colors.text, fontSize: 21, fontWeight: "900" },
   statDetail: { marginTop: 4, color: colors.primary, fontSize: 10, fontWeight: "900" },
+  streakFlame: { width: 28, height: 31, alignItems: "center", justifyContent: "flex-end" },
+  streakFlameEmoji: { position: "absolute", bottom: 0, width: 28, fontSize: 25, lineHeight: 31, textAlign: "center" },
   sectionTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   sectionTitle: { color: colors.textSecondary, fontSize: 14, fontWeight: "900", letterSpacing: 0.4 },
   sectionAction: { color: colors.primary, fontSize: 13, fontWeight: "900" },

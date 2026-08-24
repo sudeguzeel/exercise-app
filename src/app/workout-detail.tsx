@@ -8,9 +8,6 @@ import {
   isValidWorkoutSessionId,
   workoutRepository,
 } from "@/features/workouts/workout-repository";
-import {
-  formatCompletionDuration,
-} from "@/features/workouts/workout-domain";
 import type {
   WorkoutCompletion,
   WorkoutExerciseSnapshot,
@@ -80,6 +77,20 @@ export default function WorkoutDetailScreen() {
       ) ?? 0,
     [completion],
   );
+  const completedRepCount = useMemo(
+    () =>
+      completion?.exercises.reduce(
+        (exerciseTotal, exercise) =>
+          exerciseTotal +
+          exercise.sets.reduce(
+            (setTotal, set) =>
+              setTotal + (set.completedAt ? set.actualReps : 0),
+            0,
+          ),
+        0,
+      ) ?? 0,
+    [completion],
+  );
   if (completion === undefined && !loadError) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -143,14 +154,11 @@ export default function WorkoutDetailScreen() {
           <Text style={styles.summaryName}>{completion.programName}</Text>
           <View style={styles.summaryStats}>
             <SummaryMetric
-              label="SÜRE"
-              value={formatCompletionDuration(completion.durationMs)}
-            />
-            <SummaryMetric
               label="HAREKET"
               value={String(completion.completedExerciseCount)}
             />
             <SummaryMetric label="TOPLAM SET" value={String(completedSetCount)} />
+            <SummaryMetric label="TOPLAM TEKRAR" value={String(completedRepCount)} />
           </View>
         </View>
 

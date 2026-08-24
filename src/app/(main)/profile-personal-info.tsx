@@ -2,12 +2,12 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { PersonalInfo } from "@/providers/OnboardingContext";
 import { useOnboarding } from "@/providers/OnboardingContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
+import { loadAvatar } from "@/shared/lib/services/avatarService";
 import {
   loadProfilePersonalInfo,
   saveProfilePersonalInfo,
 } from "@/shared/lib/services/profileService";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -32,8 +32,6 @@ const EMPTY: PersonalInfo = {
 
 type SelectionType = "gender" | "goal";
 type PhotoTransform = { x: number; y: number; scale: number };
-const PROFILE_IMAGE_STORAGE_KEY = "profile-image-data-uri";
-const PROFILE_IMAGE_TRANSFORM_KEY = "profile-image-transform";
 const PROFILE_EDITOR_SIZE = 280;
 
 export default function ProfilePersonalInfoScreen() {
@@ -63,13 +61,10 @@ export default function ProfilePersonalInfoScreen() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([
-      AsyncStorage.getItem(PROFILE_IMAGE_STORAGE_KEY),
-      AsyncStorage.getItem(PROFILE_IMAGE_TRANSFORM_KEY),
-    ]).then(([storedImage, storedTransform]) => {
+    void loadAvatar().then((avatar) => {
       if (!active) return;
-      setProfileImage(storedImage);
-      if (storedTransform) setPhotoTransform(JSON.parse(storedTransform));
+      setProfileImage(avatar.url);
+      if (avatar.transform) setPhotoTransform(avatar.transform);
     });
     return () => { active = false; };
   }, []);
