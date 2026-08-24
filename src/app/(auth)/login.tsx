@@ -2,6 +2,7 @@ import { getAuthCallbackParameters } from "@/shared/lib/authCallbackUrl";
 import { PasswordVisibilityButton } from "@/shared/components/password-visibility-button";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { isAppleAuthAvailable, signInWithApple } from "@/shared/lib/services/appleAuthService";
 import { supabase } from "@/shared/lib/supabase";
 import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +35,11 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState("");
   const [authError, setAuthError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    void isAppleAuthAvailable().then(setAppleAvailable);
+  }, []);
 
   // Web'de Google girişi tam sayfa yönlendirmesiyle çalışıyor (bkz.
   // handleGoogleLogin'deki web dalı): Google'dan dönüşte tarayıcı bu sayfaya
@@ -276,11 +282,28 @@ const handleGoogleLogin = async () => {
   }
 };
 
-  const handleAppleLogin = () => {
-    Alert.alert(
-      "Apple ile giriş",
-      "Apple giriş entegrasyonu ilgili görev tamamlandığında bağlanacak.",
-    );
+  const handleAppleLogin = async () => {
+    if (loading) return;
+    try {
+      setLoading(true);
+      const session = await signInWithApple();
+
+      const onboardingCompleted =
+        session.user.user_metadata?.onboarding_completed === true;
+
+      router.replace(
+        onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
+      );
+    } catch (error: any) {
+      // Kullanıcı Apple onay ekranını kendisi kapattıysa hata gösterme.
+      if (error?.code === "ERR_REQUEST_CANCELED") return;
+      Alert.alert(
+        "Apple Giriş Hatası",
+        error?.message ?? "Giriş tamamlanamadı.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = () => {
@@ -428,17 +451,19 @@ const handleGoogleLogin = async () => {
                 <Text style={styles.socialButtonText}>Google</Text>
               </Pressable>
 
-              <Pressable
-                disabled={loading}
-                onPress={handleAppleLogin}
-                style={({ pressed }) => [
-                  styles.socialButton,
-                  pressed ? styles.socialButtonPressed : null,
-                ]}
-              >
-                <Ionicons name="logo-apple" size={19} color={colors.text} />
-                <Text style={styles.socialButtonText}>Apple</Text>
-              </Pressable>
+              {appleAvailable ? (
+                <Pressable
+                  disabled={loading}
+                  onPress={() => void handleAppleLogin()}
+                  style={({ pressed }) => [
+                    styles.socialButton,
+                    pressed ? styles.socialButtonPressed : null,
+                  ]}
+                >
+                  <Ionicons name="logo-apple" size={19} color={colors.text} />
+                  <Text style={styles.socialButtonText}>Apple</Text>
+                </Pressable>
+              ) : null}
             </View>
 
             <View style={styles.registerRow}>
