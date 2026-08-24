@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -7,6 +8,7 @@ import { FloatingTabBar } from "@/shared/components/floating-tab-bar";
 
 export default function MainLayout() {
   const { colors } = useAppTheme();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const tabBarSpacing = 78 + Math.max(insets.bottom, 10);
 
@@ -25,7 +27,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Ana Sayfa",
+          title: t("tabBar.home"),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "home" : "home-outline"}
@@ -38,7 +40,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="program"
         options={{
-          title: "Program",
+          title: t("tabBar.program"),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "document-text" : "document-text-outline"}
@@ -51,7 +53,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="exercise"
         options={{
-          title: "Egzersiz",
+          title: t("tabBar.exercise"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="barbell-outline" size={size} color={color} />
           ),
@@ -60,7 +62,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: "İlerlemen",
+          title: t("tabBar.progress"),
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "stats-chart" : "stats-chart-outline"}

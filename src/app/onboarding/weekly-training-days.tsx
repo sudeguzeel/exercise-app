@@ -3,6 +3,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Platform,
@@ -22,20 +23,24 @@ type DayOption = {
   label: string;
 };
 
-const dayOptions: DayOption[] = [
-  { id: "monday", label: "Pzt" },
-  { id: "tuesday", label: "Sal" },
-  { id: "wednesday", label: "Çar" },
-  { id: "thursday", label: "Per" },
-  { id: "friday", label: "Cum" },
-  { id: "saturday", label: "Cmt" },
-  { id: "sunday", label: "Paz" },
-];
-
 export default function WeeklyTrainingDaysScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const { trainingDays, setTrainingDays } = useOnboarding();
+
+  const dayOptions: DayOption[] = useMemo(
+    () => [
+      { id: "monday", label: t("days.mon") },
+      { id: "tuesday", label: t("days.tue") },
+      { id: "wednesday", label: t("days.wed") },
+      { id: "thursday", label: t("days.thu") },
+      { id: "friday", label: t("days.fri") },
+      { id: "saturday", label: t("days.sat") },
+      { id: "sunday", label: t("days.sun") },
+    ],
+    [t],
+  );
 
   const [isCreating, setIsCreating] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -88,7 +93,7 @@ export default function WeeklyTrainingDaysScreen() {
           </Pressable>
 
           <Text style={styles.stepText}>
-            Adım <Text style={styles.activeStep}>4</Text> / 4
+            {t("onboarding.step")} <Text style={styles.activeStep}>4</Text> / 4
           </Text>
         </View>
 
@@ -102,16 +107,14 @@ export default function WeeklyTrainingDaysScreen() {
         </View>
 
         <Text style={styles.title}>
-          Haftalık hedefini{"\n"}
-          belirle
+          {t("onboarding.weeklyTrainingDays.title")}
         </Text>
 
         <Text style={styles.subtitle}>
-          Antrenman yapmayı planladığın günleri seç. Bu günlerde antrenmanı
-          tamamlarsan günlük serini korursun.
+          {t("onboarding.weeklyTrainingDays.subtitle")}
         </Text>
 
-        <Text style={styles.sectionLabel}>ANTRENMAN GÜNLERİ</Text>
+        <Text style={styles.sectionLabel}>{t("onboarding.weeklyTrainingDays.sectionLabel")}</Text>
 
         <View style={styles.daysContainer}>
           {dayOptions.map((day) => {
@@ -136,16 +139,15 @@ export default function WeeklyTrainingDaysScreen() {
 
         <View style={styles.goalCard}>
           <View style={styles.goalHeader}>
-            <Text style={styles.goalTitle}>Haftalık hedef</Text>
+            <Text style={styles.goalTitle}>{t("onboarding.weeklyTrainingDays.goalTitle")}</Text>
 
             <Text style={styles.goalCount}>
-              {trainingDays.length} {trainingDays.length === 1 ? "gün" : "gün"}
+              {t("onboarding.weeklyTrainingDays.dayCount", { count: trainingDays.length })}
             </Text>
           </View>
 
           <Text style={styles.goalDescription}>
-            Seçtiğin her hedef gününde uygulamaya girip antrenmanı tamamlarsan
-            serini kazanırsın.
+            {t("onboarding.weeklyTrainingDays.goalDescription")}
           </Text>
         </View>
 
@@ -163,7 +165,7 @@ export default function WeeklyTrainingDaysScreen() {
             {isCreating ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.createButtonText}>Programımı oluştur</Text>
+              <Text style={styles.createButtonText}>{t("onboarding.weeklyTrainingDays.submit")}</Text>
             )}
           </Pressable>
         </View>

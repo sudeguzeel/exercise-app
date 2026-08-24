@@ -3,6 +3,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Platform,
@@ -23,31 +24,35 @@ type FitnessOption = {
   icon: keyof typeof Ionicons.glyphMap;
 };
 
-const fitnessOptions: FitnessOption[] = [
-  {
-    id: "cardio",
-    title: "Kardiyovasküler",
-    description: "Koşu, bisiklet, HIIT ve kondisyon odaklı çalışmalar.",
-    icon: "heart-outline",
-  },
-  {
-    id: "strength",
-    title: "Direnç / Kuvvet",
-    description: "Kas gelişimi, ağırlık ve vücut ağırlığı antrenmanları.",
-    icon: "barbell-outline",
-  },
-  {
-    id: "flexibility",
-    title: "Esneklik / Denge",
-    description: "Mobilite, yoga, core dengesi ve esneme rutinleri.",
-    icon: "body-outline",
-  },
-];
-
 export default function FitnessExperienceScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const { fitnessPreferences, setFitnessPreferences } = useOnboarding();
+
+  const fitnessOptions: FitnessOption[] = useMemo(
+    () => [
+      {
+        id: "cardio",
+        title: t("onboarding.fitnessExperience.cardioTitle"),
+        description: t("onboarding.fitnessExperience.cardioDescription"),
+        icon: "heart-outline",
+      },
+      {
+        id: "strength",
+        title: t("onboarding.fitnessExperience.strengthTitle"),
+        description: t("onboarding.fitnessExperience.strengthDescription"),
+        icon: "barbell-outline",
+      },
+      {
+        id: "flexibility",
+        title: t("onboarding.fitnessExperience.flexibilityTitle"),
+        description: t("onboarding.fitnessExperience.flexibilityDescription"),
+        icon: "body-outline",
+      },
+    ],
+    [t],
+  );
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -84,7 +89,7 @@ export default function FitnessExperienceScreen() {
 
       router.push("/onboarding/weekly-training-days");
     } catch {
-      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
+      setSaveError(t("onboarding.personalInfo.connectionError"));
     } finally {
       setIsSaving(false);
     }
@@ -102,7 +107,7 @@ export default function FitnessExperienceScreen() {
           </Pressable>
 
           <Text style={styles.stepText}>
-            Adım <Text style={styles.activeStep}>3</Text> / 4
+            {t("onboarding.step")} <Text style={styles.activeStep}>3</Text> / 4
           </Text>
         </View>
 
@@ -114,12 +119,11 @@ export default function FitnessExperienceScreen() {
         </View>
 
         <Text style={styles.title}>
-          Nasıl bir fitness{"\n"}
-          deneyimi istiyorsun?
+          {t("onboarding.fitnessExperience.title")}
         </Text>
 
         <Text style={styles.subtitle}>
-          Birden fazla seçenek işaretleyebilirsin.
+          {t("onboarding.fitnessExperience.subtitle")}
         </Text>
 
         <View style={styles.optionsContainer}>
@@ -176,7 +180,7 @@ export default function FitnessExperienceScreen() {
           {isSaving ? (
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
-            <Text style={styles.continueButtonText}>Devam et</Text>
+            <Text style={styles.continueButtonText}>{t("onboarding.continue")}</Text>
           )}
         </Pressable>
       </ScrollView>

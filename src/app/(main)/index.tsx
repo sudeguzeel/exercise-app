@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useScrollToTop } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -30,6 +31,7 @@ const CHART_HEIGHT = 120;
 
 export default function HomeScreen() {
   const { colors, isDark } = useAppTheme();
+  const { t } = useTranslation();
   const { width: windowWidth } = useWindowDimensions();
   const isCompactWidth = windowWidth < 430;
   const styles = useMemo(
@@ -118,7 +120,7 @@ export default function HomeScreen() {
   const selectedDayDetails = displayedTargetDays.find(
     (day) => day.id === selectedDay,
   );
-  const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
+  const selectedDayLabel = selectedDayDetails?.label ?? t("home.dayFallback");
   const homeMascotMessage = dashboard
     ? getHomeMascotMessage({
         isRestDay: dashboard.isRestDay,
@@ -171,8 +173,8 @@ export default function HomeScreen() {
       >
         <View style={styles.profileRow}>
           <Pressable
-            accessibilityHint="Profil ekranını açar"
-            accessibilityLabel="Profili aç"
+            accessibilityHint={t("home.openProfileHint")}
+            accessibilityLabel={t("home.openProfileLabel")}
             accessibilityRole="button"
             onPress={() => router.push("/(main)/profile")}
             style={({ pressed }) => [
@@ -207,7 +209,7 @@ export default function HomeScreen() {
               adjustsFontSizeToFit
               minimumFontScale={0.85}
             >
-              HAFTALIK TOPLAM HAREKET
+              {t("home.weeklyTotalLabel")}
             </Text>
             <Text style={styles.summaryValue}>{dashboard.weeklyTotal}</Text>
           </View>
@@ -226,12 +228,12 @@ export default function HomeScreen() {
           />
           <View style={styles.streakBadge}>
             <Text style={styles.streakText}>
-              🔥 {dashboard.streakDays} günlük seri
+              {t("home.streakDays", { count: dashboard.streakDays })}
             </Text>
           </View>
         </View>
 
-        <SectionTitle>VÜCUT BÖLGELERİ (HAFTALIK)</SectionTitle>
+        <SectionTitle>{t("home.bodyAreasTitle")}</SectionTitle>
         {dashboard.categoryTotals.length > 0 ? (
           <View style={styles.bodyAreasCard}>
             {dashboard.categoryTotals.map((area) => (
@@ -245,10 +247,10 @@ export default function HomeScreen() {
             ))}
           </View>
         ) : (
-          <EmptyCard text="Henüz vücut bölgesi verisi yok." />
+          <EmptyCard text={t("home.noBodyAreaData")} />
         )}
 
-        <SectionTitle>BU HAFTAKİ HEDEF</SectionTitle>
+        <SectionTitle>{t("home.weeklyGoalTitle")}</SectionTitle>
         {displayedTargetDays.length > 0 ? (
         <ScrollView
           horizontal
@@ -281,9 +283,9 @@ export default function HomeScreen() {
                 ) : day.status === "missed" ? (
                   <Ionicons name="close" size={22} color={colors.inverseText} />
                 ) : day.status === "today" ? (
-                  <Text style={styles.todayText}>Bugün</Text>
+                  <Text style={styles.todayText}>{t("home.today")}</Text>
                 ) : day.status === "rest" ? (
-                  <Text style={styles.pendingText}>Dinlenme</Text>
+                  <Text style={styles.pendingText}>{t("home.rest")}</Text>
                 ) : null}
               </Pressable>
             ))}
@@ -291,17 +293,16 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.emptyTargetCard}>
             <Text style={styles.emptyTargetText}>
-              Henüz bir programın yok. “Egzersizler” sekmesinden bir egzersiz
-              seçip yeni bir program oluşturabilirsin.
+              {t("home.noProgramMessage")}
             </Text>
           </View>
         )}
 
-        <SectionTitle>{`${selectedDayLabel} PROGRAMI`}</SectionTitle>
+        <SectionTitle>{t("home.dayProgramTitle", { day: selectedDayLabel })}</SectionTitle>
         <View style={styles.programCard}>
           {selectedDayProgram.length === 0 ? (
             <View style={styles.createProgramState}>
-              <Text style={styles.restDayText}>Bu gün için program bulunmuyor.</Text>
+              <Text style={styles.restDayText}>{t("home.noProgramForDay")}</Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() =>
@@ -316,7 +317,7 @@ export default function HomeScreen() {
                 ]}
               >
                 <Ionicons name="add-circle-outline" size={21} color={colors.onPrimary} />
-                <Text style={styles.createProgramButtonText}>Program Oluştur</Text>
+                <Text style={styles.createProgramButtonText}>{t("home.createProgram")}</Text>
               </Pressable>
             </View>
           ) : (
@@ -357,7 +358,7 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <SectionTitle>HAFTALIK ANTRENMAN GRAFİĞİ</SectionTitle>
+        <SectionTitle>{t("home.weeklyChartTitle")}</SectionTitle>
         <View style={styles.chartCard}>
           <View style={styles.chart}>
             <View style={styles.yAxis}>

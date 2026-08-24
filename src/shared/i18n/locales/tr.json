@@ -1,4 +1,13 @@
 {
+  "days": {
+    "mon": "Pzt",
+    "tue": "Sal",
+    "wed": "Çar",
+    "thu": "Per",
+    "fri": "Cum",
+    "sat": "Cmt",
+    "sun": "Paz"
+  },
   "common": {
     "cancel": "İptal",
     "remove": "Kaldır",
@@ -110,6 +119,90 @@
   "authCallback": {
     "checking": "E-posta doğrulaması kontrol ediliyor...",
     "callbackErrorMessage": "Doğrulama bağlantısı geçersiz veya süresi dolmuş. Lütfen doğrulama mailini tekrar gönder."
+  },
+  "onboarding": {
+    "step": "Adım",
+    "continue": "Devam et",
+    "personalInfo": {
+      "genderMale": "Erkek",
+      "genderFemale": "Kadın",
+      "genderOther": "Belirtmek\nistemiyorum",
+      "goalBuildMuscle": "Kas\nkazanımı",
+      "goalLoseWeight": "Yağ\nyakımı",
+      "goalStayFit": "Genel\nfitness",
+      "title": "Seni tanıyalım",
+      "subtitle": "Programını buna göre kişiselleştireceğiz.",
+      "genderLabel": "CİNSİYET",
+      "goalLabel": "HEDEFİN",
+      "nameDateLabel": "AD SOYAD / DOĞUM TARİHİ",
+      "fullNamePlaceholder": "Ad Soyad",
+      "birthDatePlaceholder": "GG/AA/YYYY",
+      "datePickerDone": "Tamam",
+      "metricsLabel": "BOY / MEVCUT KİLO / HEDEF KİLO",
+      "fullNameRequired": "Ad Soyad alanı zorunludur.",
+      "fullNameInvalidChars": "Yalnızca harf, boşluk, tire ve apostrof kullanılabilir.",
+      "birthDateRequired": "Doğum tarihi zorunludur.",
+      "birthDateFormat": "Tarihi GG/AA/YYYY biçiminde giriniz.",
+      "birthDateInvalid": "Geçerli bir doğum tarihi giriniz.",
+      "birthDateFuture": "Gelecek tarih kabul edilmez.",
+      "birthDateTooYoung": "En az 13 yaşında olmalısınız.",
+      "heightRequired": "Boy alanı zorunludur.",
+      "heightRange": "Boy 100–250 cm arasında tam sayı olmalıdır.",
+      "currentWeightRequired": "Mevcut kilo zorunludur.",
+      "currentWeightRange": "Mevcut kilo 30–300 kg arasında olmalıdır.",
+      "targetWeightRequired": "Hedef kilo zorunludur.",
+      "targetWeightRange": "Hedef kilo 30–300 kg arasında olmalıdır.",
+      "connectionError": "Bağlantı sağlanamadı. Lütfen tekrar deneyin.",
+      "genderRequired": "Cinsiyet seçimi zorunludur.",
+      "invalidGoal": "Geçerli bir hedef seçilmedi.",
+      "invalidMetrics": "Boy/kilo alanları geçerli olmalı."
+    },
+    "fitnessExperience": {
+      "cardioTitle": "Kardiyovasküler",
+      "cardioDescription": "Koşu, bisiklet, HIIT ve kondisyon odaklı çalışmalar.",
+      "strengthTitle": "Direnç / Kuvvet",
+      "strengthDescription": "Kas gelişimi, ağırlık ve vücut ağırlığı antrenmanları.",
+      "flexibilityTitle": "Esneklik / Denge",
+      "flexibilityDescription": "Mobilite, yoga, core dengesi ve esneme rutinleri.",
+      "title": "Nasıl bir fitness\ndeneyimi istiyorsun?",
+      "subtitle": "Birden fazla seçenek işaretleyebilirsin.",
+      "atLeastOneRequired": "En az bir fitness tercihi seçilmelidir.",
+      "invalidPreference": "Tanımlı olmayan bir fitness tercihi gönderildi."
+    },
+    "weeklyTrainingDays": {
+      "title": "Haftalık hedefini\nbelirle",
+      "subtitle": "Antrenman yapmayı planladığın günleri seç. Bu günlerde antrenmanı tamamlarsan günlük serini korursun.",
+      "sectionLabel": "ANTRENMAN GÜNLERİ",
+      "goalTitle": "Haftalık hedef",
+      "dayCount_one": "{{count}} gün",
+      "dayCount_other": "{{count}} gün",
+      "goalDescription": "Seçtiğin her hedef gününde uygulamaya girip antrenmanı tamamlarsan serini kazanırsın.",
+      "submit": "Programımı oluştur",
+      "atLeastOneDayRequired": "En az bir antrenman günü seçmelisiniz."
+    }
+  },
+  "home": {
+    "openProfileHint": "Profil ekranını açar",
+    "openProfileLabel": "Profili aç",
+    "weeklyTotalLabel": "HAFTALIK TOPLAM HAREKET",
+    "streakDays": "🔥 {{count}} günlük seri",
+    "bodyAreasTitle": "VÜCUT BÖLGELERİ (HAFTALIK)",
+    "noBodyAreaData": "Henüz vücut bölgesi verisi yok.",
+    "weeklyGoalTitle": "BU HAFTAKİ HEDEF",
+    "today": "Bugün",
+    "rest": "Dinlenme",
+    "noProgramMessage": "Henüz bir programın yok. “Egzersizler” sekmesinden bir egzersiz seçip yeni bir program oluşturabilirsin.",
+    "dayProgramTitle": "{{day}} PROGRAMI",
+    "dayFallback": "Gün",
+    "noProgramForDay": "Bu gün için program bulunmuyor.",
+    "createProgram": "Program Oluştur",
+    "weeklyChartTitle": "HAFTALIK ANTRENMAN GRAFİĞİ"
+  },
+  "tabBar": {
+    "home": "Ana Sayfa",
+    "program": "Program",
+    "exercise": "Egzersiz",
+    "progress": "İlerlemen"
   },
   "profile": {
     "editProfile": "Profili düzenle",

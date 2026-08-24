@@ -1,4 +1,13 @@
 {
+  "days": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
   "common": {
     "cancel": "Cancel",
     "remove": "Remove",
@@ -110,6 +119,90 @@
   "authCallback": {
     "checking": "Checking email verification...",
     "callbackErrorMessage": "The verification link is invalid or has expired. Please resend the verification email."
+  },
+  "onboarding": {
+    "step": "Step",
+    "continue": "Continue",
+    "personalInfo": {
+      "genderMale": "Male",
+      "genderFemale": "Female",
+      "genderOther": "Prefer not\nto say",
+      "goalBuildMuscle": "Build\nmuscle",
+      "goalLoseWeight": "Lose\nfat",
+      "goalStayFit": "General\nfitness",
+      "title": "Let's get to know you",
+      "subtitle": "We'll personalize your program based on this.",
+      "genderLabel": "GENDER",
+      "goalLabel": "YOUR GOAL",
+      "nameDateLabel": "FULL NAME / DATE OF BIRTH",
+      "fullNamePlaceholder": "Full name",
+      "birthDatePlaceholder": "DD/MM/YYYY",
+      "datePickerDone": "Done",
+      "metricsLabel": "HEIGHT / CURRENT WEIGHT / TARGET WEIGHT",
+      "fullNameRequired": "Full name field is required.",
+      "fullNameInvalidChars": "Only letters, spaces, hyphens and apostrophes are allowed.",
+      "birthDateRequired": "Date of birth is required.",
+      "birthDateFormat": "Enter the date in DD/MM/YYYY format.",
+      "birthDateInvalid": "Enter a valid date of birth.",
+      "birthDateFuture": "Future dates are not accepted.",
+      "birthDateTooYoung": "You must be at least 13 years old.",
+      "heightRequired": "Height field is required.",
+      "heightRange": "Height must be a whole number between 100–250 cm.",
+      "currentWeightRequired": "Current weight is required.",
+      "currentWeightRange": "Current weight must be between 30–300 kg.",
+      "targetWeightRequired": "Target weight is required.",
+      "targetWeightRange": "Target weight must be between 30–300 kg.",
+      "connectionError": "Couldn't connect. Please try again.",
+      "genderRequired": "Gender selection is required.",
+      "invalidGoal": "No valid goal was selected.",
+      "invalidMetrics": "Height/weight fields must be valid."
+    },
+    "fitnessExperience": {
+      "cardioTitle": "Cardiovascular",
+      "cardioDescription": "Running, cycling, HIIT, and conditioning-focused workouts.",
+      "strengthTitle": "Resistance / Strength",
+      "strengthDescription": "Muscle growth, weight training, and bodyweight workouts.",
+      "flexibilityTitle": "Flexibility / Balance",
+      "flexibilityDescription": "Mobility, yoga, core stability, and stretching routines.",
+      "title": "What kind of fitness\nexperience do you want?",
+      "subtitle": "You can select more than one option.",
+      "atLeastOneRequired": "At least one fitness preference must be selected.",
+      "invalidPreference": "An undefined fitness preference was submitted."
+    },
+    "weeklyTrainingDays": {
+      "title": "Set your\nweekly goal",
+      "subtitle": "Choose the days you plan to train. Complete a workout on those days to keep your streak.",
+      "sectionLabel": "TRAINING DAYS",
+      "goalTitle": "Weekly goal",
+      "dayCount_one": "{{count}} day",
+      "dayCount_other": "{{count}} days",
+      "goalDescription": "Open the app and complete a workout on each goal day to earn your streak.",
+      "submit": "Create my program",
+      "atLeastOneDayRequired": "You must select at least one training day."
+    }
+  },
+  "home": {
+    "openProfileHint": "Opens the profile screen",
+    "openProfileLabel": "Open profile",
+    "weeklyTotalLabel": "WEEKLY TOTAL ACTIVITY",
+    "streakDays": "🔥 {{count}}-day streak",
+    "bodyAreasTitle": "BODY AREAS (WEEKLY)",
+    "noBodyAreaData": "No body area data yet.",
+    "weeklyGoalTitle": "THIS WEEK'S GOAL",
+    "today": "Today",
+    "rest": "Rest",
+    "noProgramMessage": "You don't have a program yet. Pick an exercise from the \"Exercises\" tab to create a new program.",
+    "dayProgramTitle": "{{day}} PROGRAM",
+    "dayFallback": "Day",
+    "noProgramForDay": "No program for this day.",
+    "createProgram": "Create Program",
+    "weeklyChartTitle": "WEEKLY WORKOUT CHART"
+  },
+  "tabBar": {
+    "home": "Home",
+    "program": "Program",
+    "exercise": "Exercise",
+    "progress": "Progress"
   },
   "profile": {
     "editProfile": "Edit profile",
