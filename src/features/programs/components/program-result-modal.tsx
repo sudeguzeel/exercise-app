@@ -3,6 +3,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Modal,
   Pressable,
@@ -32,6 +33,7 @@ export function ProgramResultModal({
 }: ProgramResultModalProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   return (
     <Modal
       animationType="fade"
@@ -93,7 +95,7 @@ export function ProgramResultModal({
             ]}
           >
             <Text maxFontSizeMultiplier={1.3} style={styles.buttonText}>
-              Tamam
+              {t("programResult.confirm")}
             </Text>
           </Pressable>
         </View>

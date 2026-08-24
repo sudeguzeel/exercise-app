@@ -3,23 +3,26 @@ import type {
   AddExerciseToProgramsResult,
   UserProgram,
 } from "@/features/programs/types";
+import i18n from "@/shared/i18n";
 
-export const TRAINING_DAY_OPTIONS: {
+export function getTrainingDayOptions(): {
   id: TrainingDay;
   shortLabel: string;
   label: string;
-}[] = [
-  { id: "monday", shortLabel: "Pzt", label: "Pazartesi" },
-  { id: "tuesday", shortLabel: "Sal", label: "Salı" },
-  { id: "wednesday", shortLabel: "Çar", label: "Çarşamba" },
-  { id: "thursday", shortLabel: "Per", label: "Perşembe" },
-  { id: "friday", shortLabel: "Cum", label: "Cuma" },
-  { id: "saturday", shortLabel: "Cmt", label: "Cumartesi" },
-  { id: "sunday", shortLabel: "Paz", label: "Pazar" },
-];
+}[] {
+  return [
+    { id: "monday", shortLabel: i18n.t("days.mon"), label: i18n.t("days.monFull") },
+    { id: "tuesday", shortLabel: i18n.t("days.tue"), label: i18n.t("days.tueFull") },
+    { id: "wednesday", shortLabel: i18n.t("days.wed"), label: i18n.t("days.wedFull") },
+    { id: "thursday", shortLabel: i18n.t("days.thu"), label: i18n.t("days.thuFull") },
+    { id: "friday", shortLabel: i18n.t("days.fri"), label: i18n.t("days.friFull") },
+    { id: "saturday", shortLabel: i18n.t("days.sat"), label: i18n.t("days.satFull") },
+    { id: "sunday", shortLabel: i18n.t("days.sun"), label: i18n.t("days.sunFull") },
+  ];
+}
 
 export type ProgramResultGroup = {
-  title: "Eklendi" | "Zaten bulunuyor" | "Eklenemedi";
+  title: string;
   programNames: string[];
 };
 
@@ -60,7 +63,7 @@ export function isProgramFormValid(
 }
 
 export function normalizeProgramName(name: string) {
-  return name.trim().normalize("NFC").toLocaleLowerCase("tr-TR");
+  return name.trim().normalize("NFC").toLocaleLowerCase(i18n.language);
 }
 
 export function buildAddResultPresentation(
@@ -68,8 +71,8 @@ export function buildAddResultPresentation(
 ): ProgramResultPresentation {
   if (result.results.length === 0) {
     return {
-      title: "Egzersiz eklenemedi",
-      message: "Seçilen programlar artık mevcut değil. Lütfen tekrar deneyin.",
+      title: i18n.t("programResult.cannotAddTitle"),
+      message: i18n.t("programResult.programsGoneMessage"),
       groups: [],
     };
   }
@@ -80,40 +83,40 @@ export function buildAddResultPresentation(
   const groups: ProgramResultGroup[] = [];
 
   if (added.length > 0) {
-    groups.push({ title: "Eklendi", programNames: added });
+    groups.push({ title: i18n.t("programResult.addedTitle"), programNames: added });
   }
   if (alreadyExists.length > 0) {
     groups.push({
-      title: "Zaten bulunuyor",
+      title: i18n.t("programResult.alreadyExistsTitle"),
       programNames: alreadyExists,
     });
   }
   if (failed.length > 0) {
-    groups.push({ title: "Eklenemedi", programNames: failed });
+    groups.push({ title: i18n.t("programResult.failedTitle"), programNames: failed });
   }
 
   if (added.length === result.results.length) {
     return {
-      title: "İşlem tamamlandı",
-      message: "Egzersiz seçtiğiniz programlara başarıyla eklendi.",
+      title: i18n.t("programResult.successTitle"),
+      message: i18n.t("programResult.successMessage"),
       groups: [],
     };
   }
 
   if (alreadyExists.length === result.results.length) {
     return {
-      title: "Egzersiz zaten mevcut",
-      message: "Bu egzersiz seçilen programda zaten bulunuyor.",
+      title: i18n.t("programResult.alreadyExistsAllTitle"),
+      message: i18n.t("programResult.alreadyExistsMessage"),
       groups,
     };
   }
 
   const hasExistingExercise = alreadyExists.length > 0;
   return {
-    title: added.length > 0 ? "Programlar güncellendi" : "Egzersiz eklenemedi",
+    title: added.length > 0 ? i18n.t("programResult.updatedTitle") : i18n.t("programResult.cannotAddTitle"),
     message: hasExistingExercise
-      ? "Bu egzersiz seçilen programda zaten bulunuyor."
-      : "Bazı programlar teknik bir nedenle güncellenemedi.",
+      ? i18n.t("programResult.alreadyExistsMessage")
+      : i18n.t("programResult.partialFailureMessage"),
     groups,
   };
 }

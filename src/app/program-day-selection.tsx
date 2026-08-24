@@ -6,6 +6,7 @@ import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -34,6 +35,7 @@ function singleParam(value: string | string[] | undefined) {
 export default function ProgramDaySelectionScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     selectedDate?: string | string[];
     initialTrainingDay?: string | string[];
@@ -55,7 +57,7 @@ export default function ProgramDaySelectionScreen() {
         if (mounted) setPrograms(items);
       })
       .catch(() => {
-        Alert.alert("Programlar yüklenemedi", "Lütfen tekrar deneyin.");
+        Alert.alert(t("programDaySelection.loadFailedTitle"), t("common.tryAgainMessage"));
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -86,11 +88,11 @@ export default function ProgramDaySelectionScreen() {
           params: { selectedDate, activeProgramId: program.id },
         });
       } catch {
-        Alert.alert("Program eklenemedi", "Lütfen tekrar deneyin.");
+        Alert.alert(t("programDaySelection.addFailedTitle"), t("common.tryAgainMessage"));
         setSubmittingId(null);
       }
     },
-    [selectedDate, submittingId, trainingDay],
+    [selectedDate, submittingId, trainingDay, t],
   );
 
   const createNewProgram = useCallback(() => {
@@ -110,7 +112,7 @@ export default function ProgramDaySelectionScreen() {
         <Pressable accessibilityRole="button" onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={25} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Program ekle</Text>
+        <Text style={styles.title}>{t("programDaySelection.title")}</Text>
         <View style={styles.headerSpace} />
       </View>
 
@@ -132,7 +134,7 @@ export default function ProgramDaySelectionScreen() {
               <View style={styles.programInfo}>
                 <Text style={styles.programName}>{program.name}</Text>
                 <Text style={styles.programDetail}>
-                  {program.exercises.length} hareket
+                  {t("program.exerciseCount", { count: program.exercises.length })}
                 </Text>
               </View>
               {submittingId === program.id ? (
@@ -143,7 +145,7 @@ export default function ProgramDaySelectionScreen() {
             </Pressable>
           ))
         ) : (
-          <Text style={styles.emptyText}>Bu güne eklenebilecek başka program yok.</Text>
+          <Text style={styles.emptyText}>{t("programDaySelection.emptyMessage")}</Text>
         )}
       </ScrollView>
 
@@ -153,7 +155,7 @@ export default function ProgramDaySelectionScreen() {
           onPress={createNewProgram}
           style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
         >
-          <Text style={styles.createButtonText}>+ Yeni program oluştur</Text>
+          <Text style={styles.createButtonText}>{t("programDaySelection.createNew")}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

@@ -3,6 +3,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type ProgramCardProps = {
@@ -20,10 +21,12 @@ export function ProgramCard({
 }: ProgramCardProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
+  const exerciseCountText = t("program.exerciseCount", { count: program.exercises.length });
   return (
     <Pressable
       aria-checked={selected}
-      accessibilityLabel={`${program.name}, ${categoryLabel}, ${program.exercises.length} hareket`}
+      accessibilityLabel={`${program.name}, ${categoryLabel}, ${exerciseCountText}`}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       onPress={() => onPress(program.id)}
@@ -54,7 +57,7 @@ export function ProgramCard({
           numberOfLines={2}
           style={styles.meta}
         >
-          {categoryLabel} · {program.exercises.length} hareket
+          {categoryLabel} · {exerciseCountText}
         </Text>
       </View>
 

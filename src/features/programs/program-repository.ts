@@ -1,5 +1,6 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
+import i18n from "@/shared/i18n";
 import { supabase } from "@/shared/lib/supabase";
 import type {
   AddExerciseResultItem,
@@ -84,7 +85,7 @@ function toPersistedExercise(row: ProgramExerciseRow): PersistedProgramExercise 
       recommendedRestSeconds: null,
     }),
     restSecondsOrigin: hasStoredRestSeconds ? "stored" : "fallback",
-    name: row.exercises?.name ?? "Egzersiz",
+    name: row.exercises?.name ?? i18n.t("programRepo.exerciseDefaultName"),
     orderIndex: row.order_index,
   };
 }
@@ -121,7 +122,7 @@ async function requireUserId(): Promise<string> {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    throw new ProgramRepositoryError("AUTH_REQUIRED", "Oturum bulunamadı.");
+    throw new ProgramRepositoryError("AUTH_REQUIRED", i18n.t("programRepo.authRequired"));
   }
 
   return user.id;
@@ -151,7 +152,7 @@ function assertValidExerciseValues(exercise: ProgramExercise) {
   if (!valid) {
     throw new ProgramRepositoryError(
       "INVALID_INPUT",
-      "Set (1–10), tekrar (1–100) veya dinlenme süresi (0–300 sn) aralığın dışında.",
+      i18n.t("programRepo.valueRangeInvalid"),
     );
   }
 }
@@ -186,7 +187,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       .order("id", { ascending: true });
 
     if (error || !data) {
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Programlar alınamadı.");
+      throw new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programsUnavailable"));
     }
 
     return (data as unknown as ProgramRow[]).map(mapProgramRow);
@@ -206,7 +207,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       .maybeSingle();
 
     if (error) {
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program alınamadı.");
+      throw new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programUnavailable"));
     }
 
     return data ? mapProgramRow(data as unknown as ProgramRow) : null;
@@ -218,12 +219,12 @@ class SupabaseProgramRepository implements ProgramRepository {
   ): Promise<AddExerciseToProgramsResult> {
     const trimmedExerciseId = exercise.exerciseId?.trim();
     if (!trimmedExerciseId) {
-      throw new ProgramRepositoryError("INVALID_INPUT", "Egzersiz kimliği eksik.");
+      throw new ProgramRepositoryError("INVALID_INPUT", i18n.t("programRepo.exerciseIdMissing"));
     }
     if (!Array.isArray(programIds) || programIds.length === 0) {
       throw new ProgramRepositoryError(
         "INVALID_INPUT",
-        "En az bir program seçilmelidir.",
+        i18n.t("programRepo.atLeastOneProgramRequired"),
       );
     }
     assertValidExerciseValues(exercise);
@@ -243,11 +244,11 @@ class SupabaseProgramRepository implements ProgramRepository {
     if (exerciseError) {
       throw new ProgramRepositoryError(
         "REQUEST_FAILED",
-        "Egzersiz doğrulanamadı.",
+        i18n.t("programRepo.exerciseValidationFailed"),
       );
     }
     if (!exerciseRow) {
-      throw new ProgramRepositoryError("EXERCISE_NOT_FOUND", "Egzersiz bulunamadı.");
+      throw new ProgramRepositoryError("EXERCISE_NOT_FOUND", i18n.t("programRepo.exerciseNotFound"));
     }
 
     const requestedIds = [...new Set(programIds)];
@@ -271,7 +272,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (error || !data) {
         throw new ProgramRepositoryError(
           "REQUEST_FAILED",
-          "Programlar güncellenemedi.",
+          i18n.t("programRepo.programsUpdateFailed"),
         );
       }
 
@@ -286,7 +287,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (!UUID_PATTERN.test(programId)) {
         results.push({
           programId,
-          programName: "Geçersiz program kimliği",
+          programName: i18n.t("programRepo.invalidProgramIdName"),
           status: "failed",
         });
         continue;
@@ -300,7 +301,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (!program) {
         results.push({
           programId,
-          programName: "Bulunamayan program",
+          programName: i18n.t("programRepo.programNotFoundShort"),
           status: "failed",
         });
         continue;
@@ -365,7 +366,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       input.muscleGroupIds.length === 0 ||
       !trimmedExerciseId
     ) {
-      throw new ProgramRepositoryError("INVALID_INPUT", "Program bilgileri eksik.");
+      throw new ProgramRepositoryError("INVALID_INPUT", i18n.t("programRepo.programInfoMissing"));
     }
     assertValidExerciseValues(input.exercise);
 
@@ -401,7 +402,7 @@ class SupabaseProgramRepository implements ProgramRepository {
     if (fetchError || !programRow) {
       throw new ProgramRepositoryError(
         "REQUEST_FAILED",
-        "Program oluşturuldu ama bilgileri okunamadı.",
+        i18n.t("programRepo.programCreatedButUnreadable"),
       );
     }
 
@@ -418,7 +419,7 @@ class SupabaseProgramRepository implements ProgramRepository {
     ) {
       throw new ProgramRepositoryError(
         "INVALID_INPUT",
-        "Program bilgileri eksik veya geçersiz.",
+        i18n.t("programRepo.programInfoInvalid"),
       );
     }
 
@@ -426,7 +427,7 @@ class SupabaseProgramRepository implements ProgramRepository {
     if (new Set(exerciseIds).size !== exerciseIds.length) {
       throw new ProgramRepositoryError(
         "INVALID_INPUT",
-        "Aynı egzersiz bir programa yalnızca bir kez eklenebilir.",
+        i18n.t("programRepo.duplicateExerciseInProgram"),
       );
     }
     input.exercises.forEach(assertValidExerciseValues);
@@ -434,7 +435,7 @@ class SupabaseProgramRepository implements ProgramRepository {
     await requireUserId();
     const currentProgram = await this.getProgramById(input.id);
     if (!currentProgram) {
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program bulunamadı.");
+      throw new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programNotFound"));
     }
 
     const { error: programError } = await supabase
@@ -450,10 +451,10 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (programError.code === "23505") {
         throw new ProgramRepositoryError(
           "DUPLICATE_NAME",
-          "Bu ad ile zaten bir programınız var.",
+          i18n.t("programRepo.duplicateProgramName"),
         );
       }
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program güncellenemedi.");
+      throw new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programUpdateFailed"));
     }
 
     const currentIds = new Set(
@@ -475,7 +476,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (error) {
         throw new ProgramRepositoryError(
           "REQUEST_FAILED",
-          "Program egzersizleri güncellenemedi.",
+          i18n.t("programRepo.programExercisesUpdateFailed"),
         );
       }
     }
@@ -495,7 +496,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (error) {
         throw new ProgramRepositoryError(
           "REQUEST_FAILED",
-          "Egzersiz sırası güncellenemedi.",
+          i18n.t("programRepo.exerciseOrderUpdateFailed"),
         );
       }
     }
@@ -520,7 +521,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       if (error) {
         throw new ProgramRepositoryError(
           "REQUEST_FAILED",
-          "Yeni egzersizler programa eklenemedi.",
+          i18n.t("programRepo.newExercisesAddFailed"),
         );
       }
     }
@@ -529,7 +530,7 @@ class SupabaseProgramRepository implements ProgramRepository {
     if (!updatedProgram) {
       throw new ProgramRepositoryError(
         "REQUEST_FAILED",
-        "Program güncellendi ancak yeniden yüklenemedi.",
+        i18n.t("programRepo.programUpdatedButUnreadable"),
       );
     }
     return updatedProgram;
@@ -537,7 +538,7 @@ class SupabaseProgramRepository implements ProgramRepository {
 
   async deleteProgram(programId: string): Promise<void> {
     if (!isValidProgramId(programId)) {
-      throw new ProgramRepositoryError("INVALID_INPUT", "Program kimliği geçersiz.");
+      throw new ProgramRepositoryError("INVALID_INPUT", i18n.t("programRepo.invalidProgramId"));
     }
 
     await requireUserId();
@@ -547,7 +548,7 @@ class SupabaseProgramRepository implements ProgramRepository {
       .eq("id", programId);
 
     if (error) {
-      throw new ProgramRepositoryError("REQUEST_FAILED", "Program silinemedi.");
+      throw new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programDeleteFailed"));
     }
   }
 }
@@ -556,10 +557,10 @@ function mapCreateProgramError(error: { code?: string; message?: string } | null
   const message = error?.message ?? "";
 
   if (message.includes("AUTH_REQUIRED")) {
-    return new ProgramRepositoryError("AUTH_REQUIRED", "Oturum bulunamadı.");
+    return new ProgramRepositoryError("AUTH_REQUIRED", i18n.t("programRepo.authRequired"));
   }
   if (message.includes("EXERCISE_NOT_FOUND")) {
-    return new ProgramRepositoryError("EXERCISE_NOT_FOUND", "Egzersiz bulunamadı.");
+    return new ProgramRepositoryError("EXERCISE_NOT_FOUND", i18n.t("programRepo.exerciseNotFound"));
   }
   if (
     message.includes("INVALID_NAME") ||
@@ -568,23 +569,23 @@ function mapCreateProgramError(error: { code?: string; message?: string } | null
     message.includes("AT_LEAST_ONE_MUSCLE_GROUP_REQUIRED") ||
     message.includes("INVALID_MUSCLE_GROUP")
   ) {
-    return new ProgramRepositoryError("INVALID_INPUT", "Program bilgileri eksik veya geçersiz.");
+    return new ProgramRepositoryError("INVALID_INPUT", i18n.t("programRepo.programInfoInvalid"));
   }
   // Postgres unique_violation: (user_id, lower(btrim(name))) çakışması.
   if (error?.code === "23505") {
     return new ProgramRepositoryError(
       "DUPLICATE_NAME",
-      "Bu ad ile zaten bir programınız var.",
+      i18n.t("programRepo.duplicateProgramName"),
     );
   }
   // check_violation: sets (1-10) / reps (1-100) / rest_seconds (0-600) aralık dışı.
   if (error?.code === "23514") {
     return new ProgramRepositoryError(
       "INVALID_INPUT",
-      "Set, tekrar veya dinlenme süresi geçerli aralığın dışında.",
+      i18n.t("programRepo.setRepRestRangeInvalid"),
     );
   }
-  return new ProgramRepositoryError("REQUEST_FAILED", "Program oluşturulamadı.");
+  return new ProgramRepositoryError("REQUEST_FAILED", i18n.t("programRepo.programCreateFailed"));
 }
 
 export const programRepository: ProgramRepository = new SupabaseProgramRepository();

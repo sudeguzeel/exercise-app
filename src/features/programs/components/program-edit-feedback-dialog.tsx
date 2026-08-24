@@ -2,6 +2,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props =
@@ -21,6 +22,7 @@ type Props =
 export function ProgramEditFeedbackDialog(props: Props) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const deleting = props.mode === "delete";
 
   return (
@@ -42,13 +44,13 @@ export function ProgramEditFeedbackDialog(props: Props) {
           </View>
           <Text style={styles.title}>
             {deleting
-              ? "Programı silmek istediğinize emin misiniz?"
-              : "Değişiklikler kaydedildi"}
+              ? t("programEdit.deleteConfirmTitle")
+              : t("programEdit.savedTitle")}
           </Text>
           <Text style={styles.message}>
             {deleting
-              ? `“${props.programName || "Bu program"}” kalıcı olarak silinecek.`
-              : "Programınız başarıyla güncellendi."}
+              ? t("programEdit.deleteMessage", { programName: props.programName || t("programEdit.defaultProgramName") })
+              : t("programEdit.savedMessage")}
           </Text>
 
           {deleting ? (
@@ -63,7 +65,7 @@ export function ProgramEditFeedbackDialog(props: Props) {
                   pressed && styles.pressed,
                 ]}
               >
-                <Text style={styles.cancelText}>Hayır</Text>
+                <Text style={styles.cancelText}>{t("programEdit.no")}</Text>
               </Pressable>
               <Pressable
                 accessibilityRole="button"
@@ -77,7 +79,7 @@ export function ProgramEditFeedbackDialog(props: Props) {
                 ]}
               >
                 <Text style={styles.deleteText}>
-                  {props.busy ? "Siliniyor…" : "Evet"}
+                  {props.busy ? t("programEdit.deleting") : t("programEdit.yes")}
                 </Text>
               </Pressable>
             </View>

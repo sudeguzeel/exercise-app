@@ -1,5 +1,6 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import type { UserProgram } from "@/features/programs/types";
+import i18n from "@/shared/i18n";
 
 export type ProgramCompletionRecord = {
   programExerciseId: string;
@@ -15,15 +16,17 @@ export type WeekDayItem = {
   dayNumber: number;
 };
 
-const DAY_META: { day: TrainingDay; shortLabel: string }[] = [
-  { day: "monday", shortLabel: "Pzt" },
-  { day: "tuesday", shortLabel: "Sal" },
-  { day: "wednesday", shortLabel: "Çar" },
-  { day: "thursday", shortLabel: "Per" },
-  { day: "friday", shortLabel: "Cum" },
-  { day: "saturday", shortLabel: "Cmt" },
-  { day: "sunday", shortLabel: "Paz" },
-];
+function getDayMeta(): { day: TrainingDay; shortLabel: string }[] {
+  return [
+    { day: "monday", shortLabel: i18n.t("days.mon") },
+    { day: "tuesday", shortLabel: i18n.t("days.tue") },
+    { day: "wednesday", shortLabel: i18n.t("days.wed") },
+    { day: "thursday", shortLabel: i18n.t("days.thu") },
+    { day: "friday", shortLabel: i18n.t("days.fri") },
+    { day: "saturday", shortLabel: i18n.t("days.sat") },
+    { day: "sunday", shortLabel: i18n.t("days.sun") },
+  ];
+}
 
 export function toLocalDateKey(date: Date) {
   const year = date.getFullYear();
@@ -41,7 +44,7 @@ export function getCurrentWeek(referenceDate = new Date()): WeekDayItem[] {
   );
   monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
 
-  return DAY_META.map((meta, index) => {
+  return getDayMeta().map((meta, index) => {
     const date = new Date(monday);
     date.setDate(monday.getDate() + index);
     return {

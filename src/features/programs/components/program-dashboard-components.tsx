@@ -4,6 +4,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function WeekDaySelector({
@@ -16,6 +17,7 @@ export function WeekDaySelector({
   onSelect: (dateKey: string) => void;
 }) {
   const { styles } = useDashboardTheme();
+  const { t } = useTranslation();
   return (
     <ScrollView
       horizontal
@@ -26,7 +28,7 @@ export function WeekDaySelector({
         const selected = day.dateKey === selectedDateKey;
         return (
           <Pressable
-            accessibilityLabel={`${day.shortLabel}, ayın ${day.dayNumber}. günü`}
+            accessibilityLabel={t("program.dayAccessibility", { label: day.shortLabel, day: day.dayNumber })}
             accessibilityRole="button"
             accessibilityState={{ selected }}
             key={day.dateKey}
@@ -60,6 +62,7 @@ export function ProgramSummaryCard({
   onEdit: (programId: string) => void;
 }) {
   const { colors, styles } = useDashboardTheme();
+  const { t } = useTranslation();
   return (
     <View style={styles.programCard}>
       <View style={styles.programHeader}>
@@ -68,7 +71,7 @@ export function ProgramSummaryCard({
         </Text>
         <Text style={styles.completionText}>%{completion}</Text>
         <Pressable
-          accessibilityLabel={`${program.name} programını düzenle`}
+          accessibilityLabel={t("program.editProgramAccessibility", { name: program.name })}
           accessibilityRole="button"
           hitSlop={8}
           onPress={() => onEdit(program.id)}
@@ -82,7 +85,7 @@ export function ProgramSummaryCard({
       </View>
       <View style={styles.progressTrack}>
         <View
-          accessibilityLabel={`Program yüzde ${completion} tamamlandı`}
+          accessibilityLabel={t("program.progressAccessibility", { percent: completion })}
           style={[styles.progressFill, { width: `${completion}%` }]}
         />
       </View>
@@ -139,10 +142,11 @@ export function WeeklyTrainingChart({
   values: { dateKey: string; shortLabel: string; value: number }[];
 }) {
   const { styles } = useDashboardTheme();
+  const { t } = useTranslation();
   const maximum = Math.max(1, ...values.map((item) => Math.max(0, item.value)));
   return (
     <View style={styles.chartCard}>
-      <Text style={styles.chartTitle}>Haftalık antrenman grafiği</Text>
+      <Text style={styles.chartTitle}>{t("program.weeklyChartTitle")}</Text>
       <View style={styles.chartRow}>
         {values.map((item) => {
           const ratio = Math.min(1, Math.max(0, item.value / maximum));
@@ -150,7 +154,7 @@ export function WeeklyTrainingChart({
             <View key={item.dateKey} style={styles.chartColumn}>
               <View style={styles.barArea}>
                 <View
-                  accessibilityLabel={`${item.shortLabel}: ${item.value} tamamlanan egzersiz`}
+                  accessibilityLabel={t("program.chartBarAccessibility", { label: item.shortLabel, count: item.value })}
                   style={[
                     styles.bar,
                     item.value === 0 && styles.emptyBar,
@@ -175,9 +179,13 @@ export function ProgramExerciseRow({
   completed: boolean;
 }) {
   const { colors, styles } = useDashboardTheme();
+  const { t } = useTranslation();
   return (
     <View
-      accessibilityLabel={`${exercise.name}, ${completed ? "tamamlandı" : "tamamlanmadı"}`}
+      accessibilityLabel={t("program.exerciseAccessibility", {
+        name: exercise.name,
+        status: completed ? t("program.exerciseCompleted") : t("program.exerciseNotCompleted"),
+      })}
       accessibilityRole="checkbox"
       accessibilityState={{ checked: completed }}
       accessible

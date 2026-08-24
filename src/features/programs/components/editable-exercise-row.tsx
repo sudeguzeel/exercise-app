@@ -3,6 +3,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Animated,
   PanResponder,
@@ -31,6 +32,7 @@ export function EditableExerciseRow({
 }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const translateY = useRef(new Animated.Value(0)).current;
   const responder = useMemo(
     () =>
@@ -72,10 +74,10 @@ export function EditableExerciseRow({
     <Animated.View style={[styles.row, { transform: [{ translateY }] }]}>
       <View
         accessibilityActions={[
-          { name: "decrement", label: "Yukarı taşı" },
-          { name: "increment", label: "Aşağı taşı" },
+          { name: "decrement", label: t("programEdit.moveUp") },
+          { name: "increment", label: t("programEdit.moveDown") },
         ]}
-        accessibilityLabel={`${exercise.name} egzersizini sırala`}
+        accessibilityLabel={t("programEdit.sortExerciseAccessibility", { name: exercise.name })}
         accessibilityRole="adjustable"
         onAccessibilityAction={(event) =>
           handleAccessibilityAction(event.nativeEvent.actionName)
@@ -92,7 +94,7 @@ export function EditableExerciseRow({
         {exercise.sets}×{exercise.reps}
       </Text>
       <Pressable
-        accessibilityLabel={`${exercise.name} egzersizini programdan kaldır`}
+        accessibilityLabel={t("programEdit.removeExerciseAccessibility", { name: exercise.name })}
         accessibilityRole="button"
         hitSlop={8}
         onPress={() => onRemove(exercise.id)}
