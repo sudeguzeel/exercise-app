@@ -13,7 +13,8 @@
       "infoPlist": {
         "LSApplicationQueriesSchemes": [
           "message"
-        ]
+        ],
+        "NSMotionUsageDescription": "Günlük adım sayını gösterebilmek için hareket verine erişim izni gerekiyor."
       }
     },
     "android": {
@@ -47,7 +48,8 @@
     }
   ],
   "expo-web-browser",
-  "@react-native-community/datetimepicker"
+  "@react-native-community/datetimepicker",
+  "expo-sensors"
 ],
     "experiments": {
       "typedRoutes": true,
