@@ -20,6 +20,7 @@ import {
   saveBodyTargets,
 } from "@/features/progress/progress-storage";
 import { loadProgressDashboard } from "@/features/progress/progress-service";
+import { isPedometerAvailable, loadWeeklySteps, syncTodaySteps } from "@/shared/lib/services/stepService";
 import type {
   ProgressDashboard,
   ProgressPeriod,
@@ -72,7 +73,6 @@ const STEP_DAY_NAMES = [
   "Cumartesi",
   "Pazar",
 ];
-const STEP_CHART_VALUES = [4820, 6350, 5210, 6842, 7480, 5930, 6910];
 
 export default function ProgressScreen() {
   const { colors } = useAppTheme();
@@ -673,13 +673,36 @@ function StepsChartCard() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
+  const [weekSteps, setWeekSteps] = useState<number[]>(() => new Array(7).fill(0));
+  const [unavailable, setUnavailable] = useState(false);
   const todayIndex = (new Date().getDay() + 6) % 7;
-  const stepCounts = STEP_CHART_VALUES.map((value, index) =>
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const available = await isPedometerAvailable();
+      if (!active) return;
+      if (!available) {
+        setUnavailable(true);
+        return;
+      }
+      try {
+        await syncTodaySteps();
+      } catch {
+        // senkron başarısız olsa da Supabase'deki son bilinen veriyi göstermeye devam ederiz
+      }
+      const week = await loadWeeklySteps();
+      if (active) setWeekSteps(week);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const stepCounts = weekSteps.map((value, index) =>
     index <= todayIndex ? value : 0,
   );
-  const elapsedCounts = stepCounts.slice(0, todayIndex + 1).filter(
-    (value): value is number => value !== null,
-  );
+  const elapsedCounts = stepCounts.slice(0, todayIndex + 1);
   const maximum = Math.max(1, ...elapsedCounts);
   const formatSteps = (value: number) =>
     new Intl.NumberFormat("tr-TR").format(value);
@@ -691,6 +714,12 @@ function StepsChartCard() {
       <View style={styles.stepsWidgetHeader}>
         <Text style={styles.stepsTitle}>Günlük Hareket</Text>
       </View>
+
+      {unavailable ? (
+        <Text style={styles.stepsUnavailable}>
+          Bu cihazda adım sayar verisi bulunamadı.
+        </Text>
+      ) : null}
 
       <View style={styles.stepsWidgetMain}>
         <View style={styles.stepsRing}>
@@ -786,6 +815,7 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   card: { padding: 20, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
   stepsCard: { padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 25, backgroundColor: colors.surface },
   stepsWidgetHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  stepsUnavailable: { marginTop: 8, color: colors.textSecondary, fontSize: 12, fontWeight: "600" },
   stepsWidgetMain: { marginTop: 14, flexDirection: "row", alignItems: "center", gap: 14 },
   stepsRing: { width: 92, height: 92, borderWidth: 7, borderColor: colors.borderSubtle, borderRadius: 46, alignItems: "center", justifyContent: "center" },
   stepsRingAccent: { position: "absolute", width: 92, height: 92, borderWidth: 7, borderLeftColor: colors.primaryBright, borderTopColor: colors.primaryBright, borderRightColor: colors.primaryBright, borderBottomColor: "transparent", borderRadius: 46, transform: [{ rotate: "-35deg" }] },
