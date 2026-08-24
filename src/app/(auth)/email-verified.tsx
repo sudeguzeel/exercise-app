@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -30,6 +31,7 @@ import {
 export default function EmailVerifiedScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const { email: emailParameter } = useLocalSearchParams<{
     email?: string | string[];
   }>();
@@ -111,19 +113,18 @@ export default function EmailVerifiedScreen() {
             maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
             style={styles.title}
           >
-            E-posta doğrulandı
+            {t("emailVerified.title")}
           </Text>
 
           <Text
             maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
             style={styles.description}
           >
-            Hesabın başarıyla doğrulandı. Şimdi kişisel bilgilerini tamamlayarak
-            programını oluşturabilirsin.
+            {t("emailVerified.description")}
           </Text>
 
           <Pressable
-            accessibilityLabel="Devam et"
+            accessibilityLabel={t("emailVerified.continue")}
             accessibilityRole="button"
             onPress={() => router.replace("/onboarding/personal-info")}
             style={({ pressed }) => [
@@ -135,7 +136,7 @@ export default function EmailVerifiedScreen() {
               maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
               style={styles.continueButtonText}
             >
-              Devam et
+              {t("emailVerified.continue")}
             </Text>
           </Pressable>
         </View>

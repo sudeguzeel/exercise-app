@@ -16,13 +16,13 @@ import {
 import { AuthColors, AuthTypography } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
-
-const CALLBACK_ERROR_MESSAGE =
-  "Doğrulama bağlantısı geçersiz veya süresi dolmuş. Lütfen doğrulama mailini tekrar gönder.";
+import i18n from "@/shared/i18n";
+import { useTranslation } from "react-i18next";
 
 export default function AuthCallbackScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const linkingUrl = Linking.useLinkingURL();
   const callbackPromiseRef = useRef<Promise<string> | null>(null);
 
@@ -58,7 +58,7 @@ export default function AuthCallbackScreen() {
           pathname: "/verify-email",
           params: {
             ...(pendingEmail ? { email: pendingEmail } : {}),
-            callbackError: CALLBACK_ERROR_MESSAGE,
+            callbackError: i18n.t("authCallback.callbackErrorMessage"),
           },
         });
       }
@@ -80,7 +80,7 @@ export default function AuthCallbackScreen() {
           maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
           style={styles.message}
         >
-          E-posta doğrulaması kontrol ediliyor...
+          {t("authCallback.checking")}
         </Text>
       </View>
     </SafeAreaView>

@@ -5,6 +5,7 @@ import {
   useLocalSearchParams,
 } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -41,6 +42,7 @@ const MAIL_APP_URL = "mailto:";
 export default function VerifyEmailScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const {
     callbackError: callbackErrorParameter,
     email: emailParameter,
@@ -85,9 +87,7 @@ export default function VerifyEmailScreen() {
     if (state.isVerified) {
       navigateToVerified(state.email ?? displayedEmail);
     } else if (state.requestFailed) {
-      setErrorMessage(
-        "Doğrulama durumu kontrol edilemedi. İnternet bağlantını kontrol edip tekrar dene.",
-      );
+      setErrorMessage(t("verifyEmail.checkFailed"));
     }
 
     return state;
@@ -176,8 +176,8 @@ export default function VerifyEmailScreen() {
       await Linking.openURL(mailFallbackUrl);
     } catch {
       Alert.alert(
-        "E-posta uygulaması açılamadı",
-        "Cihazında kullanılabilir bir e-posta uygulaması bulunamadı.",
+        t("verifyEmail.mailAppFailedTitle"),
+        t("verifyEmail.mailAppFailedMessage"),
       );
     } finally {
       openingMailRef.current = false;
@@ -204,17 +204,13 @@ export default function VerifyEmailScreen() {
       const result = await resendSignupConfirmation(displayedEmail);
 
       if (!result.success) {
-        setErrorMessage(
-          "Doğrulama e-postası gönderilemedi. Lütfen tekrar dene.",
-        );
+        setErrorMessage(t("verifyEmail.resendFailed"));
         return;
       }
 
-      setStatusMessage("Doğrulama e-postası tekrar gönderildi.");
+      setStatusMessage(t("verifyEmail.resendSuccess"));
     } catch {
-      setErrorMessage(
-        "Doğrulama e-postası gönderilemedi. Lütfen tekrar dene.",
-      );
+      setErrorMessage(t("verifyEmail.resendFailed"));
     } finally {
       resendingRef.current = false;
       setResending(false);
@@ -263,7 +259,7 @@ export default function VerifyEmailScreen() {
             maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
             style={styles.title}
           >
-            E-postanı doğrula
+            {t("verifyEmail.title")}
           </Text>
 
           <Text
@@ -271,13 +267,12 @@ export default function VerifyEmailScreen() {
             style={styles.description}
           >
             <Text style={styles.emailHighlight}>{displayedEmail}</Text>
-            {" adresine doğrulama bağlantısı gönderdik. Hesabını kullanmaya "}
-            devam etmek için e-postandaki bağlantıya dokun.
+            {t("verifyEmail.descriptionSuffix")}
           </Text>
 
           <Pressable
             accessibilityLabel={
-              openingMail ? "E-posta uygulaması açılıyor" : "E-postayı aç"
+              openingMail ? t("verifyEmail.openingLabel") : t("verifyEmail.openEmail")
             }
             accessibilityRole="button"
             accessibilityState={{
@@ -299,7 +294,7 @@ export default function VerifyEmailScreen() {
                 maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
                 style={styles.primaryButtonText}
               >
-                E-postayı aç
+                {t("verifyEmail.openEmail")}
               </Text>
             )}
           </Pressable>
@@ -307,8 +302,8 @@ export default function VerifyEmailScreen() {
           <Pressable
             accessibilityLabel={
               resending
-                ? "Doğrulama e-postası gönderiliyor"
-                : "Doğrulama mailini tekrar gönder"
+                ? t("verifyEmail.resendingLabel")
+                : t("verifyEmail.resend")
             }
             accessibilityRole="button"
             accessibilityState={{ disabled: resending, busy: resending }}
@@ -327,7 +322,7 @@ export default function VerifyEmailScreen() {
                 maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
                 style={styles.secondaryButtonText}
               >
-                Doğrulama mailini tekrar gönder
+                {t("verifyEmail.resend")}
               </Text>
             )}
           </Pressable>
@@ -357,11 +352,11 @@ export default function VerifyEmailScreen() {
               maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
               style={styles.changeEmailQuestion}
             >
-              E-posta adresin yanlış mı?{" "}
+              {t("verifyEmail.wrongEmailQuestion")}
             </Text>
 
             <Pressable
-              accessibilityLabel="E-posta adresini değiştir"
+              accessibilityLabel={t("verifyEmail.changeEmailAccessibility")}
               accessibilityRole="link"
               disabled={resending}
               hitSlop={8}
@@ -371,7 +366,7 @@ export default function VerifyEmailScreen() {
                 maxFontSizeMultiplier={AuthTypography.maxFontSizeMultiplier}
                 style={styles.changeEmailLink}
               >
-                Değiştir
+                {t("verifyEmail.changeEmail")}
               </Text>
             </Pressable>
           </View>

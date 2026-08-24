@@ -5,6 +5,7 @@ import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +23,7 @@ import {
 export default function ForgotPasswordScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,13 +41,13 @@ export default function ForgotPasswordScreen() {
 
     // 1. Boş E-posta Kontrolü
     if (!trimmedEmail) {
-      setEmailError("E-posta alanı boş bırakılamaz.");
+      setEmailError(t("common.emailRequired"));
       return;
     }
 
     // 2. Format Doğrulaması
     if (!isValidEmail(trimmedEmail)) {
-      setEmailError("Geçerli bir e-posta adresi gir.");
+      setEmailError(t("common.emailInvalid"));
       return;
     }
 
@@ -60,9 +62,9 @@ export default function ForgotPasswordScreen() {
       // 4. Kayıtlı Olmayan Kullanıcı / Hata Durumu
       if (error) {
         Alert.alert(
-          "İşlem Başarısız",
+          t("forgotPassword.failedTitle"),
           error.message.includes("User not found")
-            ? "Bu e-posta adresine ait kayıtlı bir hesap bulunamadı."
+            ? t("forgotPassword.userNotFound")
             : error.message
         );
         return;
@@ -76,7 +78,7 @@ export default function ForgotPasswordScreen() {
         },
       });
     } catch {
-      Alert.alert("Hata", "Bağlantı sağlanamadı. Lütfen tekrar deneyiniz.");
+      Alert.alert(t("forgotPassword.genericErrorTitle"), t("forgotPassword.genericErrorMessage"));
     } finally {
       setLoading(false);
     }
@@ -105,14 +107,13 @@ export default function ForgotPasswordScreen() {
               <Ionicons name="chevron-back" size={24} color={colors.text} />
             </Pressable>
 
-            <Text style={styles.title}>Şifreni{"\n"}sıfırla</Text>
+            <Text style={styles.title}>{t("forgotPassword.title")}</Text>
 
             <Text style={styles.description}>
-              Hesabına bağlı e-posta adresini gir. Sana güvenli bir sıfırlama
-              bağlantısı gönderelim.
+              {t("forgotPassword.description")}
             </Text>
 
-            <Text style={styles.label}>E-POSTA</Text>
+            <Text style={styles.label}>{t("common.emailLabel")}</Text>
 
             <View
               style={[
@@ -131,7 +132,7 @@ export default function ForgotPasswordScreen() {
                     setEmailError("");
                   }
                 }}
-                placeholder="ornek@eposta.com"
+                placeholder={t("common.emailPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -159,7 +160,7 @@ export default function ForgotPasswordScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.sendButtonText}>Bağlantı gönder</Text>
+                <Text style={styles.sendButtonText}>{t("forgotPassword.submit")}</Text>
               )}
             </Pressable>
 
@@ -172,8 +173,8 @@ export default function ForgotPasswordScreen() {
               ]}
             >
               <Text style={styles.loginLinkText}>
-                Giriş ekranına{" "}
-                <Text style={styles.loginLinkHighlight}>geri dön</Text>
+                {t("forgotPassword.backToLogin")}
+                <Text style={styles.loginLinkHighlight}>{t("forgotPassword.backToLoginHighlight")}</Text>
               </Text>
             </Pressable>
           </View>

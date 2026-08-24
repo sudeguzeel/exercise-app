@@ -95,8 +95,8 @@ export default function LoginScreen() {
       } catch (error: any) {
         if (!cancelled) {
           Alert.alert(
-            "Google Giriş Hatası",
-            error?.message ?? "Oturum tamamlanamadı.",
+            t("login.googleErrorTitle"),
+            error?.message ?? t("login.sessionIncomplete"),
           );
         }
       } finally {
@@ -119,15 +119,15 @@ export default function LoginScreen() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setEmailError(t("login.emailRequired"));
+      setEmailError(t("common.emailRequired"));
       isValid = false;
     } else if (!isValidEmail(trimmedEmail)) {
-      setEmailError(t("login.emailInvalid"));
+      setEmailError(t("common.emailInvalid"));
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError(t("login.passwordRequired"));
+      setPasswordError(t("common.passwordRequired"));
       isValid = false;
     }
 
@@ -185,7 +185,7 @@ export default function LoginScreen() {
         onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
       );
     } catch {
-      Alert.alert(t("login.genericErrorTitle"), t("login.genericErrorMessage"));
+      Alert.alert(t("common.genericErrorTitle"), t("common.genericErrorMessage"));
     } finally {
       setLoading(false);
     }
@@ -330,7 +330,7 @@ const handleGoogleLogin = async () => {
               {t("login.subtitle")}
             </Text>
 
-            <Text style={styles.label}>{t("login.emailLabel")}</Text>
+            <Text style={styles.label}>{t("common.emailLabel")}</Text>
 
             <View
               style={[
@@ -350,7 +350,7 @@ const handleGoogleLogin = async () => {
                     setEmailError("");
                   }
                 }}
-                placeholder={t("login.emailPlaceholder")}
+                placeholder={t("common.emailPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -365,7 +365,7 @@ const handleGoogleLogin = async () => {
               <Text style={styles.errorText}>{emailError}</Text>
             ) : null}
 
-            <Text style={styles.label}>{t("login.passwordLabel")}</Text>
+            <Text style={styles.label}>{t("common.passwordLabel")}</Text>
 
             <View
               style={[
@@ -385,7 +385,7 @@ const handleGoogleLogin = async () => {
                     setPasswordError("");
                   }
                 }}
-                placeholder={t("login.passwordPlaceholder")}
+                placeholder={t("common.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
@@ -430,7 +430,7 @@ const handleGoogleLogin = async () => {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.loginButtonText}>{t("login.submit")}</Text>
+                <Text style={styles.loginButtonText}>{t("common.signIn")}</Text>
               )}
             </Pressable>
 

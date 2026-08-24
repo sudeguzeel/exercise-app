@@ -11,6 +11,7 @@ import { isValidEmail } from "@/shared/lib/validation/authValidation";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +30,7 @@ export default function RegisterScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const { resetOnboarding } = useOnboarding();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,26 +54,26 @@ export default function RegisterScreen() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setEmailError("E-posta alanı boş bırakılamaz.");
+      setEmailError(t("common.emailRequired"));
       isValid = false;
     } else if (!isValidEmail(trimmedEmail)) {
-      setEmailError("Geçerli bir e-posta adresi gir.");
+      setEmailError(t("common.emailInvalid"));
       isValid = false;
     }
 
     if (!password) {
-      setPasswordError("Şifre alanı boş bırakılamaz.");
+      setPasswordError(t("common.passwordRequired"));
       isValid = false;
     } else if (password.length < 6) {
-      setPasswordError("Şifre en az 6 karakter olmalı.");
+      setPasswordError(t("register.passwordTooShort"));
       isValid = false;
     }
 
     if (!confirmPassword) {
-      setConfirmPasswordError("Şifre tekrarı boş bırakılamaz.");
+      setConfirmPasswordError(t("register.confirmPasswordRequired"));
       isValid = false;
     } else if (password && confirmPassword !== password) {
-      setConfirmPasswordError("Şifreler eşleşmiyor.");
+      setConfirmPasswordError(t("register.passwordsDontMatch"));
       isValid = false;
     }
 
@@ -96,9 +98,9 @@ export default function RegisterScreen() {
 
       if (error) {
         Alert.alert(
-          "Kayıt olunamadı",
+          t("register.signupFailedTitle"),
           error.message.includes("already registered")
-            ? "Bu e-posta adresiyle kayıtlı bir hesap zaten var."
+            ? t("register.alreadyRegistered")
             : error.message,
         );
         return;
@@ -108,8 +110,8 @@ export default function RegisterScreen() {
 
       if (isExistingAccount) {
         Alert.alert(
-          "Kayıt olunamadı",
-          "Bu e-posta adresiyle kayıtlı bir hesap zaten var. Giriş yapmayı veya şifreni sıfırlamayı dene.",
+          t("register.signupFailedTitle"),
+          t("register.existingAccountMessage"),
         );
         return;
       }
@@ -133,7 +135,7 @@ export default function RegisterScreen() {
       // hazır, doğrulama beklemeden direkt onboarding'e geçiyoruz.
       router.replace("/onboarding/personal-info");
     } catch {
-      Alert.alert("Bir hata oluştu", "Bağlantını kontrol edip tekrar dene.");
+      Alert.alert(t("common.genericErrorTitle"), t("common.genericErrorMessage"));
     } finally {
       setLoading(false);
     }
@@ -162,13 +164,13 @@ export default function RegisterScreen() {
               <Ionicons name="chevron-back" size={20} color={colors.text} />
             </Pressable>
 
-            <Text style={styles.title}>Hesap oluştur</Text>
+            <Text style={styles.title}>{t("register.title")}</Text>
 
             <Text style={styles.subtitle}>
-              Programını kişiselleştirmek için önce bir hesap oluşturalım.
+              {t("register.subtitle")}
             </Text>
 
-            <Text style={styles.label}>E-POSTA</Text>
+            <Text style={styles.label}>{t("common.emailLabel")}</Text>
 
             <View
               style={[
@@ -186,7 +188,7 @@ export default function RegisterScreen() {
                     setEmailError("");
                   }
                 }}
-                placeholder="ornek@eposta.com"
+                placeholder={t("common.emailPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -201,7 +203,7 @@ export default function RegisterScreen() {
               <Text style={styles.errorText}>{emailError}</Text>
             ) : null}
 
-            <Text style={styles.label}>ŞİFRE</Text>
+            <Text style={styles.label}>{t("common.passwordLabel")}</Text>
 
             <View
               style={[
@@ -219,7 +221,7 @@ export default function RegisterScreen() {
                     setPasswordError("");
                   }
                 }}
-                placeholder="••••••••"
+                placeholder={t("common.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
@@ -237,7 +239,7 @@ export default function RegisterScreen() {
               <Text style={styles.errorText}>{passwordError}</Text>
             ) : null}
 
-            <Text style={styles.label}>ŞİFRE TEKRAR</Text>
+            <Text style={styles.label}>{t("register.confirmPasswordLabel")}</Text>
 
             <View
               style={[
@@ -255,7 +257,7 @@ export default function RegisterScreen() {
                     setConfirmPasswordError("");
                   }
                 }}
-                placeholder="••••••••"
+                placeholder={t("common.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
@@ -288,15 +290,15 @@ export default function RegisterScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.registerButtonText}>Hesap oluştur</Text>
+                <Text style={styles.registerButtonText}>{t("register.submit")}</Text>
               )}
             </Pressable>
 
             <View style={styles.loginRow}>
-              <Text style={styles.loginQuestion}>Zaten hesabın var mı? </Text>
+              <Text style={styles.loginQuestion}>{t("register.haveAccount")}</Text>
 
               <Pressable disabled={loading} onPress={() => router.replace("/login")}>
-                <Text style={styles.loginLink}>Giriş yap</Text>
+                <Text style={styles.loginLink}>{t("common.signIn")}</Text>
               </Pressable>
             </View>
           </View>

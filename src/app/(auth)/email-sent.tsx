@@ -3,6 +3,7 @@ import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Alert,
@@ -16,6 +17,7 @@ import {
 export default function EmailSentScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const { email } = useLocalSearchParams<{
     email?: string | string[];
   }>();
@@ -24,7 +26,7 @@ export default function EmailSentScreen() {
 
   const displayedEmail = Array.isArray(email)
     ? email[0]
-    : email || "E-posta adresi bulunamadı";
+    : email || t("emailSent.emailNotFound");
 
   const handleResend = async () => {
     if (loading) {
@@ -38,13 +40,13 @@ export default function EmailSentScreen() {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       Alert.alert(
-        "Bağlantı gönderildi",
-        `Yeni şifre sıfırlama bağlantısı ${displayedEmail} adresine gönderildi.`,
+        t("emailSent.resentTitle"),
+        t("emailSent.resentMessage", { email: displayedEmail }),
       );
     } catch {
       Alert.alert(
-        "Gönderilemedi",
-        "Şifre sıfırlama bağlantısı tekrar gönderilemedi. Lütfen yeniden dene.",
+        t("emailSent.resendFailedTitle"),
+        t("emailSent.resendFailedMessage"),
       );
     } finally {
       setLoading(false);
@@ -58,10 +60,10 @@ export default function EmailSentScreen() {
           <Ionicons name="mail-outline" size={42} color={colors.primary} />
         </View>
 
-        <Text style={styles.title}>E-postanı kontrol et</Text>
+        <Text style={styles.title}>{t("emailSent.title")}</Text>
 
         <Text style={styles.description}>
-          Şifre sıfırlama bağlantısını aşağıdaki e-posta adresine gönderdik.
+          {t("emailSent.description")}
         </Text>
 
         <View style={styles.emailContainer}>
@@ -76,7 +78,7 @@ export default function EmailSentScreen() {
           <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
 
           <Text style={styles.durationText}>
-            Bağlantı 3 dakika boyunca geçerlidir.
+            {t("emailSent.validityNotice")}
           </Text>
         </View>
 
@@ -89,7 +91,7 @@ export default function EmailSentScreen() {
             loading ? styles.buttonDisabled : null,
           ]}
         >
-          <Text style={styles.loginButtonText}>Giriş ekranına dön</Text>
+          <Text style={styles.loginButtonText}>{t("emailSent.backToLogin")}</Text>
         </Pressable>
 
         <Pressable
@@ -104,12 +106,12 @@ export default function EmailSentScreen() {
           {loading ? (
             <>
               <ActivityIndicator size="small" color={colors.primary} />
-              <Text style={styles.resendButtonText}>Gönderiliyor...</Text>
+              <Text style={styles.resendButtonText}>{t("emailSent.resending")}</Text>
             </>
           ) : (
             <>
               <Ionicons name="refresh-outline" size={19} color={colors.primary} />
-              <Text style={styles.resendButtonText}>Tekrar gönder</Text>
+              <Text style={styles.resendButtonText}>{t("emailSent.resend")}</Text>
             </>
           )}
         </Pressable>

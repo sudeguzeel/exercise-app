@@ -5,6 +5,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -25,6 +26,7 @@ import { supabase } from "@/shared/lib/supabase";
 export default function ResetPasswordScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   const linkingUrl = Linking.useLinkingURL();
   const sessionPromiseRef = useRef<Promise<void> | null>(null);
 
@@ -66,18 +68,18 @@ export default function ResetPasswordScreen() {
     setConfirmPasswordError("");
 
     if (!password) {
-      setPasswordError("Şifre alanı boş bırakılamaz.");
+      setPasswordError(t("common.passwordRequired"));
       isValid = false;
     } else if (password.length < 6) {
-      setPasswordError("Şifre en az 6 karakter olmalı.");
+      setPasswordError(t("register.passwordTooShort"));
       isValid = false;
     }
 
     if (!confirmPassword) {
-      setConfirmPasswordError("Şifre tekrarı boş bırakılamaz.");
+      setConfirmPasswordError(t("register.confirmPasswordRequired"));
       isValid = false;
     } else if (password && confirmPassword !== password) {
-      setConfirmPasswordError("Şifreler eşleşmiyor.");
+      setConfirmPasswordError(t("register.passwordsDontMatch"));
       isValid = false;
     }
 
@@ -95,19 +97,19 @@ export default function ResetPasswordScreen() {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        Alert.alert("İşlem başarısız", error.message);
+        Alert.alert(t("resetPassword.updateFailedTitle"), error.message);
         return;
       }
 
       await supabase.auth.signOut();
 
       Alert.alert(
-        "Şifren güncellendi",
-        "Yeni şifrenle giriş yapabilirsin.",
-        [{ text: "Tamam", onPress: () => router.replace("/login") }],
+        t("resetPassword.successTitle"),
+        t("resetPassword.successMessage"),
+        [{ text: t("resetPassword.ok"), onPress: () => router.replace("/login") }],
       );
     } catch {
-      Alert.alert("Hata", "Bağlantı sağlanamadı. Lütfen tekrar deneyiniz.");
+      Alert.alert(t("forgotPassword.genericErrorTitle"), t("forgotPassword.genericErrorMessage"));
     } finally {
       setLoading(false);
     }
@@ -131,7 +133,7 @@ export default function ResetPasswordScreen() {
             <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
           </View>
 
-          <Text style={styles.title}>Bağlantı geçersiz</Text>
+          <Text style={styles.title}>{t("resetPassword.invalidLinkTitle")}</Text>
 
           <Text style={styles.description}>{sessionError}</Text>
 
@@ -142,7 +144,7 @@ export default function ResetPasswordScreen() {
               pressed ? styles.buttonPressed : null,
             ]}
           >
-            <Text style={styles.sendButtonText}>Yeni bağlantı iste</Text>
+            <Text style={styles.sendButtonText}>{t("resetPassword.requestNewLink")}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -161,14 +163,13 @@ export default function ResetPasswordScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.container}>
-            <Text style={styles.title}>Yeni{"\n"}şifre belirle</Text>
+            <Text style={styles.title}>{t("resetPassword.title")}</Text>
 
             <Text style={styles.description}>
-              Hesabın için yeni bir şifre oluştur. Şifren en az 6 karakter
-              olmalı.
+              {t("resetPassword.description")}
             </Text>
 
-            <Text style={styles.label}>YENİ ŞİFRE</Text>
+            <Text style={styles.label}>{t("resetPassword.newPasswordLabel")}</Text>
 
             <View
               style={[
@@ -187,7 +188,7 @@ export default function ResetPasswordScreen() {
                     setPasswordError("");
                   }
                 }}
-                placeholder="••••••••"
+                placeholder={t("common.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isPasswordVisible}
                 editable={!loading}
@@ -205,7 +206,7 @@ export default function ResetPasswordScreen() {
               <Text style={styles.errorText}>{passwordError}</Text>
             ) : null}
 
-            <Text style={styles.label}>ŞİFRE TEKRAR</Text>
+            <Text style={styles.label}>{t("register.confirmPasswordLabel")}</Text>
 
             <View
               style={[
@@ -224,7 +225,7 @@ export default function ResetPasswordScreen() {
                     setConfirmPasswordError("");
                   }
                 }}
-                placeholder="••••••••"
+                placeholder={t("common.passwordPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 secureTextEntry={!isConfirmPasswordVisible}
                 editable={!loading}
@@ -257,7 +258,7 @@ export default function ResetPasswordScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.sendButtonText}>Şifreyi güncelle</Text>
+                <Text style={styles.sendButtonText}>{t("resetPassword.submit")}</Text>
               )}
             </Pressable>
 
@@ -270,8 +271,8 @@ export default function ResetPasswordScreen() {
               ]}
             >
               <Text style={styles.loginLinkText}>
-                Giriş ekranına{" "}
-                <Text style={styles.loginLinkHighlight}>geri dön</Text>
+                {t("forgotPassword.backToLogin")}
+                <Text style={styles.loginLinkHighlight}>{t("forgotPassword.backToLoginHighlight")}</Text>
               </Text>
             </Pressable>
           </View>
