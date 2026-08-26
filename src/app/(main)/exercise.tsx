@@ -1,22 +1,21 @@
 import { ExerciseCard } from "@/features/exercises/components/exercise-card";
-import {
-  buildCategoryFilters,
-  type ExerciseListItem,
-} from "@/features/exercises/exercise-catalog";
+import { type ExerciseListItem } from "@/features/exercises/exercise-catalog";
 import {
   parseInitialTrainingDay,
   type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
-import { DataErrorState } from "@/shared/components/data-error-state";
 import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import {
   EXERCISE_PAGE_SIZE,
   getBodyParts,
+  getEquipments,
   searchExercises,
   type BodyPartOption,
+  type ExerciseFilterOption
 } from "@/shared/lib/services/exerciseCatalogService";
 import { Ionicons } from "@expo/vector-icons";
 import { useScrollToTop } from "@react-navigation/native";
@@ -31,9 +30,9 @@ import {
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -72,11 +71,19 @@ export default function ExerciseScreen() {
   const listRef = useRef<FlatList<ExerciseListItem>>(null);
   const isNewProgramSelection = selectionMode === "new-program";
   const [bodyParts, setBodyParts] = useState<BodyPartOption[]>([]);
+  const [equipments, setEquipments] = useState<ExerciseFilterOption[]>([]);
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
+  null,
+);
+
+const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(
+  null,
+);
+  const [activeFilter, setActiveFilter] = useState<
+  "bodyPart" | "equipment" | null
+>(null);
   const [exercises, setExercises] = useState<ExerciseListItem[]>([]);
   const [listState, setListState] = useState<"loading" | "success" | "error">(
     "loading",
@@ -86,17 +93,27 @@ export default function ExerciseScreen() {
   const [offlineErrorDismissed, setOfflineErrorDismissed] = useState(false);
   const requestIdRef = useRef(0);
   const hasSuccessfulDataRef = useRef(false);
-
   useScrollToTop(listRef);
+  const selectedBodyPartName = selectedCategoryId
+  ? bodyParts.find((item) => item.id === selectedCategoryId)?.name ?? "Tümü"
+  : "Tümü";
+const selectedEquipmentName = selectedEquipmentId
+  ? equipments.find((item) => item.id === selectedEquipmentId)?.name ?? "Tümü"
+  : "Tümü";
+  const activeFilterOptions =
+  activeFilter === "bodyPart" ? bodyParts : equipments;
 
-  const categoryFilters = useMemo(
-    () => buildCategoryFilters(bodyParts),
-    [bodyParts],
-  );
+const activeFilterTitle =
+  activeFilter === "bodyPart" ? "Bölge Seç" : "Ekipman Seç";
 
+const activeSelectedId =
+  activeFilter === "bodyPart"
+    ? selectedCategoryId
+    : selectedEquipmentId;
   useEffect(() => {
-    void getBodyParts().then(setBodyParts);
-  }, []);
+  void getBodyParts().then(setBodyParts);
+  void getEquipments().then(setEquipments);
+}, []);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -118,10 +135,11 @@ export default function ExerciseScreen() {
 
       try {
         const result = await searchExercises({
-          search: debouncedSearch,
-          bodyPartId: selectedCategoryId,
-          offset,
-        });
+  search: debouncedSearch,
+  bodyPartId: selectedCategoryId,
+  equipmentId: selectedEquipmentId,
+  offset,
+});
 
         if (requestIdRef.current !== requestId) {
           // Bu istek sırasında arama/filtre değişti, sonucu yok say.
@@ -144,7 +162,11 @@ export default function ExerciseScreen() {
         }
       }
     },
-    [debouncedSearch, selectedCategoryId],
+    [
+  debouncedSearch,
+  selectedCategoryId,
+  selectedEquipmentId,
+],
   );
 
   useEffect(() => {
@@ -316,43 +338,147 @@ export default function ExerciseScreen() {
                 value={searchText}
               />
             </View>
+            <View style={styles.filterRow}>
+  <View style={styles.filterColumn}>
+    <Text style={styles.filterLabel}>Bölge</Text>
 
-            <ScrollView
-              horizontal
-              contentContainerStyle={styles.categoryContent}
-              keyboardShouldPersistTaps="handled"
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryList}
+    <Pressable
+      onPress={() => setActiveFilter("bodyPart")}
+      style={({ pressed }) => [
+        styles.filterButton,
+        selectedCategoryId && styles.filterButtonSelected,
+        pressed && styles.categoryButtonPressed,
+      ]}
+    >
+      <Text
+        numberOfLines={1}
+        style={styles.filterButtonText}
+      >
+        {selectedBodyPartName}
+      </Text>
+
+      <Ionicons
+        name="chevron-down"
+        size={17}
+        color={colors.textSecondary}
+      />
+    </Pressable>
+  </View>
+   <Modal
+  animationType="slide"
+  transparent
+  visible={activeFilter !== null}
+  onRequestClose={() => setActiveFilter(null)}
+>
+  <Pressable
+    style={styles.modalOverlay}
+    onPress={() => setActiveFilter(null)}
+  >
+    <Pressable
+      style={styles.filterSheet}
+      onPress={(event) => event.stopPropagation()}
+    >
+      <View style={styles.filterSheetHeader}>
+        <Text style={styles.filterSheetTitle}>
+          {activeFilterTitle}
+        </Text>
+
+        <Pressable onPress={() => setActiveFilter(null)}>
+          <Ionicons
+            name="close"
+            size={24}
+            color={colors.text}
+          />
+        </Pressable>
+      </View>
+
+      <Pressable
+        style={styles.filterOption}
+        onPress={() => {
+          if (activeFilter === "bodyPart") {
+            setSelectedCategoryId(null);
+          } else {
+            setSelectedEquipmentId(null);
+          }
+
+          setActiveFilter(null);
+        }}
+      >
+        <Text style={styles.filterOptionText}>Tümü</Text>
+
+        <Ionicons
+          name={activeSelectedId === null ? "radio-button-on" : "radio-button-off"}
+          size={22}
+          color={colors.primary}
+        />
+      </Pressable>
+
+      <FlatList
+        data={activeFilterOptions}
+        keyExtractor={(item) => item.id}
+        style={styles.filterOptionsList}
+        renderItem={({ item }) => {
+          const isSelected = activeSelectedId === item.id;
+
+          return (
+            <Pressable
+              style={styles.filterOption}
+              onPress={() => {
+                if (activeFilter === "bodyPart") {
+                  setSelectedCategoryId(item.id);
+                } else {
+                  setSelectedEquipmentId(item.id);
+                }
+
+                setActiveFilter(null);
+              }}
             >
-              {categoryFilters.map((category) => {
-                const isSelected = selectedCategoryId === category.id;
+              <Text style={styles.filterOptionText}>
+                {item.name}
+              </Text>
 
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: isSelected }}
-                    key={category.id ?? "all"}
-                    onPress={() => setSelectedCategoryId(category.id)}
-                    style={({ pressed }) => [
-                      styles.categoryButton,
-                      isSelected && styles.categoryButtonSelected,
-                      pressed && styles.categoryButtonPressed,
-                    ]}
-                  >
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      numberOfLines={1}
-                      style={[
-                        styles.categoryText,
-                        isSelected && styles.categoryTextSelected,
-                      ]}
-                    >
-                      {category.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+              <Ionicons
+                name={
+                  isSelected
+                    ? "radio-button-on"
+                    : "radio-button-off"
+                }
+                size={22}
+                color={colors.primary}
+              />
+            </Pressable>
+          );
+        }}
+      />
+    </Pressable>
+  </Pressable>
+</Modal>
+  <View style={styles.filterColumn}>
+    <Text style={styles.filterLabel}>Ekipman</Text>
+
+    <Pressable
+      onPress={() => setActiveFilter("equipment")}
+      style={({ pressed }) => [
+        styles.filterButton,
+        selectedEquipmentId && styles.filterButtonSelected,
+        pressed && styles.categoryButtonPressed,
+      ]}
+    >
+      <Text
+        numberOfLines={1}
+        style={styles.filterButtonText}
+      >
+        {selectedEquipmentName}
+      </Text>
+
+      <Ionicons
+        name="chevron-down"
+        size={17}
+        color={colors.textSecondary}
+      />
+    </Pressable>
+  </View>
+</View>
 
           </View>
         }
@@ -463,67 +589,127 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  searchInput: {
-    flex: 1,
-    height: "100%",
-    paddingVertical: 0,
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  categoryList: {
-    marginTop: 20,
-    marginHorizontal: -20,
-  },
-  categoryContent: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  categoryButton: {
-    minWidth: 92,
-    height: 48,
-    paddingHorizontal: 20,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: 24,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryButtonSelected: {
-    borderColor: colors.primaryBright,
-    backgroundColor: colors.primaryBright,
-  },
-  categoryButtonPressed: {
-    opacity: 0.72,
-  },
-  categoryText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  categoryTextSelected: {
-    color: colors.text,
-  },
-  separator: {
-    height: 14,
-  },
-  emptyState: {
-    minHeight: 180,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    marginTop: 10,
-    color: colors.textSecondary,
-    fontSize: 16,
-    lineHeight: 23,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
+ searchInput: {
+  flex: 1,
+  height: "100%",
+  paddingVertical: 0,
+  color: colors.text,
+  fontSize: 16,
+  fontWeight: "600",
+},
+
+filterRow: {
+  flexDirection: "row",
+  gap: 12,
+  marginTop: 20,
+},
+
+filterColumn: {
+  flex: 1,
+  gap: 8,
+},
+
+filterLabel: {
+  color: colors.textSecondary,
+  fontSize: 14,
+  fontWeight: "700",
+},
+
+filterButton: {
+  height: 48,
+  paddingHorizontal: 16,
+  borderWidth: 1.5,
+  borderColor: colors.border,
+  borderRadius: 24,
+  backgroundColor: colors.surface,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+},
+
+filterButtonSelected: {
+  borderColor: colors.primaryBright,
+},
+
+filterButtonText: {
+  flex: 1,
+  color: colors.text,
+  fontSize: 15,
+  fontWeight: "700",
+},
+
+categoryButtonPressed: {
+  opacity: 0.72,
+},
+modalOverlay: {
+  flex: 1,
+  backgroundColor: "rgba(0, 0, 0, 0.45)",
+  justifyContent: "flex-end",
+},
+
+filterSheet: {
+  maxHeight: "70%",
+  paddingTop: 10,
+  paddingHorizontal: 20,
+  paddingBottom: 24,
+  borderTopLeftRadius: 28,
+  borderTopRightRadius: 28,
+  backgroundColor: colors.background,
+},
+
+filterSheetHeader: {
+  minHeight: 56,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+},
+
+filterSheetTitle: {
+  color: colors.text,
+  fontSize: 20,
+  fontWeight: "800",
+},
+
+filterOptionsList: {
+  maxHeight: 430,
+},
+
+filterOption: {
+  minHeight: 54,
+  paddingVertical: 12,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.borderSubtle,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+},
+
+filterOptionText: {
+  flex: 1,
+  color: colors.text,
+  fontSize: 16,
+  fontWeight: "600",
+},
+emptyState: {
+  minHeight: 180,
+  paddingHorizontal: 24,
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+emptyText: {
+  marginTop: 10,
+  color: colors.textSecondary,
+  fontSize: 16,
+  lineHeight: 23,
+  fontWeight: "700",
+  textAlign: "center",
+},
+
+footerLoading: {
+  paddingVertical: 20,
+  alignItems: "center",
+},
 });

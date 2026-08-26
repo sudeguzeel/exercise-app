@@ -8,9 +8,9 @@ import { ProgramResultModal } from "@/features/programs/components/program-resul
 import { SelectionChip } from "@/features/programs/components/selection-chip";
 import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import {
+  getTrainingDayOptions,
   isProgramFormValid,
   toggleSelection,
-  TRAINING_DAY_OPTIONS,
 } from "@/features/programs/program-domain";
 import {
   programRepository,
@@ -28,6 +28,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -55,6 +56,8 @@ const REMINDER_TIMES = Array.from(
 export default function NewProgramScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
+  const trainingDayOptions = useMemo(() => getTrainingDayOptions(), [t]);
   const searchParams =
     useLocalSearchParams<ProgramSelectionSearchParams>();
   const selection = useMemo(
@@ -142,16 +145,14 @@ export default function NewProgramScreen() {
           selection.weightKg,
         );
         setModalState({
-          title: "Program oluşturuldu",
-          message:
-            "Program oluşturuldu ve egzersiz programa başarıyla eklendi.",
+          title: t("newProgram.createdTitle"),
+          message: t("newProgram.createdMessage"),
           success: true,
         });
       } catch {
         setModalState({
-          title: "Kilo kaydı tamamlanamadı",
-          message:
-            "Program oluşturuldu ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
+          title: t("newProgram.weightSaveFailedTitle"),
+          message: t("newProgram.weightSaveFailedMessage"),
           success: false,
         });
       }
@@ -162,15 +163,14 @@ export default function NewProgramScreen() {
         error.code === "DUPLICATE_NAME"
       ) {
         setModalState({
-          title: "Program oluşturulamadı",
-          message: "Bu ad ile zaten bir programınız var.",
+          title: t("newProgram.createFailedTitle"),
+          message: t("programRepo.duplicateProgramName"),
           success: false,
         });
       } else {
         setModalState({
-          title: "Program oluşturulamadı",
-          message:
-            "Program oluşturulurken bir sorun oluştu. Lütfen tekrar deneyin.",
+          title: t("newProgram.createFailedTitle"),
+          message: t("newProgram.genericCreateFailedMessage"),
           success: false,
         });
       }
@@ -185,6 +185,7 @@ export default function NewProgramScreen() {
     selectedDays,
     muscleGroupIds,
     selection,
+    t,
   ]);
 
   const handleModalConfirm = useCallback(() => {
@@ -223,7 +224,7 @@ export default function NewProgramScreen() {
             <View style={styles.content}>
               <ProgramFlowHeader
                 onBack={() => router.back()}
-                title="Yeni program"
+                title={t("newProgram.headerTitle")}
               />
 
               {isRouteValid ? (
@@ -233,16 +234,16 @@ export default function NewProgramScreen() {
                       maxFontSizeMultiplier={1.3}
                       style={styles.sectionLabel}
                     >
-                      PROGRAM ADI
+                      {t("newProgram.nameLabel")}
                     </Text>
                     <TextInput
-                      accessibilityLabel="Program adı"
+                      accessibilityLabel={t("newProgram.nameAccessibility")}
                       autoCapitalize="words"
                       autoCorrect={false}
                       editable={!isSubmitting}
                       maxFontSizeMultiplier={1.3}
                       onChangeText={setProgramName}
-                      placeholder="Örn. İtiş Günü"
+                      placeholder={t("newProgram.namePlaceholder")}
                       placeholderTextColor={colors.placeholder}
                       returnKeyType="done"
                       style={styles.nameInput}
@@ -255,15 +256,15 @@ export default function NewProgramScreen() {
                       maxFontSizeMultiplier={1.3}
                       style={styles.sectionLabel}
                     >
-                      HANGİ GÜNLER YAPILACAK?
+                      {t("newProgram.daysLabel")}
                     </Text>
                     <View style={styles.dayGrid}>
                       {initialTrainingDay
-                        ? TRAINING_DAY_OPTIONS.filter(
+                        ? trainingDayOptions.filter(
                             (day) => day.id === initialTrainingDay,
                           ).map((day) => (
                             <View
-                              accessibilityLabel={`${day.label}, seçili gün`}
+                              accessibilityLabel={t("newProgram.fixedDaySelectedAccessibility", { label: day.label })}
                               accessible
                               key={day.id}
                               style={styles.fixedDayChip}
@@ -271,7 +272,7 @@ export default function NewProgramScreen() {
                               <Text style={styles.fixedDayText}>{day.shortLabel}</Text>
                             </View>
                           ))
-                        : TRAINING_DAY_OPTIONS.map((day) => (
+                        : trainingDayOptions.map((day) => (
                             <SelectionChip
                               accessibilityLabel={day.label}
                               compact
@@ -290,7 +291,7 @@ export default function NewProgramScreen() {
 
                   <View style={styles.reminderCard}>
                       <Pressable
-                        accessibilityLabel="Antrenman hatırlatıcısını aç veya kapat"
+                        accessibilityLabel={t("newProgram.reminderToggleAccessibility")}
                         accessibilityRole="switch"
                         accessibilityState={{ checked: reminderEnabled }}
                         onPress={() =>
@@ -311,10 +312,10 @@ export default function NewProgramScreen() {
                         />
                         <View style={styles.reminderTitleContent}>
                           <Text style={styles.reminderTitle}>
-                            Antrenman Hatırlatıcısı
+                            {t("newProgram.reminderTitle")}
                           </Text>
                           <Text style={styles.reminderDescription}>
-                            Antrenman saatinde bildirim al.
+                            {t("newProgram.reminderDescription")}
                           </Text>
                         </View>
                         <View style={styles.reminderToggleLabel}>
@@ -330,7 +331,7 @@ export default function NewProgramScreen() {
                               reminderEnabled && styles.reminderToggleTextActive,
                             ]}
                           >
-                            {reminderEnabled ? "Açık" : "Aç/Kapat"}
+                            {reminderEnabled ? t("newProgram.reminderOn") : t("newProgram.reminderToggle")}
                           </Text>
                         </View>
                       </Pressable>
@@ -338,13 +339,13 @@ export default function NewProgramScreen() {
                       {reminderEnabled ? (
                         <View style={styles.reminderExpanded}>
                           <Text style={styles.reminderTimeLabel}>
-                            Hatırlatma saatleri
+                            {t("newProgram.reminderTimesLabel")}
                           </Text>
                           {reminderTimes.map((reminderTime, index) => (
                             <View key={`${index}-${reminderTime}`}>
                               <View style={styles.reminderTimeRow}>
                                 <Pressable
-                                  accessibilityLabel={`Hatırlatma saati ${reminderTime}. Saat listesini aç`}
+                                  accessibilityLabel={t("newProgram.reminderTimeOpenAccessibility", { time: reminderTime })}
                                   accessibilityRole="button"
                                   accessibilityState={{
                                     expanded: reminderListOpen === index,
@@ -379,7 +380,7 @@ export default function NewProgramScreen() {
                                 </Pressable>
                                 {index > 0 ? (
                                   <Pressable
-                                    accessibilityLabel={`${reminderTime} hatırlatmasını kaldır`}
+                                    accessibilityLabel={t("newProgram.removeReminderAccessibility", { time: reminderTime })}
                                     accessibilityRole="button"
                                     onPress={() => {
                                       setReminderTimes((times) =>
@@ -469,7 +470,7 @@ export default function NewProgramScreen() {
                                 color={colors.primary}
                               />
                               <Text style={styles.addReminderButtonText}>
-                                Saat ekle
+                                {t("newProgram.addReminderTime")}
                               </Text>
                             </Pressable>
                           ) : null}
@@ -484,22 +485,20 @@ export default function NewProgramScreen() {
                         numberOfLines={2}
                         style={styles.summaryTitle}
                       >
-                        {trimmedProgramName || "Yeni program"}
+                        {trimmedProgramName || t("newProgram.defaultProgramName")}
                       </Text>
                       <Text
                         maxFontSizeMultiplier={1.3}
                         style={styles.summaryDayCount}
                       >
-                        {selectedDays.size} gün
+                        {t("newProgram.dayCountLabel", { count: selectedDays.size })}
                       </Text>
                     </View>
                     <Text
                       maxFontSizeMultiplier={1.3}
                       style={styles.summaryDescription}
                     >
-                      Bu programı oluşturduğunda, egzersiz eklerken listede
-                      görünecek ve “Program” sekmende haftalık takvimine
-                      işlenecek.
+                      {t("newProgram.summaryDescription")}
                     </Text>
                   </View>
                 </>
@@ -514,10 +513,10 @@ export default function NewProgramScreen() {
                     maxFontSizeMultiplier={1.3}
                     style={styles.invalidTitle}
                   >
-                    Egzersiz bilgileri bulunamadı
+                    {t("newProgram.invalidTitle")}
                   </Text>
                   <Text maxFontSizeMultiplier={1.3} style={styles.invalidText}>
-                    Yeni program akışını egzersiz detayından tekrar başlatın.
+                    {t("newProgram.invalidText")}
                   </Text>
                   <Pressable
                     accessibilityRole="button"
@@ -528,7 +527,7 @@ export default function NewProgramScreen() {
                     ]}
                   >
                     <Text style={styles.invalidButtonText}>
-                      Egzersizlere dön
+                      {t("newProgram.backToExercises")}
                     </Text>
                   </Pressable>
                 </View>
@@ -540,7 +539,7 @@ export default function NewProgramScreen() {
             <View style={styles.footer}>
               <View style={styles.footerContent}>
                 <Pressable
-                  accessibilityLabel="Programı oluştur"
+                  accessibilityLabel={t("newProgram.createProgramAccessibility")}
                   accessibilityRole="button"
                   accessibilityState={{
                     busy: isSubmitting,
@@ -564,7 +563,7 @@ export default function NewProgramScreen() {
                         !canSubmit && styles.submitButtonTextDisabled,
                       ]}
                     >
-                      Programı oluştur
+                      {t("newProgram.submit")}
                     </Text>
                   )}
                 </Pressable>

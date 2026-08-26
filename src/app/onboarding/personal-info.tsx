@@ -6,6 +6,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -18,44 +19,9 @@ import {
     View,
 } from "react-native";
 
+import { useLanguage } from "@/providers/LanguageContext";
 import { Gender, Goal, useOnboarding } from "@/providers/OnboardingContext";
 import { savePersonalInfo } from "@/shared/lib/services/personalInfoService";
-
-const genderOptions: {
-  label: string;
-  value: Gender;
-}[] = [
-  {
-    label: "Erkek",
-    value: "male",
-  },
-  {
-    label: "Kadın",
-    value: "female",
-  },
-  {
-    label: "Belirtmek\nistemiyorum",
-    value: "other",
-  },
-];
-
-const goalOptions: {
-  label: string;
-  value: Goal;
-}[] = [
-  {
-    label: "Kas\nkazanımı",
-    value: "build-muscle",
-  },
-  {
-    label: "Yağ\nyakımı",
-    value: "lose-weight",
-  },
-  {
-    label: "Genel\nfitness",
-    value: "stay-fit",
-  },
-];
 
 function formatDate(date: Date) {
   const day = String(date.getDate()).padStart(2, "0");
@@ -135,7 +101,27 @@ function formatWeightInput(value: string) {
 export default function PersonalInfoScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const { personalInfo, setPersonalInfo } = useOnboarding();
+
+  const genderOptions: { label: string; value: Gender }[] = useMemo(
+    () => [
+      { label: t("onboarding.personalInfo.genderMale"), value: "male" },
+      { label: t("onboarding.personalInfo.genderFemale"), value: "female" },
+      { label: t("onboarding.personalInfo.genderOther"), value: "other" },
+    ],
+    [t],
+  );
+
+  const goalOptions: { label: string; value: Goal }[] = useMemo(
+    () => [
+      { label: t("onboarding.personalInfo.goalBuildMuscle"), value: "build-muscle" },
+      { label: t("onboarding.personalInfo.goalLoseWeight"), value: "lose-weight" },
+      { label: t("onboarding.personalInfo.goalStayFit"), value: "stay-fit" },
+    ],
+    [t],
+  );
 
   const [showDatePicker, setShowDatePicker] = useState(false);
 
@@ -157,89 +143,89 @@ export default function PersonalInfoScreen() {
     const value = personalInfo.fullName.trim();
 
     if (!value) {
-      return "Ad Soyad alanı zorunludur.";
+      return t("onboarding.personalInfo.fullNameRequired");
     }
 
     const pattern =
       /^[A-Za-zÇĞİÖŞÜçğıöşüÀ-ž]+(?:[ '-][A-Za-zÇĞİÖŞÜçğıöşüÀ-ž]+)*$/;
 
     if (!pattern.test(value)) {
-      return "Yalnızca harf, boşluk, tire ve apostrof kullanılabilir.";
+      return t("onboarding.personalInfo.fullNameInvalidChars");
     }
 
     return "";
-  }, [personalInfo.fullName]);
+  }, [personalInfo.fullName, t]);
 
   const birthDateError = useMemo(() => {
     if (!personalInfo.birthDate) {
-      return "Doğum tarihi zorunludur.";
+      return t("onboarding.personalInfo.birthDateRequired");
     }
 
     if (personalInfo.birthDate.length !== 10) {
-      return "Tarihi GG/AA/YYYY biçiminde giriniz.";
+      return t("onboarding.personalInfo.birthDateFormat");
     }
 
     const date = parseBirthDate(personalInfo.birthDate);
 
     if (!date) {
-      return "Geçerli bir doğum tarihi giriniz.";
+      return t("onboarding.personalInfo.birthDateInvalid");
     }
 
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
     if (date > today) {
-      return "Gelecek tarih kabul edilmez.";
+      return t("onboarding.personalInfo.birthDateFuture");
     }
 
     if (calculateAge(date) < 13) {
-      return "En az 13 yaşında olmalısınız.";
+      return t("onboarding.personalInfo.birthDateTooYoung");
     }
 
     return "";
-  }, [personalInfo.birthDate]);
+  }, [personalInfo.birthDate, t]);
 
   const heightError = useMemo(() => {
     if (!personalInfo.height) {
-      return "Boy alanı zorunludur.";
+      return t("onboarding.personalInfo.heightRequired");
     }
 
     const value = Number(personalInfo.height);
 
     if (!Number.isInteger(value) || value < 100 || value > 250) {
-      return "Boy 100–250 cm arasında tam sayı olmalıdır.";
+      return t("onboarding.personalInfo.heightRange");
     }
 
     return "";
-  }, [personalInfo.height]);
+  }, [personalInfo.height, t]);
 
   const currentWeightError = useMemo(() => {
     if (!personalInfo.currentWeight) {
-      return "Mevcut kilo zorunludur.";
+      return t("onboarding.personalInfo.currentWeightRequired");
     }
 
     const value = Number(personalInfo.currentWeight);
 
     if (Number.isNaN(value) || value < 30 || value > 300) {
-      return "Mevcut kilo 30–300 kg arasında olmalıdır.";
+      return t("onboarding.personalInfo.currentWeightRange");
     }
 
     return "";
-  }, [personalInfo.currentWeight]);
+  }, [personalInfo.currentWeight, t]);
 
   const targetWeightError = useMemo(() => {
     if (!personalInfo.targetWeight) {
-      return "Hedef kilo zorunludur.";
+      return t("onboarding.personalInfo.targetWeightRequired");
     }
 
     const value = Number(personalInfo.targetWeight);
 
     if (Number.isNaN(value) || value < 30 || value > 300) {
-      return "Hedef kilo 30–300 kg arasında olmalıdır.";
+      return t("onboarding.personalInfo.targetWeightRange");
     }
 
     return "";
-  }, [personalInfo.targetWeight]);
+  }, [personalInfo.targetWeight, t]);
 
   const isFormValid =
     personalInfo.gender !== "" &&
@@ -308,7 +294,7 @@ export default function PersonalInfoScreen() {
 
       router.push("/onboarding/fitness-experience");
     } catch {
-      setSaveError("Bağlantı sağlanamadı. Lütfen tekrar deneyin.");
+      setSaveError(t("onboarding.personalInfo.connectionError"));
     } finally {
       setIsSaving(false);
     }
@@ -333,7 +319,7 @@ export default function PersonalInfoScreen() {
           </Pressable>
 
           <Text style={styles.stepText}>
-            Adım <Text style={styles.activeStep}>2</Text> / 4
+            {t("onboarding.step")} <Text style={styles.activeStep}>2</Text> / 4
           </Text>
         </View>
 
@@ -344,13 +330,13 @@ export default function PersonalInfoScreen() {
           <View style={styles.progressItem} />
         </View>
 
-        <Text style={styles.title}>Seni tanıyalım</Text>
+        <Text style={styles.title}>{t("onboarding.personalInfo.title")}</Text>
 
         <Text style={styles.subtitle}>
-          Programını buna göre kişiselleştireceğiz.
+          {t("onboarding.personalInfo.subtitle")}
         </Text>
 
-        <Text style={styles.sectionLabel}>CİNSİYET</Text>
+        <Text style={styles.sectionLabel}>{t("onboarding.personalInfo.genderLabel")}</Text>
 
         <View style={styles.optionRow}>
           {genderOptions.map((option) => {
@@ -378,7 +364,7 @@ export default function PersonalInfoScreen() {
           })}
         </View>
 
-        <Text style={styles.sectionLabel}>HEDEFİN</Text>
+        <Text style={styles.sectionLabel}>{t("onboarding.personalInfo.goalLabel")}</Text>
 
         <View style={styles.optionRow}>
           {goalOptions.map((option) => {
@@ -400,7 +386,7 @@ export default function PersonalInfoScreen() {
           })}
         </View>
 
-        <Text style={styles.sectionLabel}>AD SOYAD / DOĞUM TARİHİ</Text>
+        <Text style={styles.sectionLabel}>{t("onboarding.personalInfo.nameDateLabel")}</Text>
 
         <View style={styles.doubleRow}>
           <View style={styles.halfField}>
@@ -413,7 +399,7 @@ export default function PersonalInfoScreen() {
                   fullName: true,
                 }))
               }
-              placeholder="Ad Soyad"
+              placeholder={t("onboarding.personalInfo.fullNamePlaceholder")}
               placeholderTextColor={colors.placeholder}
               autoCapitalize="words"
               maxLength={50}
@@ -443,7 +429,7 @@ export default function PersonalInfoScreen() {
                     birthDate: true,
                   }))
                 }
-                placeholder="GG/AA/YYYY"
+                placeholder={t("onboarding.personalInfo.birthDatePlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 keyboardType="number-pad"
                 maxLength={10}
@@ -487,7 +473,7 @@ export default function PersonalInfoScreen() {
               themeVariant="light"
               textColor={colors.text}
               accentColor={colors.primaryBright}
-              locale="tr-TR"
+              locale={language === "tr" ? "tr-TR" : "en-US"}
             />
 
             {Platform.OS === "ios" ? (
@@ -495,13 +481,13 @@ export default function PersonalInfoScreen() {
                 style={styles.datePickerDoneButton}
                 onPress={() => setShowDatePicker(false)}
               >
-                <Text style={styles.datePickerDoneText}>Tamam</Text>
+                <Text style={styles.datePickerDoneText}>{t("onboarding.personalInfo.datePickerDone")}</Text>
               </Pressable>
             ) : null}
           </View>
         ) : null}
 
-        <Text style={styles.sectionLabel}>BOY / MEVCUT KİLO / HEDEF KİLO</Text>
+        <Text style={styles.sectionLabel}>{t("onboarding.personalInfo.metricsLabel")}</Text>
 
         <View style={styles.tripleRow}>
           <View style={styles.smallField}>
@@ -625,7 +611,7 @@ export default function PersonalInfoScreen() {
             {isSaving ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.continueButtonText}>Devam et</Text>
+              <Text style={styles.continueButtonText}>{t("onboarding.continue")}</Text>
             )}
           </Pressable>
         </View>

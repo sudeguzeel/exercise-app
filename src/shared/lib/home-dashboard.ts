@@ -1,5 +1,6 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
 import type { PersistedProgramExercise, UserProgram } from "@/features/programs/types";
+import i18n from "@/shared/i18n";
 import type { BodyPartOption } from "@/shared/lib/services/exerciseCatalogService";
 import type { Ionicons } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
@@ -60,15 +61,17 @@ export type HomeDashboard = {
   isRestDay: boolean;
 };
 
-const DAY_META: { id: TrainingDay; label: string }[] = [
-  { id: "monday", label: "Pzt" },
-  { id: "tuesday", label: "Sal" },
-  { id: "wednesday", label: "Çar" },
-  { id: "thursday", label: "Per" },
-  { id: "friday", label: "Cum" },
-  { id: "saturday", label: "Cmt" },
-  { id: "sunday", label: "Paz" },
-];
+function getDayMeta(): { id: TrainingDay; label: string }[] {
+  return [
+    { id: "monday", label: i18n.t("days.mon") },
+    { id: "tuesday", label: i18n.t("days.tue") },
+    { id: "wednesday", label: i18n.t("days.wed") },
+    { id: "thursday", label: i18n.t("days.thu") },
+    { id: "friday", label: i18n.t("days.fri") },
+    { id: "saturday", label: i18n.t("days.sat") },
+    { id: "sunday", label: i18n.t("days.sun") },
+  ];
+}
 
 export function startOfWeek(referenceDate: Date) {
   const date = new Date(
@@ -162,7 +165,8 @@ export function buildHomeDashboard(
     return { ...category, value };
   });
 
-  const dailyTotals: DailyTotal[] = DAY_META.map((day, index) => {
+  const dayMeta = getDayMeta();
+  const dailyTotals: DailyTotal[] = dayMeta.map((day, index) => {
     const date = toDateKey(addDays(weekStartDate, index));
     const value =
       date <= today ? weekRecords.filter((record) => record.workoutDate === date).length : 0;
@@ -208,7 +212,7 @@ export function buildHomeDashboard(
     ]),
   ) as Record<TrainingDay, TodayProgramExercise[]>;
 
-  const todayDayId = DAY_META[(new Date(referenceDate).getDay() + 6) % 7].id;
+  const todayDayId = dayMeta[(new Date(referenceDate).getDay() + 6) % 7].id;
   const todayProgramExercises = programExercisesByDay[todayDayId];
 
   return {
@@ -254,7 +258,7 @@ function calculateStreakFromKeys(
   // 60 gün geriye bakılır (sonsuz döngüyü önlemek için güvenlik sınırı).
   for (let i = 0; i < 60; i += 1) {
     const date = toDateKey(cursor);
-    const dayId = DAY_META[(cursor.getDay() + 6) % 7].id;
+    const dayId = getDayMeta()[(cursor.getDay() + 6) % 7].id;
     const hasExercises = exerciseCountForDay(programs, dayId) > 0;
 
     if (!hasExercises) {

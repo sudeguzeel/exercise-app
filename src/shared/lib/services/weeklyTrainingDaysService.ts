@@ -1,4 +1,5 @@
 import type { TrainingDay } from "@/providers/OnboardingContext";
+import i18n from "@/shared/i18n";
 import { supabase } from "@/shared/lib/supabase";
 
 export type SaveWeeklyTrainingDaysResult =
@@ -21,7 +22,7 @@ export async function saveWeeklyTrainingDays(
   if (!Array.isArray(days) || days.length === 0) {
     return {
       success: false,
-      message: "En az bir antrenman günü seçmelisiniz.",
+      message: i18n.t("onboarding.weeklyTrainingDays.atLeastOneDayRequired"),
     };
   }
 

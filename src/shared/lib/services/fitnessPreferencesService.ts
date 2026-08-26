@@ -1,3 +1,4 @@
+import i18n from "@/shared/i18n";
 import { supabase } from "@/shared/lib/supabase";
 
 export const FITNESS_PREFERENCES = ["cardio", "strength", "flexibility"] as const;
@@ -20,7 +21,7 @@ function validatePreferences(
   if (!Array.isArray(preferences) || preferences.length === 0) {
     return {
       success: false,
-      message: "En az bir fitness tercihi seçilmelidir.",
+      message: i18n.t("onboarding.fitnessExperience.atLeastOneRequired"),
     };
   }
 
@@ -33,7 +34,7 @@ function validatePreferences(
   if (hasInvalidPreference) {
     return {
       success: false,
-      message: "Tanımlı olmayan bir fitness tercihi gönderildi.",
+      message: i18n.t("onboarding.fitnessExperience.invalidPreference"),
     };
   }
 

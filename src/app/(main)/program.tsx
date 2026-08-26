@@ -31,6 +31,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -52,6 +53,7 @@ function singleParam(value: string | string[] | undefined) {
 export default function ProgramScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const { isOffline } = useConnectivity();
   const params = useLocalSearchParams<{
     selectedDate?: string | string[];
@@ -195,17 +197,16 @@ export default function ProgramScreen() {
           void loadChart();
         })
         .catch(() => {
-          const message = "Antrenman kaydı sıfırlanamadı. Lütfen tekrar deneyin.";
+          const message = t("program.resetFailedMessage");
           if (Platform.OS === "web") {
             window.alert(message);
           } else {
-            Alert.alert("Sıfırlanamadı", message);
+            Alert.alert(t("program.resetFailedTitle"), message);
           }
         });
     };
 
-    const confirmMessage =
-      "Bugün için tamamlanan bu antrenman kaydı silinecek ve baştan başlatabileceksin. Emin misin?";
+    const confirmMessage = t("program.resetConfirmMessage");
 
     // react-native-web'de Alert.alert no-op — butonlu bir dialog hiç
     // görünmüyor, onPress asla tetiklenmiyor. Web'de window.confirm'e
@@ -215,11 +216,11 @@ export default function ProgramScreen() {
       return;
     }
 
-    Alert.alert("Antrenmanı sıfırla", confirmMessage, [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Sıfırla", style: "destructive", onPress: performReset },
+    Alert.alert(t("program.resetConfirmTitle"), confirmMessage, [
+      { text: t("program.resetCancel"), style: "cancel" },
+      { text: t("program.reset"), style: "destructive", onPress: performReset },
     ]);
-  }, [activeProgram, loadChart, selectedDateKey]);
+  }, [activeProgram, loadChart, selectedDateKey, t]);
 
   const currentCompletionRecords = useMemo(
     () => completionRecords ?? [],
@@ -283,8 +284,8 @@ export default function ProgramScreen() {
     if (!activeProgram || navigationLock.current) return;
     if (activeProgram.exercises.length === 0) {
       Alert.alert(
-        "Antrenman başlatılamadı",
-        "Bu programda henüz egzersiz bulunmuyor.",
+        t("program.startFailedTitle"),
+        t("program.noExercisesMessage"),
       );
       return;
     }
@@ -303,13 +304,13 @@ export default function ProgramScreen() {
       navigationLock.current = false;
       setNavigationBusy(false);
       Alert.alert(
-        "Antrenman başlatılamadı",
+        t("program.startFailedTitle"),
         error instanceof WorkoutRepositoryError
           ? error.message
-          : "Bağlantınızı kontrol edip tekrar deneyin.",
+          : t("program.connectionCheckMessage"),
       );
     }
-  }, [activeProgram, selectedDateKey]);
+  }, [activeProgram, selectedDateKey, t]);
 
   const handleAddWorkout = useCallback(() => {
     const selectedTrainingDay = week.find(
@@ -358,13 +359,13 @@ export default function ProgramScreen() {
       >
         <View style={styles.topRow}>
           <Text numberOfLines={1} style={styles.greeting}>
-            Merhaba,
+            {t("program.greeting")}
             <Text style={styles.greetingName}>
-              {profileLoading ? " …" : ` ${displayName ?? "Sporcu"}`}
+              {profileLoading ? " …" : ` ${displayName ?? t("program.athleteFallback")}`}
             </Text>
           </Text>
         <Pressable
-  accessibilityLabel="Profil"
+  accessibilityLabel={t("program.profileAccessibility")}
   accessibilityRole="button"
   onPress={() => router.push("/(main)/profile")}
   style={({ pressed }) => [
@@ -389,7 +390,7 @@ export default function ProgramScreen() {
         </View>
 
         {programState === "loading" && !hasSuccessfulProgramsRef.current ? (
-          <SectionState loading text="Programlar yükleniyor…" />
+          <SectionState loading text={t("program.loadingPrograms")} />
         ) : dailyPrograms.length > 0 ? (
           <View style={styles.programCards}>
             {dailyPrograms.map((program) => (
@@ -410,9 +411,9 @@ export default function ProgramScreen() {
             <View style={styles.emptyProgramsIcon}>
               <Ionicons name="barbell-outline" size={27} color={colors.primary} />
             </View>
-            <Text style={styles.emptyProgramsTitle}>Henüz bir programın yok</Text>
+            <Text style={styles.emptyProgramsTitle}>{t("program.noProgramsTitle")}</Text>
             <Text style={styles.stateText}>
-              Hazır olduğunda kendine uygun yeni bir program oluşturabilirsin.
+              {t("program.noProgramsSubtitle")}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -420,14 +421,14 @@ export default function ProgramScreen() {
               style={({ pressed }) => [styles.createProgramButton, pressed && styles.pressed]}
             >
               <Ionicons name="add" size={18} color={colors.onPrimary} />
-              <Text style={styles.createProgramText}>Yeni program oluştur</Text>
+              <Text style={styles.createProgramText}>{t("program.createNewProgram")}</Text>
             </Pressable>
           </View>
         ) : (
-          <EmptyCard text="Bu gün için planlanmış bir program bulunmuyor." />
+          <EmptyCard text={t("program.noProgramForDayMessage")} />
         )}
 
-        <Text style={styles.sectionTitle}>BUGÜNKÜ PROGRAMLAR</Text>
+        <Text style={styles.sectionTitle}>{t("program.todayProgramsTitle")}</Text>
         {dailyPrograms.length > 0 ? (
           <ProgramPills
             activeProgramId={activeProgramId}
@@ -435,7 +436,7 @@ export default function ProgramScreen() {
             programs={dailyPrograms}
           />
         ) : (
-          <Text style={styles.inlineEmpty}>Seçilebilecek bir program yok.</Text>
+          <Text style={styles.inlineEmpty}>{t("program.noSelectableProgram")}</Text>
         )}
 
         <View style={styles.exerciseList}>
@@ -449,7 +450,7 @@ export default function ProgramScreen() {
                 />
               ))
             ) : (
-              <EmptyCard text="Bu programda henüz egzersiz bulunmuyor." />
+              <EmptyCard text={t("program.noExercisesMessage")} />
             )
           ) : null}
         </View>
@@ -460,7 +461,7 @@ export default function ProgramScreen() {
             onPress={handleResetToday}
             style={({ pressed }) => [styles.resetLink, pressed && styles.pressed]}
           >
-            <Text style={styles.resetLinkText}>Bugünkü antrenmanı sıfırla</Text>
+            <Text style={styles.resetLinkText}>{t("program.resetTodayWorkout")}</Text>
           </Pressable>
         ) : null}
       </ScrollView>
@@ -477,7 +478,7 @@ export default function ProgramScreen() {
             pressed && programState !== "loading" && styles.pressed,
           ]}
         >
-          <Text style={styles.addWorkoutButtonText}>+ Program ekle</Text>
+          <Text style={styles.addWorkoutButtonText}>{t("program.addProgram")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -504,7 +505,7 @@ export default function ProgramScreen() {
                 color={colors.onPrimary}
               />
               <Text style={styles.startButtonText}>
-                Antrenmana başla
+                {t("program.startWorkout")}
               </Text>
             </>
           )}
@@ -525,6 +526,7 @@ function SectionState({
 }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   return (
     <View style={styles.stateCard}>
       {loading ? (
@@ -535,7 +537,7 @@ function SectionState({
       <Text style={styles.stateText}>{text}</Text>
       {onRetry ? (
         <Pressable accessibilityRole="button" onPress={onRetry} style={styles.retryButton}>
-          <Text style={styles.retryText}>Yeniden dene</Text>
+          <Text style={styles.retryText}>{t("program.retry")}</Text>
         </Pressable>
       ) : null}
     </View>

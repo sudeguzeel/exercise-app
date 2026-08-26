@@ -2,6 +2,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type ProgramFlowHeaderProps = {
@@ -15,10 +16,11 @@ export function ProgramFlowHeader({
 }: ProgramFlowHeaderProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <Pressable
-        accessibilityLabel="Geri dön"
+        accessibilityLabel={t("profile.goBack")}
         accessibilityRole="button"
         hitSlop={8}
         onPress={onBack}

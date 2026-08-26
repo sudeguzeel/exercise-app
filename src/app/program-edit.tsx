@@ -10,9 +10,9 @@ import {
   type ProgramEditDraft,
 } from "@/features/programs/program-edit-draft";
 import {
+  getTrainingDayOptions,
   isProgramFormValid,
   toggleSelection,
-  TRAINING_DAY_OPTIONS,
 } from "@/features/programs/program-domain";
 import { getCurrentWeek } from "@/features/programs/program-dashboard";
 import {
@@ -28,6 +28,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -56,6 +57,8 @@ function singleParam(value: string | string[] | undefined) {
 export default function ProgramEditScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
+  const trainingDayOptions = useMemo(() => getTrainingDayOptions(), [t]);
   const params = useLocalSearchParams<{
     programId?: string | string[];
     selectedDate?: string | string[];
@@ -231,9 +234,9 @@ export default function ProgramEditScreen() {
         weightSaveResults.some((result) => result.status === "rejected")
       ) {
         Alert.alert(
-          "Kilo kaydı tamamlanamadı",
-          "Program güncellendi ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
-          [{ text: "Tamam", onPress: () => returnToPrograms(updated.id) }],
+          t("newProgram.weightSaveFailedTitle"),
+          t("programEdit.weightSaveFailedMessageEdit"),
+          [{ text: t("resetPassword.ok"), onPress: () => returnToPrograms(updated.id) }],
         );
         return;
       }
@@ -244,16 +247,16 @@ export default function ProgramEditScreen() {
       );
     } catch (error) {
       Alert.alert(
-        "Program güncellenemedi",
+        t("programEdit.updateFailedTitle"),
         error instanceof ProgramRepositoryError
           ? error.message
-          : "Bağlantınızı kontrol edip tekrar deneyin.",
+          : t("program.connectionCheckMessage"),
       );
       mutationLock.current = false;
     } finally {
       setIsSaving(false);
     }
-  }, [canSave, draft, returnToPrograms]);
+  }, [canSave, draft, returnToPrograms, t]);
 
   const confirmDelete = useCallback(() => {
     if (!draft || isSaving || isDeleting) return;
@@ -271,16 +274,16 @@ export default function ProgramEditScreen() {
       returnToPrograms();
     } catch (error) {
       Alert.alert(
-        "Program silinemedi",
+        t("programEdit.deleteFailedTitle"),
         error instanceof ProgramRepositoryError
           ? error.message
-          : "Bağlantınızı kontrol edip tekrar deneyin.",
+          : t("program.connectionCheckMessage"),
       );
       mutationLock.current = false;
     } finally {
       setIsDeleting(false);
     }
-  }, [draft, returnToPrograms]);
+  }, [draft, returnToPrograms, t]);
 
   if (loadState !== "success" || !draft) {
     return (
@@ -293,16 +296,16 @@ export default function ProgramEditScreen() {
             <>
               <Ionicons name="alert-circle-outline" size={40} color={colors.primary} />
               <Text style={styles.stateTitle}>
-                {loadState === "not-found" ? "Program bulunamadı" : "Program alınamadı"}
+                {loadState === "not-found" ? t("programEdit.notFoundTitle") : t("programEdit.loadErrorTitle")}
               </Text>
               <Text style={styles.stateText}>
                 {loadState === "not-found"
-                  ? "Program bağlantısı geçersiz veya program artık mevcut değil."
-                  : "Bağlantınızı kontrol edip tekrar deneyin."}
+                  ? t("programEdit.notFoundMessage")
+                  : t("program.connectionCheckMessage")}
               </Text>
               {loadState === "error" ? (
                 <Pressable onPress={() => void loadProgram()} style={styles.retryButton}>
-                  <Text style={styles.retryText}>Yeniden dene</Text>
+                  <Text style={styles.retryText}>{t("program.retry")}</Text>
                 </Pressable>
               ) : null}
             </>
@@ -335,13 +338,13 @@ export default function ProgramEditScreen() {
           scrollEnabled={!isDragging}
           showsVerticalScrollIndicator={false}
         >
-          <FormLabel>PROGRAM ADI</FormLabel>
+          <FormLabel>{t("newProgram.nameLabel")}</FormLabel>
           <TextInput
-            accessibilityLabel="Program adı"
+            accessibilityLabel={t("newProgram.nameAccessibility")}
             maxLength={60}
             onBlur={() => setNameTouched(true)}
             onChangeText={(name) => updateDraft({ ...draft, name })}
-            placeholder="Program adı"
+            placeholder={t("programEdit.namePlaceholder")}
             placeholderTextColor={colors.placeholder}
             returnKeyType="done"
             style={[
@@ -351,17 +354,17 @@ export default function ProgramEditScreen() {
             value={draft.name}
           />
           {nameTouched && !draft.name.trim() ? (
-            <Text style={styles.validationText}>Program adı zorunludur.</Text>
+            <Text style={styles.validationText}>{t("programEdit.nameRequired")}</Text>
           ) : null}
 
-          <FormLabel>HANGİ GÜNLER YAPILACAK?</FormLabel>
+          <FormLabel>{t("newProgram.daysLabel")}</FormLabel>
           <View style={styles.dayGrid}>
             {selectedTrainingDay
-              ? TRAINING_DAY_OPTIONS.filter(
+              ? trainingDayOptions.filter(
                   (day) => day.id === selectedTrainingDay,
                 ).map((day) => (
                   <View
-                    accessibilityLabel={`${day.label}, seçili gün`}
+                    accessibilityLabel={t("newProgram.fixedDaySelectedAccessibility", { label: day.label })}
                     accessible
                     key={day.id}
                     style={styles.fixedDayChip}
@@ -369,7 +372,7 @@ export default function ProgramEditScreen() {
                     <Text style={styles.fixedDayText}>{day.shortLabel}</Text>
                   </View>
                 ))
-              : TRAINING_DAY_OPTIONS.map((day) => {
+              : trainingDayOptions.map((day) => {
                   const selected = draft.trainingDays.includes(day.id);
                   return (
                     <ChoiceChip
@@ -383,12 +386,12 @@ export default function ProgramEditScreen() {
                 })}
           </View>
           {draft.trainingDays.length === 0 ? (
-            <Text style={styles.validationText}>En az bir gün seçmelisiniz.</Text>
+            <Text style={styles.validationText}>{t("programEdit.atLeastOneDayRequired")}</Text>
           ) : null}
 
           <View style={styles.reminderCard}>
             <Pressable
-              accessibilityLabel="Antrenman hatırlatıcısını aç veya kapat"
+              accessibilityLabel={t("newProgram.reminderToggleAccessibility")}
               accessibilityRole="switch"
               accessibilityState={{ checked: reminderEnabled }}
               onPress={() =>
@@ -401,25 +404,25 @@ export default function ProgramEditScreen() {
             >
               <Ionicons name="notifications-outline" size={22} color={colors.primary} />
               <View style={styles.reminderTitleContent}>
-                <Text style={styles.reminderTitle}>Antrenman Hatırlatıcısı</Text>
-                <Text style={styles.reminderDescription}>Antrenman saatinde bildirim al.</Text>
+                <Text style={styles.reminderTitle}>{t("newProgram.reminderTitle")}</Text>
+                <Text style={styles.reminderDescription}>{t("newProgram.reminderDescription")}</Text>
               </View>
               <View style={styles.reminderToggleLabel}>
                 <View style={[styles.reminderStatusDot, reminderEnabled && styles.reminderStatusDotActive]} />
                 <Text style={[styles.reminderToggleText, reminderEnabled && styles.reminderToggleTextActive]}>
-                  {reminderEnabled ? "Açık" : "Aç/Kapat"}
+                  {reminderEnabled ? t("newProgram.reminderOn") : t("newProgram.reminderToggle")}
                 </Text>
               </View>
             </Pressable>
 
             {reminderEnabled ? (
               <View style={styles.reminderExpanded}>
-                <Text style={styles.reminderTimeLabel}>Hatırlatma saatleri</Text>
+                <Text style={styles.reminderTimeLabel}>{t("newProgram.reminderTimesLabel")}</Text>
                 {reminderTimes.map((reminderTime, index) => (
                   <View key={`${index}-${reminderTime}`}>
                     <View style={styles.reminderTimeRow}>
                       <Pressable
-                        accessibilityLabel={`Hatırlatma saati ${reminderTime}. Saat listesini aç`}
+                        accessibilityLabel={t("newProgram.reminderTimeOpenAccessibility", { time: reminderTime })}
                         accessibilityRole="button"
                         accessibilityState={{ expanded: reminderListOpen === index }}
                         onPress={() => setReminderListOpen((openIndex) => openIndex === index ? null : index)}
@@ -431,7 +434,7 @@ export default function ProgramEditScreen() {
                       </Pressable>
                       {index > 0 ? (
                         <Pressable
-                          accessibilityLabel={`${reminderTime} hatırlatmasını kaldır`}
+                          accessibilityLabel={t("newProgram.removeReminderAccessibility", { time: reminderTime })}
                           accessibilityRole="button"
                           onPress={() => {
                             setReminderTimes((times) => times.filter((_, itemIndex) => itemIndex !== index));
@@ -478,14 +481,14 @@ export default function ProgramEditScreen() {
                     style={({ pressed }) => [styles.addReminderButton, pressed && styles.pressed]}
                   >
                     <Ionicons name="add" size={19} color={colors.primary} />
-                    <Text style={styles.addReminderButtonText}>Saat ekle</Text>
+                    <Text style={styles.addReminderButtonText}>{t("newProgram.addReminderTime")}</Text>
                   </Pressable>
                 ) : null}
               </View>
             ) : null}
           </View>
 
-          <FormLabel>EGZERSİZLER</FormLabel>
+          <FormLabel>{t("programEdit.exercisesLabel")}</FormLabel>
           <View style={styles.exerciseList}>
             {draft.exercises.map((exercise, index) => (
               <EditableExerciseRow
@@ -500,7 +503,7 @@ export default function ProgramEditScreen() {
             ))}
           </View>
           {draft.exercises.length === 0 ? (
-            <Text style={styles.emptyExercises}>Bu programda egzersiz bulunmuyor.</Text>
+            <Text style={styles.emptyExercises}>{t("programEdit.noExercises")}</Text>
           ) : null}
 
           <Pressable
@@ -508,7 +511,7 @@ export default function ProgramEditScreen() {
             onPress={handleAddExercise}
             style={({ pressed }) => [styles.addExerciseButton, pressed && styles.pressed]}
           >
-            <Text style={styles.addExerciseText}>Egzersiz ekle</Text>
+            <Text style={styles.addExerciseText}>{t("programEdit.addExercise")}</Text>
           </Pressable>
 
           <Pressable
@@ -525,7 +528,7 @@ export default function ProgramEditScreen() {
             {isSaving ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.saveButtonText}>Değişiklikleri kaydet</Text>
+              <Text style={styles.saveButtonText}>{t("programEdit.saveChanges")}</Text>
             )}
           </Pressable>
 
@@ -539,7 +542,7 @@ export default function ProgramEditScreen() {
             {isDeleting ? (
               <ActivityIndicator color={colors.error} />
             ) : (
-              <Text style={styles.deleteButtonText}>Programı sil</Text>
+              <Text style={styles.deleteButtonText}>{t("programEdit.deleteProgram")}</Text>
             )}
           </Pressable>
         </ScrollView>
@@ -551,17 +554,18 @@ export default function ProgramEditScreen() {
 function Header({ onBack }: { onBack: () => void }) {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <Pressable
-        accessibilityLabel="Programlara geri dön"
+        accessibilityLabel={t("programEdit.backAccessibility")}
         accessibilityRole="button"
         onPress={onBack}
         style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
       >
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
-      <Text style={styles.headerTitle}>Programı düzenle</Text>
+      <Text style={styles.headerTitle}>{t("programEdit.headerTitle")}</Text>
       <View style={styles.headerSpacer} />
     </View>
   );

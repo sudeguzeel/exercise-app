@@ -1,4 +1,5 @@
 import type { Gender, Goal, PersonalInfo } from "@/providers/OnboardingContext";
+import i18n from "@/shared/i18n";
 import { supabase } from "@/shared/lib/supabase";
 
 export type SavePersonalInfoResult =
@@ -59,13 +60,13 @@ export async function savePersonalInfo(
   personalInfo: PersonalInfo,
 ): Promise<SavePersonalInfoResult> {
   if (!personalInfo.gender) {
-    return { success: false, message: "Cinsiyet seçimi zorunludur." };
+    return { success: false, message: i18n.t("onboarding.personalInfo.genderRequired") };
   }
 
   const gender = GENDER_MAP[personalInfo.gender];
 
   if (!isMappedGoal(personalInfo.goal)) {
-    return { success: false, message: "Geçerli bir hedef seçilmedi." };
+    return { success: false, message: i18n.t("onboarding.personalInfo.invalidGoal") };
   }
 
   const goal = GOAL_MAP[personalInfo.goal];
@@ -73,13 +74,13 @@ export async function savePersonalInfo(
   const fullName = personalInfo.fullName.trim();
 
   if (!fullName) {
-    return { success: false, message: "Ad Soyad alanı zorunludur." };
+    return { success: false, message: i18n.t("onboarding.personalInfo.fullNameRequired") };
   }
 
   const isoBirthDate = parseBirthDateToIso(personalInfo.birthDate);
 
   if (!isoBirthDate) {
-    return { success: false, message: "Geçerli bir doğum tarihi giriniz." };
+    return { success: false, message: i18n.t("onboarding.personalInfo.birthDateInvalid") };
   }
 
   const height = Number(personalInfo.height);
@@ -91,7 +92,7 @@ export async function savePersonalInfo(
     !Number.isFinite(currentWeight) ||
     !Number.isFinite(targetWeight)
   ) {
-    return { success: false, message: "Boy/kilo alanları geçerli olmalı." };
+    return { success: false, message: i18n.t("onboarding.personalInfo.invalidMetrics") };
   }
 
   const { error } = await supabase.rpc("save_onboarding_personal_info", {

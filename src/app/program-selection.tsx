@@ -17,6 +17,8 @@ import { programRepository } from "@/features/programs/program-repository";
 import type { UserProgram } from "@/features/programs/types";
 import { saveInitialProgramExerciseWeight } from "@/features/progress/progress-storage";
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { useLanguage } from "@/providers/LanguageContext";
+import i18n from "@/shared/i18n";
 import { MainColors } from "@/shared/constants/theme";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import {
@@ -29,6 +31,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -55,6 +58,8 @@ function getRouteParam(value: string | string[] | undefined) {
 export default function ProgramSelectionScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const searchParams =
     useLocalSearchParams<ProgramSelectionRouteParams>();
   const selection = useMemo(
@@ -203,7 +208,7 @@ export default function ProgramSelectionScreen() {
         const saveResults = await Promise.allSettled(
           addedProgramIds.map(async (programId) => {
             const program = await programRepository.getProgramById(programId);
-            if (!program) throw new Error("Program yeniden yüklenemedi.");
+            if (!program) throw new Error(t("programSelection.programReloadFailed"));
             await saveInitialProgramExerciseWeight(
               program,
               selection.exerciseId,
@@ -219,9 +224,8 @@ export default function ProgramSelectionScreen() {
       const presentation = weightSaveFailed
         ? {
             ...basePresentation,
-            title: "Kilo kaydı tamamlanamadı",
-            message:
-              "Egzersiz programa eklendi ancak başlangıç kilosu kaydedilemedi. Hareket Kilolarını Güncelle ekranından tekrar deneyin.",
+            title: t("newProgram.weightSaveFailedTitle"),
+            message: t("programSelection.weightSaveFailedMessageSelection"),
           }
         : basePresentation;
       setResultModal({
@@ -233,9 +237,8 @@ export default function ProgramSelectionScreen() {
     } catch {
       setResultModal({
         presentation: {
-          title: "Egzersiz eklenemedi",
-          message:
-            "Programlar güncellenirken bir sorun oluştu. Lütfen tekrar deneyin.",
+          title: t("programSelection.addFailedTitle"),
+          message: t("programSelection.addFailedMessage"),
           groups: [],
         },
         success: false,
@@ -248,6 +251,7 @@ export default function ProgramSelectionScreen() {
     isSubmitting,
     selectedProgramIds,
     selection,
+    t,
   ]);
 
   const handleNewProgram = useCallback(() => {
@@ -290,7 +294,7 @@ export default function ProgramSelectionScreen() {
           <View style={styles.content}>
             <ProgramFlowHeader
               onBack={() => router.back()}
-              title="Programa ekle"
+              title={t("programSelection.headerTitle")}
             />
 
             {isRouteValid && exercise ? (
@@ -301,10 +305,10 @@ export default function ProgramSelectionScreen() {
                     numberOfLines={2}
                     style={styles.exerciseName}
                   >
-                    {exercise.name.toLocaleUpperCase("tr-TR")}
+                    {exercise.name.toLocaleUpperCase(language)}
                   </Text>
                   <Text maxFontSizeMultiplier={1.3} style={styles.description}>
-                    Bu egzersizi seç ve programlarından istediklerine ekle.
+                    {t("programSelection.description")}
                   </Text>
                 </View>
 
@@ -319,7 +323,7 @@ export default function ProgramSelectionScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.stateText}
                       >
-                        Programlar yükleniyor...
+                        {t("program.loadingPrograms")}
                       </Text>
                     </View>
                   ) : null}
@@ -335,13 +339,13 @@ export default function ProgramSelectionScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.stateTitle}
                       >
-                        Programlar alınamadı
+                        {t("programSelection.loadFailedTitle")}
                       </Text>
                       <Text
                         maxFontSizeMultiplier={1.3}
                         style={styles.stateText}
                       >
-                        Bağlantınızı kontrol edip yeniden deneyin.
+                        {t("programSelection.loadFailedMessage")}
                       </Text>
                       <Pressable
                         accessibilityRole="button"
@@ -351,7 +355,7 @@ export default function ProgramSelectionScreen() {
                           pressed && styles.pressed,
                         ]}
                       >
-                        <Text style={styles.retryButtonText}>Yeniden dene</Text>
+                        <Text style={styles.retryButtonText}>{t("program.retry")}</Text>
                       </Pressable>
                     </View>
                   ) : null}
@@ -367,7 +371,7 @@ export default function ProgramSelectionScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.stateTitle}
                       >
-                        Henüz bir programınız bulunmuyor.
+                        {t("programSelection.noProgramsMessage")}
                       </Text>
                     </View>
                   ) : null}
@@ -389,7 +393,7 @@ export default function ProgramSelectionScreen() {
                 </View>
 
                 <Pressable
-                  accessibilityLabel="Yeni program oluştur"
+                  accessibilityLabel={t("program.createNewProgram")}
                   accessibilityRole="button"
                   onPress={handleNewProgram}
                   style={({ pressed }) => [
@@ -406,7 +410,7 @@ export default function ProgramSelectionScreen() {
                     maxFontSizeMultiplier={1.3}
                     style={styles.newProgramText}
                   >
-                    Yeni program oluştur
+                    {t("program.createNewProgram")}
                   </Text>
                 </Pressable>
               </>
@@ -421,11 +425,10 @@ export default function ProgramSelectionScreen() {
                   maxFontSizeMultiplier={1.3}
                   style={styles.invalidTitle}
                 >
-                  Egzersiz bilgileri bulunamadı
+                  {t("newProgram.invalidTitle")}
                 </Text>
                 <Text maxFontSizeMultiplier={1.3} style={styles.invalidText}>
-                  Egzersizi tekrar seçerek programa ekleme işlemini
-                  başlatabilirsiniz.
+                  {t("programSelection.invalidTextSelection")}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -436,7 +439,7 @@ export default function ProgramSelectionScreen() {
                   ]}
                 >
                   <Text style={styles.invalidButtonText}>
-                    Egzersizlere dön
+                    {t("newProgram.backToExercises")}
                   </Text>
                 </Pressable>
               </View>
@@ -448,7 +451,7 @@ export default function ProgramSelectionScreen() {
           <View style={styles.footer}>
             <View style={styles.footerContent}>
               <Pressable
-                accessibilityLabel="Seçili programlara ekle"
+                accessibilityLabel={t("programSelection.addToSelected")}
                 accessibilityRole="button"
                 accessibilityState={{
                   busy: isSubmitting,
@@ -472,7 +475,7 @@ export default function ProgramSelectionScreen() {
                       !canSubmit && styles.submitButtonTextDisabled,
                     ]}
                   >
-                    Seçili programlara ekle
+                    {t("programSelection.addToSelected")}
                   </Text>
                 )}
               </Pressable>
@@ -500,7 +503,7 @@ function getProgramCategoryLabel(
   const names = program.muscleGroupIds
     .map((id) => categoryNames.get(id))
     .filter((name): name is string => Boolean(name));
-  if (names.length === 0) return "Genel";
+  if (names.length === 0) return i18n.t("programSelection.defaultCategory");
   if (names.length <= 2) return names.join(" & ");
   return names.slice(0, 2).join(" & ");
 }

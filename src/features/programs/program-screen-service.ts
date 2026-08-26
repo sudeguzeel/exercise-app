@@ -1,5 +1,6 @@
 import type { ProgramCompletionRecord } from "@/features/programs/program-dashboard";
 import { workoutRepository } from "@/features/workouts/workout-repository";
+import i18n from "@/shared/i18n";
 import { supabase } from "@/shared/lib/supabase";
 
 export async function getCurrentUserDisplayName(): Promise<string | null> {
@@ -70,7 +71,7 @@ export async function getProgramCompletionRecords(
   const remoteUnavailable =
     remoteResult.status === "rejected" || Boolean(remoteResult.value.error);
   if (remoteUnavailable && localResult.status === "rejected") {
-    throw new Error("Haftalık antrenman bilgileri alınamadı.");
+    throw new Error(i18n.t("common.weeklyDataUnavailable"));
   }
 
   const uniqueRecords = new Map<string, ProgramCompletionRecord>();

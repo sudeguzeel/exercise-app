@@ -1,4 +1,5 @@
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { useLanguage } from "@/providers/LanguageContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { loadAvatar, removeAvatar, saveAvatar } from "@/shared/lib/services/avatarService";
 import { loadProfilePersonalInfo } from "@/shared/lib/services/profileService";
@@ -7,6 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -36,6 +38,8 @@ const DEFAULT_TRANSFORM: PhotoTransform = { x: 0, y: 0, scale: 1 };
 export default function ProfileScreen() {
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
+  const { language } = useLanguage();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -73,8 +77,8 @@ export default function ProfileScreen() {
   }, []);
 
   const displayName = useMemo(
-    () => getDisplayName(fullName, email),
-    [email, fullName],
+    () => getDisplayName(fullName, email, t("common.defaultUserName"), language),
+    [email, fullName, language, t],
   );
   const initials = useMemo(() => getInitials(displayName), [displayName]);
 
@@ -86,7 +90,7 @@ export default function ProfileScreen() {
       if (error) throw error;
       router.replace("/login");
     } catch {
-      Alert.alert("Çıkış yapılamadı", "Lütfen tekrar deneyin.");
+      Alert.alert(t("profile.signOutFailedTitle"), t("common.tryAgainMessage"));
     } finally {
       setSigningOut(false);
     }
@@ -94,15 +98,15 @@ export default function ProfileScreen() {
 
   const confirmSignOut = () => {
     if (Platform.OS === "web") {
-      if (globalThis.confirm("Hesabından çıkış yapmak istediğine emin misin?")) void handleSignOut();
+      if (globalThis.confirm(t("profile.signOutConfirmMessage"))) void handleSignOut();
       return;
     }
     Alert.alert(
-      "Çıkış yap",
-      "Hesabından çıkış yapmak istediğine emin misin?",
+      t("profile.signOut"),
+      t("profile.signOutConfirmMessage"),
       [
-        { text: "İptal", style: "cancel" },
-        { text: "Çıkış yap", style: "destructive", onPress: () => void handleSignOut() },
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("profile.signOut"), style: "destructive", onPress: () => void handleSignOut() },
       ],
     );
   };
@@ -115,7 +119,7 @@ export default function ProfileScreen() {
     const documentApi = webGlobal.document;
     const mediaDevices = webGlobal.navigator?.mediaDevices;
     if (!documentApi || !mediaDevices) {
-      Alert.alert("Kamera açılamadı", "Tarayıcın kamera kullanımını desteklemiyor.");
+      Alert.alert(t("profile.webCameraUnsupportedTitle"), t("profile.webCameraUnsupportedMessage"));
       return;
     }
 
@@ -129,7 +133,7 @@ export default function ProfileScreen() {
       });
 
       const title = documentApi.createElement("div");
-      title.textContent = "Fotoğraf çek";
+      title.textContent = t("profile.webCameraTitle");
       Object.assign(title.style, { marginBottom: "18px", color: "white", fontSize: "22px", fontWeight: "800" });
 
       const video = documentApi.createElement("video");
@@ -144,9 +148,9 @@ export default function ProfileScreen() {
       const actions = documentApi.createElement("div");
       Object.assign(actions.style, { display: "flex", gap: "12px", marginTop: "22px" });
       const cancel = documentApi.createElement("button");
-      cancel.textContent = "İptal";
+      cancel.textContent = t("common.cancel");
       const capture = documentApi.createElement("button");
-      capture.textContent = "Fotoğraf çek";
+      capture.textContent = t("profile.webCameraCapture");
       for (const button of [cancel, capture]) {
         Object.assign(button.style, {
           minWidth: "130px", height: "50px", padding: "0 20px", border: "0",
@@ -178,7 +182,7 @@ export default function ProfileScreen() {
       documentApi.body.appendChild(overlay);
       await video.play();
     } catch {
-      Alert.alert("Kamera izni gerekli", "Kamerayı açmak için tarayıcıdan kamera izni vermelisin.");
+      Alert.alert(t("profile.webCameraPermissionTitle"), t("profile.webCameraPermissionMessage"));
     }
   };
 
@@ -195,10 +199,10 @@ export default function ProfileScreen() {
           : await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
           Alert.alert(
-            "İzin gerekli",
+            t("profile.permissionRequiredTitle"),
             source === "camera"
-              ? "Fotoğraf çekebilmek için kamera izni vermelisin."
-              : "Fotoğraf seçebilmek için galeri izni vermelisin.",
+              ? t("profile.cameraPermissionMessage")
+              : t("profile.galleryPermissionMessage"),
           );
           return;
         }
@@ -221,7 +225,7 @@ export default function ProfileScreen() {
       setEditorImage(imageSource);
       setEditorTransform(DEFAULT_TRANSFORM);
     } catch {
-      Alert.alert("Fotoğraf açılamadı", "Lütfen tekrar deneyin.");
+      Alert.alert(t("profile.photoOpenFailedTitle"), t("common.tryAgainMessage"));
     }
   };
 
@@ -241,7 +245,7 @@ export default function ProfileScreen() {
       setPhotoTransform(editorTransform);
       setEditorImage(null);
     } catch {
-      Alert.alert("Fotoğraf kaydedilemedi", "Lütfen tekrar deneyin.");
+      Alert.alert(t("profile.photoSaveFailedTitle"), t("common.tryAgainMessage"));
     } finally {
       setUploadingPhoto(false);
     }
@@ -259,7 +263,7 @@ export default function ProfileScreen() {
       setProfileImage(null);
       setPhotoTransform(DEFAULT_TRANSFORM);
     } catch {
-      Alert.alert("Fotoğraf kaldırılamadı", "Lütfen tekrar deneyin.");
+      Alert.alert(t("profile.photoRemoveFailedTitle"), t("common.tryAgainMessage"));
     }
   };
 
@@ -293,7 +297,7 @@ export default function ProfileScreen() {
   };
 
   const showComingSoon = (title: string) =>
-    Alert.alert(title, "Bu bölüm yakında kullanıma açılacak.");
+    Alert.alert(title, t("profile.comingSoon"));
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -304,8 +308,8 @@ export default function ProfileScreen() {
         <View style={styles.identityRow}>
           <View style={styles.identityLeft}>
             <Pressable
-              accessibilityHint="Profil fotoğrafı seçmenizi sağlar"
-              accessibilityLabel="Profil fotoğrafını değiştir"
+              accessibilityHint={t("profile.changePhotoHint")}
+              accessibilityLabel={t("profile.changePhotoLabel")}
               accessibilityRole="button"
               onPress={() => setPhotoMenuVisible(true)}
               style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
@@ -345,19 +349,19 @@ export default function ProfileScreen() {
             <View style={styles.identityText}>
               <Text style={styles.name}>{displayName}</Text>
               <Text style={styles.email} numberOfLines={1}>
-                {email || "E-posta bilgisi bulunamadı"}
+                {email || t("profile.emailMissing")}
               </Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push("/(main)/profile-personal-info")}
                 style={({ pressed }) => [styles.editProfileButton, pressed && styles.pressed]}
               >
-                <Text style={styles.editProfileText}>Profili düzenle</Text>
+                <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
               </Pressable>
             </View>
           </View>
           <Pressable
-            accessibilityLabel="Geri dön"
+            accessibilityLabel={t("profile.goBack")}
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => router.back()}
@@ -370,65 +374,65 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <SectionLabel>HESAP</SectionLabel>
+        <SectionLabel>{t("profile.sectionAccount")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
             icon="person-outline"
-            label="Kişisel bilgilerim"
+            label={t("profile.personalInfo")}
             onPress={() => router.push("/(main)/profile-personal-info")}
           />
           <MenuItem
             icon="flag-outline"
-            label="Hedeflerim"
+            label={t("profile.goals")}
             onPress={() => router.push({ pathname: "/(main)/profile-personal-info", params: { section: "goals" } })}
           />
           <MenuItem
             icon="notifications-outline"
-            label="Bildirimler"
+            label={t("profile.notifications")}
             isLast
             onPress={() => router.push("/(main)/profile-notifications")}
           />
         </View>
 
-        <SectionLabel>UYGULAMA</SectionLabel>
+        <SectionLabel>{t("profile.sectionApp")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
             icon="language-outline"
-            label="Dil"
-            value="Türkçe"
+            label={t("profile.language")}
+            value={t(`profileLanguage.${language}`)}
             onPress={() => router.push("/(main)/profile-language")}
           />
           <MenuItem
             icon="moon-outline"
-            label="Görünüm"
-            value="Koyu tema"
+            label={t("profile.appearance")}
+            value={t("profile.appearanceValue")}
             onPress={() => router.push("/(main)/profile-app-settings")}
           />
           <MenuItem
             icon="lock-closed-outline"
-            label="Gizlilik ve güvenlik"
+            label={t("profile.privacy")}
             isLast
             onPress={() => router.push("/(main)/profile-privacy")}
           />
         </View>
 
-        <SectionLabel>DESTEK</SectionLabel>
+        <SectionLabel>{t("profile.sectionSupport")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
             icon="help-circle-outline"
-            label="Yardım ve sık sorulan sorular"
-            onPress={() => showComingSoon("Yardım ve sık sorulan sorular")}
+            label={t("profile.help")}
+            onPress={() => showComingSoon(t("profile.help"))}
           />
           <MenuItem
             icon="chatbubble-ellipses-outline"
-            label="Geri bildirim gönder"
+            label={t("profile.feedback")}
             onPress={() => void Linking.openURL("mailto:destek@exerciseapp.com?subject=Exercise%20App%20Geri%20Bildirim")}
           />
           <MenuItem
             icon="information-circle-outline"
-            label="Uygulama hakkında"
+            label={t("profile.about")}
             isLast
-            onPress={() => Alert.alert("Exercise App", "Sürüm 1.0.0")}
+            onPress={() => Alert.alert("Exercise App", t("profile.aboutMessage"))}
           />
         </View>
 
@@ -446,7 +450,7 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Ionicons name="log-out-outline" size={21} color={colors.error} />
-              <Text style={styles.signOutText}>Çıkış yap</Text>
+              <Text style={styles.signOutText}>{t("profile.signOut")}</Text>
             </>
           )}
         </Pressable>
@@ -455,11 +459,11 @@ export default function ProfileScreen() {
       <Modal transparent animationType="fade" visible={photoMenuVisible} onRequestClose={() => setPhotoMenuVisible(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setPhotoMenuVisible(false)}>
           <View style={styles.photoMenu}>
-            <Text style={styles.photoMenuTitle}>Profil fotoğrafı</Text>
-            <PhotoAction icon="images-outline" label="Yeni fotoğraf seç" onPress={() => { setPhotoMenuVisible(false); setPhotoSourceVisible(true); }} />
-            {profileImage ? <PhotoAction icon="crop-outline" label="Fotoğrafı düzenle" onPress={editProfileImage} /> : null}
-            {profileImage ? <PhotoAction danger icon="trash-outline" label="Fotoğrafı kaldır" onPress={removeProfileImage} /> : null}
-            <Pressable onPress={() => setPhotoMenuVisible(false)} style={styles.menuCancel}><Text style={styles.menuCancelText}>İptal</Text></Pressable>
+            <Text style={styles.photoMenuTitle}>{t("profile.photoMenuTitle")}</Text>
+            <PhotoAction icon="images-outline" label={t("profile.photoPickNew")} onPress={() => { setPhotoMenuVisible(false); setPhotoSourceVisible(true); }} />
+            {profileImage ? <PhotoAction icon="crop-outline" label={t("profile.photoEdit")} onPress={editProfileImage} /> : null}
+            {profileImage ? <PhotoAction danger icon="trash-outline" label={t("profile.photoRemove")} onPress={removeProfileImage} /> : null}
+            <Pressable onPress={() => setPhotoMenuVisible(false)} style={styles.menuCancel}><Text style={styles.menuCancelText}>{t("common.cancel")}</Text></Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -467,10 +471,10 @@ export default function ProfileScreen() {
       <Modal transparent animationType="fade" visible={photoSourceVisible} onRequestClose={() => setPhotoSourceVisible(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setPhotoSourceVisible(false)}>
           <View style={styles.photoMenu}>
-            <Text style={styles.photoMenuTitle}>Fotoğraf ekle</Text>
-            <PhotoAction icon="camera-outline" label="Kamera" onPress={() => void selectProfileImage("camera")} />
-            <PhotoAction icon="images-outline" label="Fotoğraflar" onPress={() => void selectProfileImage("gallery")} />
-            <Pressable onPress={() => setPhotoSourceVisible(false)} style={styles.menuCancel}><Text style={styles.menuCancelText}>İptal</Text></Pressable>
+            <Text style={styles.photoMenuTitle}>{t("profile.photoSourceTitle")}</Text>
+            <PhotoAction icon="camera-outline" label={t("profile.photoSourceCamera")} onPress={() => void selectProfileImage("camera")} />
+            <PhotoAction icon="images-outline" label={t("profile.photoSourceGallery")} onPress={() => void selectProfileImage("gallery")} />
+            <Pressable onPress={() => setPhotoSourceVisible(false)} style={styles.menuCancel}><Text style={styles.menuCancelText}>{t("common.cancel")}</Text></Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -479,11 +483,11 @@ export default function ProfileScreen() {
         <View style={styles.confirmBackdrop}>
           <View style={styles.confirmCard}>
             <View style={styles.confirmIcon}><Ionicons name="trash-outline" size={26} color={colors.error} /></View>
-            <Text style={styles.confirmTitle}>Fotoğrafı kaldır</Text>
-            <Text style={styles.confirmText}>Profil fotoğrafını kaldırmak istediğine emin misin?</Text>
+            <Text style={styles.confirmTitle}>{t("profile.photoRemoveConfirmTitle")}</Text>
+            <Text style={styles.confirmText}>{t("profile.photoRemoveConfirmMessage")}</Text>
             <View style={styles.confirmActions}>
-              <Pressable onPress={() => setRemoveConfirmVisible(false)} style={styles.confirmCancel}><Text style={styles.confirmCancelText}>İptal</Text></Pressable>
-              <Pressable onPress={() => void confirmRemoveProfileImage()} style={styles.confirmRemove}><Text style={styles.confirmRemoveText}>Kaldır</Text></Pressable>
+              <Pressable onPress={() => setRemoveConfirmVisible(false)} style={styles.confirmCancel}><Text style={styles.confirmCancelText}>{t("common.cancel")}</Text></Pressable>
+              <Pressable onPress={() => void confirmRemoveProfileImage()} style={styles.confirmRemove}><Text style={styles.confirmRemoveText}>{t("common.remove")}</Text></Pressable>
             </View>
           </View>
         </View>
@@ -492,8 +496,8 @@ export default function ProfileScreen() {
       <Modal animationType="slide" visible={editorImage !== null} onRequestClose={() => setEditorImage(null)}>
         <SafeAreaView style={styles.editorSafeArea}>
           <View style={styles.editorHeader}>
-            <Pressable onPress={() => setEditorImage(null)}><Text style={styles.editorCancel}>İptal</Text></Pressable>
-            <Text style={styles.editorTitle}>Fotoğrafı düzenle</Text>
+            <Pressable onPress={() => setEditorImage(null)}><Text style={styles.editorCancel}>{t("common.cancel")}</Text></Pressable>
+            <Text style={styles.editorTitle}>{t("profile.photoEditorTitle")}</Text>
             <View style={styles.editorSpacer} />
           </View>
           <View style={styles.editorContent}>
@@ -502,7 +506,7 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Pressable disabled={uploadingPhoto} onPress={() => void applyProfileImage()} style={styles.applyButton}>
-            {uploadingPhoto ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.applyText}>Uygula</Text>}
+            {uploadingPhoto ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.applyText}>{t("profile.photoApply")}</Text>}
           </Pressable>
         </SafeAreaView>
       </Modal>
@@ -549,15 +553,15 @@ function SectionLabel({ children }: { children: string }) {
   return <Text style={styles.sectionLabel}>{children}</Text>;
 }
 
-function getDisplayName(fullName: string, email: string) {
+function getDisplayName(fullName: string, email: string, fallback: string, locale: string) {
   const normalizedName = fullName.trim();
   if (normalizedName) return normalizedName;
   const localPart = email.split("@")[0]?.trim();
-  if (!localPart) return "Kullanıcı";
+  if (!localPart) return fallback;
   const words = localPart.split(/[._-]+/).filter(Boolean);
-  if (words.length === 0) return "Kullanıcı";
+  if (words.length === 0) return fallback;
   return words
-    .map((word) => word.charAt(0).toLocaleUpperCase("tr-TR") + word.slice(1))
+    .map((word) => word.charAt(0).toLocaleUpperCase(locale) + word.slice(1))
     .join(" ");
 }
 
