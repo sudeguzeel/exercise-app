@@ -374,7 +374,7 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
-        <SectionLabel>{t("profile.sectionAccount")}</SectionLabel>
+                <SectionLabel>{t("profile.sectionAccount")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
             icon="person-outline"
@@ -384,8 +384,25 @@ export default function ProfileScreen() {
           <MenuItem
             icon="flag-outline"
             label={t("profile.goals")}
-            onPress={() => router.push({ pathname: "/(main)/profile-personal-info", params: { section: "goals" } })}
+            onPress={() =>
+              router.push({
+                pathname: "/(main)/profile-personal-info",
+                params: { section: "goals" },
+              })
+            }
           />
+
+          <MenuItem
+            icon="heart-outline"
+            label={t("Favorilerim")}
+            onPress={() =>
+              router.push({
+                pathname: "/(main)/favorites",
+                params: { from: "profile" },
+              })
+            }
+          />
+
           <MenuItem
             icon="notifications-outline"
             label={t("profile.notifications")}
@@ -393,7 +410,6 @@ export default function ProfileScreen() {
             onPress={() => router.push("/(main)/profile-notifications")}
           />
         </View>
-
         <SectionLabel>{t("profile.sectionApp")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
