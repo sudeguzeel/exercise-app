@@ -394,7 +394,7 @@ export default function ProfileScreen() {
 
           <MenuItem
             icon="heart-outline"
-            label={t("Favorilerim")}
+            label={t("profile.myFavorites")}
             onPress={() =>
               router.push({
                 pathname: "/(main)/favorites",
