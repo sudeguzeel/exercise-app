@@ -287,16 +287,17 @@ export default function ProgramSelectionScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <View style={styles.screen}>
+        <View style={styles.fixedHeader}>
+          <ProgramFlowHeader
+            onBack={() => router.back()}
+            title={t("programSelection.headerTitle")}
+          />
+        </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-            <ProgramFlowHeader
-              onBack={() => router.back()}
-              title={t("programSelection.headerTitle")}
-            />
-
             {isRouteValid && exercise ? (
               <>
                 <View style={styles.intro}>
@@ -525,6 +526,15 @@ const baseStyles = StyleSheet.create({
     maxWidth: 560,
     alignSelf: "center",
     paddingHorizontal: 20,
+  },
+  fixedHeader: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    backgroundColor: MainColors.background,
+    zIndex: 10,
   },
   intro: {
     marginTop: 40,

@@ -6,6 +6,7 @@ import * as NativeSplashScreen from "expo-splash-screen";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo } from "react";
+import { Platform } from "react-native";
 import "react-native-reanimated";
 
 import {
@@ -56,6 +57,36 @@ function RootNavigator() {
     if (isHydrated) void NativeSplashScreen.hideAsync();
   }, [isHydrated]);
 
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+
+    const elements = [
+      document.documentElement,
+      document.body,
+      document.getElementById("root"),
+    ].filter((element): element is HTMLElement => element !== null);
+    const previousStyles = elements.map((element) => ({
+      element,
+      height: element.style.height,
+      maxHeight: element.style.maxHeight,
+      overflow: element.style.overflow,
+      overscrollBehavior: element.style.overscrollBehavior,
+    }));
+
+    elements.forEach((element) => {
+      element.style.height = "100%";
+      element.style.maxHeight = "100%";
+      element.style.overflow = "hidden";
+      element.style.overscrollBehavior = "none";
+    });
+
+    return () => {
+      previousStyles.forEach(({ element, ...styles }) => {
+        Object.assign(element.style, styles);
+      });
+    };
+  }, []);
+
   if (!isHydrated) return null;
 
   return (
@@ -67,6 +98,10 @@ function RootNavigator() {
               headerShown: false,
               gestureEnabled: true,
               gestureDirection: "horizontal",
+              contentStyle: {
+                backgroundColor: colors.background,
+                overflow: "hidden",
+              },
             }}
           >
             <Stack.Screen

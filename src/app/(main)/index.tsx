@@ -211,26 +211,25 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.fixedProfileRow}>
+        <Pressable
+          accessibilityHint={t("home.openProfileHint")}
+          accessibilityLabel={t("home.openProfileLabel")}
+          accessibilityRole="button"
+          onPress={() => router.push("/(main)/profile")}
+          style={({ pressed }) => [
+            styles.profileButton,
+            pressed && styles.profileButtonPressed,
+          ]}
+        >
+          <Ionicons name="person-outline" size={23} color={colors.text} />
+        </Pressable>
+      </View>
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.profileRow}>
-          <Pressable
-            accessibilityHint={t("home.openProfileHint")}
-            accessibilityLabel={t("home.openProfileLabel")}
-            accessibilityRole="button"
-            onPress={() => router.push("/(main)/profile")}
-            style={({ pressed }) => [
-              styles.profileButton,
-              pressed && styles.profileButtonPressed,
-            ]}
-          >
-            <Ionicons name="person-outline" size={23} color={colors.text} />
-          </Pressable>
-        </View>
-
         <View style={styles.summaryCard}>
           <View pointerEvents="none" style={styles.summaryDecorations}>
             <View style={[styles.summaryHill, styles.summaryHillBack]} />
@@ -531,10 +530,16 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
     paddingHorizontal: 16,
     paddingBottom: 30,
   },
-  profileRow: {
+  fixedProfileRow: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 16,
     minHeight: 64,
     alignItems: "flex-end",
     justifyContent: "center",
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   profileButton: {
     width: 46,

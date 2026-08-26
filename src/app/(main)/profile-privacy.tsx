@@ -58,15 +58,14 @@ export default function ProfilePrivacyScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.header}>
+        <Pressable accessibilityLabel="Profile dön" onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={22} color={colors.primary} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Gizlilik ve Güvenlik</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Pressable accessibilityLabel="Profile dön" onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={22} color={colors.primary} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Gizlilik ve Güvenlik</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <SectionLabel>GÜVENLİK</SectionLabel>
         <View style={styles.card}>
           <PrivacyRow icon="key-outline" label="Şifreyi değiştir" onPress={() => router.push("/(main)/profile-change-password")} />
@@ -119,8 +118,8 @@ function PrivacyRow({ icon, label, danger = false, isLast = true, disabled = fal
 
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 30 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
+  content: { paddingHorizontal: 20, paddingBottom: 30 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 18, backgroundColor: colors.background, zIndex: 10 },
   backButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 21, backgroundColor: colors.surface },
   headerTitle: { color: colors.text, fontSize: 19, fontWeight: "900" },
   headerSpacer: { width: 42 },

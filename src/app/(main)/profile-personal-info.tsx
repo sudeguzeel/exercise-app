@@ -113,9 +113,9 @@ export default function ProfilePersonalInfoScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <Header title={goalsOnly ? "Hedeflerim" : "Kişisel Bilgilerim"} />
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <Header title={goalsOnly ? "Hedeflerim" : "Kişisel Bilgilerim"} />
          <View style={styles.introRow}>
             <View style={styles.avatar}>
               {profileImage ? (
@@ -224,8 +224,8 @@ const goalLabel = (v: PersonalInfo["goal"]) => v === "build-muscle" ? "Kas Kazan
 
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 }, center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { paddingHorizontal: 18, paddingTop: 14, paddingBottom: 28 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 24 },
+  content: { paddingHorizontal: 18, paddingBottom: 28 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18, backgroundColor: colors.background, zIndex: 10 },
   back: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
   headerTitle: { color: colors.text, fontSize: 19, fontWeight: "900" }, headerSpacer: { width: 38 },
   introRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
