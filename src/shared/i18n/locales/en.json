@@ -233,7 +233,6 @@
     "fixedDaySelectedAccessibility": "{{label}}, selected day",
     "reminderToggleAccessibility": "Turn workout reminder on or off",
     "reminderTitle": "Workout Reminder",
-    "reminderDescription": "Get notified at workout time.",
     "reminderOn": "On",
     "reminderToggle": "On/Off",
     "reminderTimesLabel": "Reminder times",

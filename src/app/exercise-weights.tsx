@@ -180,9 +180,6 @@ export default function ExerciseWeightsScreen() {
           <View style={styles.emptyCard}>
             <Ionicons name="barbell-outline" size={34} color={colors.primary} />
             <Text style={styles.emptyTitle}>Bu filtrede hareket yok</Text>
-            <Text style={styles.emptyDescription}>
-              Başka bir kas grubu seçebilir veya programına hareket ekleyebilirsin.
-            </Text>
           </View>
         }
         ListHeaderComponent={
@@ -373,7 +370,6 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   errorText: { marginTop: 8, color: colors.error, fontSize: 11, textAlign: "center" },
   emptyCard: { padding: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center" },
   emptyTitle: { marginTop: 12, color: colors.text, fontSize: 18, fontWeight: "900" },
-  emptyDescription: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center" },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },
   stateText: { color: colors.textSecondary, fontSize: 14 },
 });

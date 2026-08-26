@@ -15,6 +15,7 @@ import {
 import { LanguageProvider, useLanguage } from "@/providers/LanguageContext";
 import { OnboardingProvider } from "@/providers/OnboardingContext";
 import { FavoritesProvider } from "@/providers/FavoritesContext";
+import { AndroidBackSwipe } from "@/shared/components/android-back-swipe";
 
 void NativeSplashScreen.preventAutoHideAsync();
 
@@ -22,7 +23,9 @@ export default function RootLayout() {
   return (
     <LanguageProvider>
       <AppThemeProvider>
-        <RootNavigator />
+        <AndroidBackSwipe>
+          <RootNavigator />
+        </AndroidBackSwipe>
       </AppThemeProvider>
     </LanguageProvider>
   );
@@ -59,7 +62,13 @@ function RootNavigator() {
     <OnboardingProvider>
       <FavoritesProvider>
         <ThemeProvider value={navigationTheme}>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              gestureDirection: "horizontal",
+            }}
+          >
             <Stack.Screen
               name="index"
               options={{

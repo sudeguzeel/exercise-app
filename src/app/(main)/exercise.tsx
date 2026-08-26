@@ -142,7 +142,6 @@ const activeSelectedId =
 });
 
         if (requestIdRef.current !== requestId) {
-          // Bu istek sırasında arama/filtre değişti, sonucu yok say.
           return;
         }
 

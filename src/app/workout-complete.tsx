@@ -27,19 +27,6 @@ function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function getCompletionMessage(completion: WorkoutCompletion) {
-  if (!completion.plannedDay) {
-    return "Seçtiğin antrenmanı tamamladın. Plan dışı bu çalışma da ilerlemene eklendi.";
-  }
-  if (completion.currentStreak > 1) {
-    return `Seçtiğin antrenmanı tamamladın. Serin ${completion.currentStreak} güne ulaştı.`;
-  }
-  if (completion.currentStreak === 1) {
-    return "Seçtiğin antrenmanı tamamladın. Yeni serinin ilk gününü başarıyla bitirdin.";
-  }
-  return "Seçtiğin antrenmanı tamamladın. Sonucun ilerlemene eklendi.";
-}
-
 export default function WorkoutCompleteScreen() {
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
@@ -90,8 +77,6 @@ export default function WorkoutCompleteScreen() {
           currentStreak: dashboard.streakDays,
         });
       } catch {
-        // Ana sayfa verisi geçici olarak alınamazsa kayıt sırasında hesaplanan
-        // seri değeri yine de sonuç ekranını kullanılabilir tutar.
         setCompletion(result);
       }
     } catch {
@@ -128,8 +113,6 @@ export default function WorkoutCompleteScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.description}>{getCompletionMessage(completion)}</Text>
-
           <View style={styles.summaryRow}>
             <SummaryCard
               label="SÜRE"
@@ -217,14 +200,6 @@ const baseStyles = StyleSheet.create({
     paddingBottom: 42,
     alignItems: "center",
     justifyContent: "center",
-  },
-  description: {
-    maxWidth: 400,
-    marginTop: 12,
-    color: MainColors.mutedText,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
   },
   summaryRow: {
     width: "100%",

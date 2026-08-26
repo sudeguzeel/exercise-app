@@ -233,7 +233,6 @@
     "fixedDaySelectedAccessibility": "{{label}}, seçili gün",
     "reminderToggleAccessibility": "Antrenman hatırlatıcısını aç veya kapat",
     "reminderTitle": "Antrenman Hatırlatıcısı",
-    "reminderDescription": "Antrenman saatinde bildirim al.",
     "reminderOn": "Açık",
     "reminderToggle": "Aç/Kapat",
     "reminderTimesLabel": "Hatırlatma saatleri",

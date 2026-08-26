@@ -184,9 +184,6 @@ export default function ExerciseDetailScreen() {
         const result = await getExerciseDetail(normalizedId);
         if (!mountedRef || mountedRef.current) setExercise(result);
       } catch {
-        // getExerciseDetail sadece gerçek bir sorgu hatasında (ağ/DB)
-        // fırlatır; "bulunamadı" durumu zaten null döner ve ayrı bir
-        // ekranla ele alınır.
         if (!mountedRef || mountedRef.current) setLoadError(true);
       }
     },
@@ -201,7 +198,6 @@ export default function ExerciseDetailScreen() {
     };
   }, [loadExercise]);
 
-  // Öneri varsa önce dataset değerini kullan; öneri yoksa manuel alanları aç.
   useEffect(() => {
     setUseCustomValues(!hasRecommendedValues);
     setCustomValues(INITIAL_CUSTOM_VALUES);

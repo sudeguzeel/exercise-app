@@ -52,8 +52,6 @@ function mapWorkingWeightRow(row: WorkingWeightRow): WorkingWeightRecord {
 }
 
 export async function listWorkingWeights() {
-  // RLS (auth.uid() = user_id) zaten sadece bu kullanıcının satırlarını
-  // döndürür.
   const { data, error } = await supabase
     .from("user_exercise_working_weights")
     .select(WORKING_WEIGHT_COLUMNS);
@@ -201,7 +199,6 @@ export async function loadBodyProgress(): Promise<BodyProgress> {
         musclePercentage: typeof parsed.musclePercentage === "number" ? parsed.musclePercentage : null,
       };
     } catch {
-      // Bozuk/eski yerel hedef verisi ekranın açılmasını engellemez.
     }
   }
 
@@ -241,10 +238,6 @@ export async function saveBodyMeasurement(input: {
 
   if (error || !data) throw new Error("Ölçümler kaydedilemedi.");
 
-  // profiles/body_metrics'teki "güncel kilo" alanı bu ölçüm geçmişinin en
-  // son değeriyle senkron kalmalı (onboarding/profil ekranları oradan
-  // okuyor). Profil güncellemesi başarısız olursa yeni ölçüm kaydı da geri
-  // alınır — ikisi tutarsız kalmasın.
   const saveResult = await saveProfilePersonalInfo({
     ...profileResult.personalInfo,
     currentWeight: String(input.weightKg),
@@ -293,7 +286,6 @@ export async function saveBodyTargets(input: {
     try {
       existing = { ...existing, ...(JSON.parse(storedTargets) as Partial<StoredBodyTargets>) };
     } catch {
-      // Bozuk hedef verisinin üzerine geçerli değerler güvenle yazılır.
     }
   }
   await AsyncStorage.setItem(

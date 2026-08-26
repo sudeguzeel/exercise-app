@@ -73,19 +73,12 @@ export function findSetPosition(
   return null;
 }
 
-// Bir hareketin kendi içindeki ilk tamamlanmamış seti — setler her zaman
-// kendi hareketi içinde sırayla tamamlanır, ama hareketler arasında serbestçe
-// geçilebilir (bkz. workout.tsx'teki kaydırmalı hareket seçici).
 export function findFirstIncompleteSetIndexInExercise(
   exercise: WorkoutExerciseSnapshot,
 ): number {
   return exercise.sets.findIndex((set) => !set.completedAt);
 }
 
-// Gerçek zamanda (completedAt'e göre) en son tamamlanan set — kullanıcı
-// hareketler arasında serbestçe geçebildiği için "son tamamlanan" artık
-// dizideki son eleman olmak zorunda değil (bkz. goBackOneStep /
-// revertLastCompletedSet).
 export function findMostRecentlyCompletedPosition(
   session: WorkoutSession,
 ): WorkoutSetPosition | null {
@@ -101,11 +94,6 @@ export function findMostRecentlyCompletedPosition(
   return best;
 }
 
-// workout.tsx bir antrenman ekranını (yeniden) açtığında hangi hareketi
-// göstereceğine karar verir: kullanıcı en son hangi harekette çalışıyorsa
-// (ve o hareketin hâlâ bitmemiş seti varsa) oraya devam eder; değilse ilk
-// tamamlanmamış harekete düşer. Kullanıcı daha sonra serbestçe kaydırarak
-// başka bir harekete geçebilir.
 export function resolveDefaultExerciseIndex(
   session: WorkoutSession,
 ): number | null {

@@ -36,7 +36,6 @@ export default function EmailSentScreen() {
     try {
       setLoading(true);
 
-      // Şifre sıfırlama API'si hazır olduğunda bu bölüm değiştirilecek.
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       Alert.alert(

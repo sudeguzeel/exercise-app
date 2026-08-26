@@ -56,8 +56,6 @@ export function AppThemeProvider({ children }: { children: ReactNode }) {
   const setMode = useCallback((nextMode: AppThemeMode) => {
     setModeState(nextMode);
     void AsyncStorage.setItem(THEME_STORAGE_KEY, nextMode).catch(() => {
-      // Tema bellek içinde uygulanmaya devam eder; sonraki açılışta varsayılan
-      // açık temaya güvenli şekilde geri dönülür.
     });
   }, []);
 

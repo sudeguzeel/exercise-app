@@ -22,7 +22,6 @@ export type ExerciseNameLookup = Map<
   }
 >;
 
-// user_completed_exercises tablosundan gelen tek bir tamamlanma kaydı.
 export type CompletedExerciseRecord = {
   exerciseId: string;
   programExerciseId: string;
@@ -100,20 +99,10 @@ function addDays(date: Date, amount: number) {
   return result;
 }
 
-/**
- * DAY_META sırasındaki index (0=Pzt) için haftanın o gününde antrenmanı olan
- * programları döner (bir programın training_days'i birden çok gün içerebilir,
- * bir gün birden çok programa ait olabilir).
- */
 function programsForDay(programs: UserProgram[], dayId: TrainingDay) {
   return programs.filter((program) => program.trainingDays.includes(dayId));
 }
 
-/**
- * Mock veri döneminde her gün için tek bir "plan" vardı; gerçek veride bir
- * gün birden fazla programa ait olabildiği için o günün toplam egzersiz
- * sayısı, o gün antrenmanı olan tüm programların egzersizlerinin toplamıdır.
- */
 function exerciseCountForDay(programs: UserProgram[], dayId: TrainingDay) {
   return programsForDay(programs, dayId).reduce(
     (total, program) => total + program.exercises.length,
@@ -253,9 +242,6 @@ function calculateStreakFromKeys(
   let streak = 0;
   let cursor = new Date(`${today}T12:00:00`);
 
-  // Bugünden geriye doğru, o günün planı tamamlanmışsa seriye ekle;
-  // planlanmış ama tamamlanmamış bir güne rastlarsa seri biter. En fazla
-  // 60 gün geriye bakılır (sonsuz döngüyü önlemek için güvenlik sınırı).
   for (let i = 0; i < 60; i += 1) {
     const date = toDateKey(cursor);
     const dayId = getDayMeta()[(cursor.getDay() + 6) % 7].id;
@@ -273,7 +259,6 @@ function calculateStreakFromKeys(
     }
 
     if (date === today) {
-      // Bugünün planı henüz tamamlanmamış olabilir, seriyi bozmadan atla.
       cursor = addDays(cursor, -1);
       continue;
     }
