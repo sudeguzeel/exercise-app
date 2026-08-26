@@ -100,7 +100,7 @@ export function getRaccoonMood(streak: number): RaccoonMood {
   if (safeStreak <= 2) return "sleepy";
   if (safeStreak <= 4) return "tired";
   if (safeStreak <= 6) return "getting_used";
-  if (safeStreak <= 14) return "motivated";
+  if (safeStreak <= 13) return "motivated";
   if (safeStreak <= 29) return "focused";
   if (safeStreak <= 59) return "fit";
   if (safeStreak <= 99) return "athlete";
@@ -109,6 +109,7 @@ export function getRaccoonMood(streak: number): RaccoonMood {
 
 function getActiveAnimationState(mood: RaccoonMood): ActiveAnimationState {
   if (mood === "sleepy") return "sleepy";
+  if (mood === "tired") return "tired";
   if (mood === "getting_used") return "getting_used";
   if (mood === "motivated") return "brave";
   if (mood === "focused") return "brave_ii";
