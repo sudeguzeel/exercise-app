@@ -5,6 +5,8 @@ import {
 } from "@/features/workouts/workout-repository";
 import type { WorkoutCompletion } from "@/features/workouts/types";
 import { MainColors } from "@/shared/constants/theme";
+import { buildHomeDashboard } from "@/shared/lib/home-dashboard";
+import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { useThemedScreenStyles } from "@/shared/hooks/use-themed-screen-styles";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,8 +71,29 @@ export default function WorkoutCompleteScreen() {
     setLoadError(null);
     try {
       const result = await workoutRepository.getCompletion(workoutSessionId);
-      setCompletion(result);
-      if (!result) setLoadError("Tamamlanan antrenman kaydı bulunamadı.");
+      if (!result) {
+        setCompletion(null);
+        setLoadError("Tamamlanan antrenman kaydı bulunamadı.");
+        return;
+      }
+
+      try {
+        const source = await getHomeSourceData();
+        const dashboard = buildHomeDashboard(
+          source.programs,
+          source.completedRecords,
+          source.exerciseLookup,
+          source.categories,
+        );
+        setCompletion({
+          ...result,
+          currentStreak: dashboard.streakDays,
+        });
+      } catch {
+        // Ana sayfa verisi geçici olarak alınamazsa kayıt sırasında hesaplanan
+        // seri değeri yine de sonuç ekranını kullanılabilir tutar.
+        setCompletion(result);
+      }
     } catch {
       setCompletion(null);
       setLoadError("Antrenman sonucu yüklenemedi.");

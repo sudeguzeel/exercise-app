@@ -2,7 +2,11 @@ import { buildHomeDashboard, type HomeDashboard } from "@/shared/lib/home-dashbo
 import { toDateKey } from "@/shared/lib/home-dashboard";
 import { getHomeSourceData } from "@/shared/lib/services/homeService";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { RaccoonMascot } from "@/shared/components/raccoon-mascot";
+import {
+  getRaccoonMood,
+  RaccoonMascot,
+  type RaccoonMood,
+} from "@/shared/components/raccoon-mascot";
 import { useConnectivity } from "@/shared/hooks/use-connectivity";
 import { useOnboarding, type TrainingDay } from "@/providers/OnboardingContext";
 import { useAppTheme } from "@/providers/AppThemeContext";
@@ -24,6 +28,57 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const MAX_CHART_VALUE = 20;
 const CHART_HEIGHT = 120;
+
+const MASCOT_MESSAGES: Record<RaccoonMood, readonly string[]> = {
+  sleepy: [
+    "Bugün sadece başla, gerisi gelir.",
+    "Küçük bir adım da ilerlemedir.",
+    "Hazır olman gerekmiyor, başlaman yeter.",
+  ],
+  tired: [
+    "Yorulman normal. Devam etmen önemli.",
+    "Biraz nefes al, sonra devam ederiz.",
+    "Zorlanıyorsan gelişiyorsun demektir.",
+  ],
+  getting_used: [
+    "Bak, alışmaya başladın!",
+    "Ritmin oluşuyor, bunu hissediyorum.",
+    "Her gün biraz daha güçlüsün.",
+  ],
+  motivated: [
+    "Artık ritmi yakaladın.",
+    "Kararlılığın yüzünden okunuyor!",
+    "Bugün de kendin için buradasın.",
+  ],
+  focused: [
+    "Kararlılığın fark yaratıyor.",
+    "Odağını koru, sonuçlar geliyor.",
+    "Bu artık bir alışkanlık oluyor.",
+  ],
+  fit: [
+    "Değişim artık görünüyor!",
+    "Emeğin güce dönüşüyor.",
+    "İstikrar sana çok yakıştı.",
+  ],
+  athlete: [
+    "Disiplin senin gücün oldu.",
+    "Artık sadece çalışmıyor, gelişiyorsun.",
+    "Bir sporcu gibi düşünüyorsun.",
+  ],
+  champion: [
+    "100 gün! Bunu gerçekten sen başardın.",
+    "Buraya şansla değil, emekle geldin.",
+    "Şampiyonluk, devam etmeyi seçmektir.",
+  ],
+};
+
+function getMascotMessage(streak: number) {
+  const safeStreak = Number.isFinite(streak)
+    ? Math.max(0, Math.floor(streak))
+    : 0;
+  const messages = MASCOT_MESSAGES[getRaccoonMood(safeStreak)];
+  return messages[safeStreak % messages.length];
+}
 
 export default function HomeScreen() {
   const { colors, isDark } = useAppTheme();
@@ -116,7 +171,6 @@ export default function HomeScreen() {
     (day) => day.id === selectedDay,
   );
   const selectedDayLabel = selectedDayDetails?.label ?? "Gün";
-
   if (loadState === "loading" && !dashboard && !isRetrying) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -150,6 +204,8 @@ export default function HomeScreen() {
       </SafeAreaView>
     );
   }
+
+  const mascotMessage = getMascotMessage(dashboard.streakDays);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -188,6 +244,14 @@ export default function HomeScreen() {
             <View style={[styles.summaryLeaf, styles.summaryLeafOne]} />
             <View style={[styles.summaryLeaf, styles.summaryLeafTwo]} />
             <View style={[styles.summaryLeaf, styles.summaryLeafThree]} />
+          </View>
+          <View style={styles.mascotSpeechBubble}>
+            <View pointerEvents="none" style={styles.mascotSpeechGlowOne} />
+            <View pointerEvents="none" style={styles.mascotSpeechGlowTwo} />
+            <Text numberOfLines={3} style={styles.mascotSpeechText}>
+              {mascotMessage}
+            </Text>
+            <View style={styles.mascotSpeechTail} />
           </View>
           <View style={styles.summaryContent}>
             <Text
@@ -485,7 +549,7 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
     opacity: 0.7,
   },
   summaryCard: {
-    minHeight: 168,
+    minHeight: isCompactWidth ? 218 : 226,
     padding: 24,
     borderRadius: 28,
     flexDirection: "row",
@@ -551,6 +615,9 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
   summaryLeafTwo: { left: "57%", top: 55, transform: [{ rotate: "18deg" }] },
   summaryLeafThree: { right: "30%", top: 27, transform: [{ rotate: "-12deg" }] },
   summaryContent: {
+    position: "absolute",
+    left: 24,
+    bottom: 18,
     flex: 1,
     minWidth: 0,
     maxWidth: "42%",
@@ -560,7 +627,68 @@ const createStyles = (colors: AppThemeColors, isDark: boolean, isCompactWidth: b
   summaryMascot: {
     position: "absolute",
     right: isCompactWidth ? -4 : 6,
-    top: isCompactWidth ? -1 : -8,
+    top: isCompactWidth ? 38 : 30,
+    zIndex: 2,
+  },
+  mascotSpeechBubble: {
+    position: "absolute",
+    left: 20,
+    top: 18,
+    width: isCompactWidth ? "51%" : "48%",
+    minHeight: 54,
+    paddingHorizontal: 15,
+    paddingVertical: 11,
+    borderWidth: 1.5,
+    borderColor: isDark ? "rgba(126, 220, 52, 0.68)" : "rgba(76, 133, 48, 0.48)",
+    borderRadius: 18,
+    justifyContent: "center",
+    backgroundColor: isDark ? "rgba(18, 27, 20, 0.97)" : "rgba(241, 247, 236, 0.96)",
+    shadowColor: isDark ? colors.primary : "#426D30",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.16 : 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    zIndex: 4,
+  },
+  mascotSpeechGlowOne: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    width: 96,
+    height: 25,
+    borderRadius: 999,
+    backgroundColor: isDark ? "rgba(49, 103, 52, 0.3)" : "rgba(128, 175, 99, 0.2)",
+    transform: [{ rotate: "-5deg" }],
+  },
+  mascotSpeechGlowTwo: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 108,
+    height: 29,
+    borderRadius: 999,
+    backgroundColor: isDark ? "rgba(36, 82, 43, 0.34)" : "rgba(166, 199, 137, 0.2)",
+    transform: [{ rotate: "6deg" }],
+  },
+  mascotSpeechText: {
+    zIndex: 1,
+    color: isDark ? "#F3F8EF" : "#1D321A",
+    fontSize: isCompactWidth ? 11 : 12,
+    lineHeight: isCompactWidth ? 15 : 17,
+    fontWeight: "700",
+  },
+  mascotSpeechTail: {
+    position: "absolute",
+    right: -9,
+    bottom: 13,
+    width: 0,
+    height: 0,
+    borderTopWidth: 7,
+    borderBottomWidth: 7,
+    borderLeftWidth: 10,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: isDark ? "rgba(18, 27, 20, 0.97)" : "rgba(241, 247, 236, 0.96)",
   },
   summaryLabel: {
     flexShrink: 1,
