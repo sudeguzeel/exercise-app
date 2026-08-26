@@ -4,21 +4,23 @@ import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PRIVACY_ITEMS = [
-  { icon: "document-text-outline", label: "Gizlilik Politikası" },
-  { icon: "reader-outline", label: "Kullanım Koşulları" },
-  { icon: "download-outline", label: "Verilerini İndir" },
-  { icon: "trash-outline", label: "Hesabı Sil", danger: true },
+  { id: "privacyPolicy", icon: "document-text-outline" },
+  { id: "termsOfUse", icon: "reader-outline" },
+  { id: "downloadData", icon: "download-outline" },
+  { id: "deleteAccount", icon: "trash-outline", danger: true },
 ] as const;
 
 export default function ProfilePrivacyScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [deleting, setDeleting] = useState(false);
-  const soon = (label: string) => Alert.alert(label, "Bu özellik yakında kullanıma açılacak.");
+  const soon = (label: string) => Alert.alert(label, t("profilePrivacy.comingSoon"));
 
   const deleteAccount = async () => {
     if (deleting) return;
@@ -26,18 +28,18 @@ export default function ProfilePrivacyScreen() {
       setDeleting(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        Alert.alert("Hata", "Oturum bulunamadı. Lütfen tekrar giriş yap.");
+        Alert.alert(t("profilePrivacy.sessionErrorTitle"), t("profilePrivacy.sessionErrorMessage"));
         return;
       }
       const { data, error } = await supabase.functions.invoke("delete-account");
       if (error || (data as { error?: string } | null)?.error) {
-        Alert.alert("Hesap silinemedi", "Lütfen tekrar dene.");
+        Alert.alert(t("profilePrivacy.deleteFailedTitle"), t("profilePrivacy.deleteFailedMessage"));
         return;
       }
       await supabase.auth.signOut();
       router.replace("/login");
     } catch {
-      Alert.alert("Hesap silinemedi", "Lütfen tekrar dene.");
+      Alert.alert(t("profilePrivacy.deleteFailedTitle"), t("profilePrivacy.deleteFailedMessage"));
     } finally {
       setDeleting(false);
     }
@@ -45,14 +47,14 @@ export default function ProfilePrivacyScreen() {
 
   const confirmDeleteAccount = () => {
     if (deleting) return;
-    const message = "Bu işlem geri alınamaz. Hesabın ve tüm verilerin kalıcı olarak silinecek.";
+    const message = t("profilePrivacy.deleteConfirmMessage");
     if (Platform.OS === "web") {
-      if (globalThis.confirm(`Hesabını silmek istediğine emin misin?\n\n${message}`)) void deleteAccount();
+      if (globalThis.confirm(`${t("profilePrivacy.webDeleteConfirmPrefix")}\n\n${message}`)) void deleteAccount();
       return;
     }
-    Alert.alert("Hesabını silmek istediğine emin misin?", message, [
-      { text: "Vazgeç", style: "cancel" },
-      { text: "Hesabımı sil", style: "destructive", onPress: () => void deleteAccount() },
+    Alert.alert(t("profilePrivacy.deleteConfirmTitle"), message, [
+      { text: t("profilePrivacy.cancel"), style: "cancel" },
+      { text: t("profilePrivacy.confirmDelete"), style: "destructive", onPress: () => void deleteAccount() },
     ]);
   };
 
@@ -60,30 +62,33 @@ export default function ProfilePrivacyScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Pressable accessibilityLabel="Profile dön" onPress={() => router.back()} style={styles.backButton}>
+          <Pressable accessibilityLabel={t("profilePrivacy.backAccessibility")} onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={22} color={colors.primary} />
           </Pressable>
-          <Text style={styles.headerTitle}>Gizlilik ve Güvenlik</Text>
+          <Text style={styles.headerTitle}>{t("profilePrivacy.headerTitle")}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
-        <SectionLabel>GÜVENLİK</SectionLabel>
+        <SectionLabel>{t("profilePrivacy.sectionSecurity")}</SectionLabel>
         <View style={styles.card}>
-          <PrivacyRow icon="key-outline" label="Şifreyi değiştir" onPress={() => router.push("/(main)/profile-change-password")} />
+          <PrivacyRow icon="key-outline" label={t("profilePrivacy.changePassword")} onPress={() => router.push("/(main)/profile-change-password")} />
         </View>
 
-        <SectionLabel>GİZLİLİK VE VERİLER</SectionLabel>
+        <SectionLabel>{t("profilePrivacy.sectionPrivacyData")}</SectionLabel>
         <View style={styles.card}>
           {PRIVACY_ITEMS.map((item, index) => {
-            const isDelete = item.label === "Hesabı Sil";
+            const isDelete = item.id === "deleteAccount";
+            const label = t(`profilePrivacy.${item.id}`);
             return (
               <PrivacyRow
-                key={item.label}
-                {...item}
+                key={item.id}
+                icon={item.icon}
+                danger={"danger" in item ? item.danger : false}
+                label={label}
                 disabled={isDelete && deleting}
                 isLast={index === PRIVACY_ITEMS.length - 1}
                 loading={isDelete && deleting}
-                onPress={isDelete ? confirmDeleteAccount : () => soon(item.label)}
+                onPress={isDelete ? confirmDeleteAccount : () => soon(label)}
               />
             );
           })}
@@ -91,7 +96,7 @@ export default function ProfilePrivacyScreen() {
 
         <View style={styles.warning}>
           <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
-          <Text style={styles.warningText}>Hesap silme işlemi geri alınamaz. Silme işleminden önce mutlaka emin ol.</Text>
+          <Text style={styles.warningText}>{t("profilePrivacy.warningText")}</Text>
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -1,4 +1,5 @@
 import { useAppTheme } from "@/providers/AppThemeContext";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 export function WorkoutFinishDialog({
@@ -10,13 +11,14 @@ export function WorkoutFinishDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={onCancel}>
       <View style={styles.backdrop}>
         <View style={[styles.dialog, { backgroundColor: colors.surface }]}>
           <Text style={[styles.title, { color: colors.text }]}>
-            Antrenmanı bitirmek istediğinize emin misiniz?
+            {t("workoutFinishDialog.confirmTitle")}
           </Text>
           <View style={styles.actions}>
             <Pressable
@@ -28,7 +30,7 @@ export function WorkoutFinishDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>Hayır</Text>
+              <Text style={[styles.buttonText, { color: colors.onPrimary }]}>{t("workoutFinishDialog.no")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -39,7 +41,7 @@ export function WorkoutFinishDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={[styles.buttonText, { color: colors.error }]}>Evet</Text>
+              <Text style={[styles.buttonText, { color: colors.error }]}>{t("workoutFinishDialog.yes")}</Text>
             </Pressable>
           </View>
         </View>

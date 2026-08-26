@@ -7,6 +7,7 @@ import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function FavoritesScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { favorites, status, refetchFavorites, toggleFavorite } =
@@ -64,7 +66,7 @@ export default function FavoritesScreen() {
       <SafeAreaView style={styles.safeArea} edges={["top"]}>
         <DataErrorState
           variant="service"
-          description="Favorilerin yüklenirken bir hata oluştu. Lütfen daha sonra tekrar dene."
+          description={t("favorites.errorDescription")}
           errorCode="FIT-SERVICE-FAVORITES"
           onRetry={() => void handleRetry()}
           retrying={retrying}
@@ -78,7 +80,7 @@ export default function FavoritesScreen() {
       <View style={styles.header}>
                     <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Geri dön"
+          accessibilityLabel={t("favorites.goBack")}
           onPress={goBack}
           style={({ pressed }) => [
             styles.backButton,
@@ -87,14 +89,14 @@ export default function FavoritesScreen() {
         >
           <Ionicons name="chevron-back" size={25} color={colors.text} />
         </Pressable>
-        <Text style={styles.title}>Favoriler</Text>
+        <Text style={styles.title}>{t("favorites.title")}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {status === "loading" ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
+          <Text style={styles.loadingText}>{t("favorites.loading")}</Text>
         </View>
       ) : (
         <FlatList
@@ -115,6 +117,7 @@ export default function FavoritesScreen() {
 }
 
 function EmptyFavorites() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
@@ -122,9 +125,9 @@ function EmptyFavorites() {
       <View style={styles.emptyIcon}>
         <Ionicons name="heart-outline" size={72} color={colors.primary} />
       </View>
-      <Text style={styles.emptyTitle}>Henüz favori egzersizin yok</Text>
+      <Text style={styles.emptyTitle}>{t("favorites.emptyTitle")}</Text>
       <Text style={styles.emptyDescription}>
-        Beğendiğin egzersizleri favoriye ekleyerek burada kolayca görüntüleyebilirsin.
+        {t("favorites.emptyDescription")}
       </Text>
       <Pressable
         accessibilityRole="button"
@@ -135,7 +138,7 @@ function EmptyFavorites() {
         ]}
       >
         <Ionicons name="search" size={21} color={colors.onPrimary} />
-        <Text style={styles.discoverText}>Egzersizleri keşfet</Text>
+        <Text style={styles.discoverText}>{t("favorites.discover")}</Text>
       </Pressable>
     </View>
   );

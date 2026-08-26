@@ -31,6 +31,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -56,6 +57,7 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const insets = useSafeAreaInsets();
@@ -166,7 +168,7 @@ export default function WorkoutScreen() {
   const loadSession = useCallback(async () => {
     if (!isValidWorkoutSessionId(workoutSessionId)) {
       setSession(null);
-      setLoadError("Antrenman bağlantısı geçersiz.");
+      setLoadError(t("workout.errors.invalidLink"));
       return;
     }
 
@@ -178,7 +180,7 @@ export default function WorkoutScreen() {
       let nextSession = await workoutRepository.getSession(workoutSessionId);
       if (!nextSession) {
         setSession(null);
-        setLoadError("Antrenman oturumu bulunamadı.");
+        setLoadError(t("workout.errors.sessionNotFound"));
         return;
       }
       if (
@@ -191,9 +193,7 @@ export default function WorkoutScreen() {
           return;
         }
         setSession(null);
-        setLoadError(
-          "Antrenman tamamlanma kaydı ilerleme verileriyle uyuşmuyor.",
-        );
+        setLoadError(t("workout.errors.completionMismatch"));
         return;
       }
       if (nextSession.status === "paused") {
@@ -210,7 +210,7 @@ export default function WorkoutScreen() {
         resolveDefaultExerciseIndex(nextSession) === null
       ) {
         setSession(null);
-        setLoadError("Antrenmanın set bilgileri eksik veya geçersiz.");
+        setLoadError(t("workout.errors.missingSets"));
         return;
       }
 
@@ -218,19 +218,15 @@ export default function WorkoutScreen() {
       setNow(Date.now());
       if (nextSession.phase === "saving") {
         setSaveStatus("error");
-        setActionError(
-          "Setlerin tamamlandı. Antrenman kaydını bitirmek için tekrar dene.",
-        );
+        setActionError(t("workout.errors.setsCompletedRetryFinish"));
       } else {
         setSaveStatus("idle");
       }
     } catch {
       setSession(null);
-      setLoadError(
-        "Antrenman yüklenemedi. Bağlantını kontrol edip yeniden dene.",
-      );
+      setLoadError(t("workout.errors.loadFailed"));
     }
-  }, [navigateAfterCompletion, replaceWithRest, workoutSessionId]);
+  }, [navigateAfterCompletion, replaceWithRest, t, workoutSessionId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -290,12 +286,12 @@ export default function WorkoutScreen() {
         if (revertedPosition) setViewedExerciseIndex(revertedPosition.exerciseIndex);
       }
     } catch {
-      setActionError("Önceki sete dönülemedi. Lütfen yeniden dene.");
+      setActionError(t("workout.errors.revertSetFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [requestExit, workoutSessionId]);
+  }, [requestExit, t, workoutSessionId]);
 
   const finishWorkout = useCallback(async () => {
     if (transitionInProgressRef.current) return;
@@ -309,14 +305,12 @@ export default function WorkoutScreen() {
       await navigateAfterCompletion();
     } catch {
       setSaveStatus("error");
-      setActionError(
-        "Antrenman kaydı tamamlanamadı. Verilerin korunuyor; yeniden deneyebilirsin.",
-      );
+      setActionError(t("workout.errors.completeWorkoutFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [navigateAfterCompletion, workoutSessionId]);
+  }, [navigateAfterCompletion, t, workoutSessionId]);
 
   const finishIncompleteWorkout = useCallback(async () => {
     if (transitionInProgressRef.current) return;
@@ -334,14 +328,12 @@ export default function WorkoutScreen() {
       await navigateAfterCompletion();
     } catch {
       setSaveStatus("error");
-      setActionError(
-        "Antrenman tamamlanamadı. İlerlemen korunuyor; yeniden deneyebilirsin.",
-      );
+      setActionError(t("workout.errors.finishIncompleteFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [navigateAfterCompletion, workoutSessionId]);
+  }, [navigateAfterCompletion, t, workoutSessionId]);
 
   const completeCurrentSet = useCallback(async () => {
     if (transitionInProgressRef.current) return;
@@ -389,25 +381,21 @@ export default function WorkoutScreen() {
     } catch {
       if (finalizing) {
         setSaveStatus("error");
-        setActionError(
-          "Antrenman kaydı tamamlanamadı. Verilerin korunuyor; yeniden deneyebilirsin.",
-        );
+        setActionError(t("workout.errors.completeWorkoutFailed"));
       } else {
-        setActionError(
-          "Set kaydedilemedi. İlerlemen korunuyor; yeniden deneyebilirsin.",
-        );
+        setActionError(t("workout.errors.completeSetFailed"));
       }
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [navigateAfterCompletion, replaceWithRest, viewedExerciseIndex, workoutSessionId]);
+  }, [navigateAfterCompletion, replaceWithRest, t, viewedExerciseIndex, workoutSessionId]);
 
   if (session === undefined && !loadError) {
     return (
       <ScreenState>
         <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={styles.stateText}>Antrenman hazırlanıyor…</Text>
+        <Text style={styles.stateText}>{t("workout.loading")}</Text>
       </ScreenState>
     );
   }
@@ -416,17 +404,17 @@ export default function WorkoutScreen() {
     return (
       <ScreenState>
         <Ionicons name="alert-circle-outline" size={42} color={colors.primary} />
-        <Text style={styles.stateTitle}>Antrenman açılamadı</Text>
-        <Text style={styles.stateText}>{loadError ?? "Antrenman verisi eksik."}</Text>
+        <Text style={styles.stateTitle}>{t("workout.errors.openFailedTitle")}</Text>
+        <Text style={styles.stateText}>{loadError ?? t("workout.errors.dataMissing")}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => void loadSession()}
           style={styles.statePrimaryButton}
         >
-          <Text style={styles.statePrimaryText}>Yeniden dene</Text>
+          <Text style={styles.statePrimaryText}>{t("workout.retry")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={requestExit}>
-          <Text style={styles.stateLink}>Ana sayfaya dön</Text>
+          <Text style={styles.stateLink}>{t("workout.backToHome")}</Text>
         </Pressable>
       </ScreenState>
     );
@@ -440,9 +428,9 @@ export default function WorkoutScreen() {
         ) : (
           <Ionicons name="cloud-upload-outline" size={44} color={colors.primary} />
         )}
-        <Text style={styles.stateTitle}>Antrenman kaydediliyor</Text>
+        <Text style={styles.stateTitle}>{t("workout.savingTitle")}</Text>
         <Text accessibilityLiveRegion="polite" style={styles.stateText}>
-          {actionError ?? "Sonucun güvenli biçimde kaydediliyor…"}
+          {actionError ?? t("workout.savingSafely")}
         </Text>
         <Pressable
           accessibilityRole="button"
@@ -452,11 +440,11 @@ export default function WorkoutScreen() {
           style={[styles.statePrimaryButton, isTransitioning && styles.disabledButton]}
         >
           <Text style={styles.statePrimaryText}>
-            {isTransitioning ? "Kaydediliyor…" : "Tekrar dene"}
+            {isTransitioning ? t("workout.saving") : t("workout.retry")}
           </Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={requestExit}>
-          <Text style={styles.stateLink}>Ana sayfaya dön</Text>
+          <Text style={styles.stateLink}>{t("workout.backToHome")}</Text>
         </Pressable>
       </ScreenState>
     );
@@ -534,7 +522,7 @@ export default function WorkoutScreen() {
                     size={26}
                     color={colors.primary}
                   />
-                  <Text style={styles.doneText}>Bu hareket tamamlandı</Text>
+                  <Text style={styles.doneText}>{t("workout.exerciseDone")}</Text>
                 </View>
               ) : null}
             </ScrollView>
@@ -573,7 +561,7 @@ export default function WorkoutScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.finishButtonText}>Antrenmanı bitir</Text>
+          <Text style={styles.finishButtonText}>{t("workout.finishWorkout")}</Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -593,7 +581,9 @@ export default function WorkoutScreen() {
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.completeButtonText}>
-              {viewedExerciseDone ? "Hareket tamamlandı ✓" : "Seti tamamla ✓"}
+              {viewedExerciseDone
+                ? t("workout.exerciseDoneCheck")
+                : t("workout.completeSetCheck")}
             </Text>
           )}
         </Pressable>
