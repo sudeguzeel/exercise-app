@@ -1,11 +1,11 @@
 import { ExerciseCard } from "@/features/exercises/components/exercise-card";
 import type { ExerciseListItem } from "@/features/exercises/exercise-catalog";
-import { DataErrorState } from "@/shared/components/data-error-state";
 import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
+import { DataErrorState } from "@/shared/components/data-error-state";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,6 +24,15 @@ export default function FavoritesScreen() {
   const { favorites, status, refetchFavorites, toggleFavorite } =
     useFavorites();
   const [retrying, setRetrying] = useState(false);
+  const { from } = useLocalSearchParams<{ from?: string }>();
+
+  const goBack = useCallback(() => {
+    if (from === "profile") {
+      router.replace("/(main)/profile");
+    } else {
+      router.replace("/(main)/exercise");
+    }
+  }, [from]);
 
   const handleRetry = useCallback(async () => {
     setRetrying(true);
@@ -67,10 +76,10 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
-        <Pressable
+                    <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Egzersizlere dön"
-          onPress={() => router.replace("/exercise")}
+          accessibilityLabel="Geri dön"
+          onPress={goBack}
           style={({ pressed }) => [
             styles.backButton,
             pressed && styles.pressed,
