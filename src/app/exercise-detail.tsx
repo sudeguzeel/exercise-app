@@ -5,17 +5,17 @@ import {
   type CustomExerciseValueKey,
   type CustomExerciseValues,
 } from "@/features/exercises/exercise-detail-validation";
+import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import {
   parseInitialTrainingDay,
   serializeProgramSelectionPayload,
-  type ProgramSelectionSearchParams,
   type ProgramSelectionPayload,
+  type ProgramSelectionSearchParams,
 } from "@/features/exercises/program-selection";
-import { resolveProgramExerciseRestSeconds } from "@/features/exercises/program-exercise-rest";
 import { addExerciseToProgramEditDraft } from "@/features/programs/program-edit-draft";
 import { useAppTheme } from "@/providers/AppThemeContext";
-import type { AppThemeColors } from "@/shared/constants/theme";
 import { useFavorites } from "@/providers/FavoritesContext";
+import type { AppThemeColors } from "@/shared/constants/theme";
 import {
   getExerciseDetail,
   getExerciseSummary,
@@ -578,32 +578,6 @@ export default function ExerciseDetailScreen() {
                   {formatExerciseName(exercise.name)}
                 </Text>
 
-                {exercise.steps.length > 0 ? (
-                  <View style={styles.stepsSection}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
-                      Nasıl yapılır?
-                    </Text>
-                    {exercise.steps.map((step, index) => (
-                      <View key={index} style={styles.stepRow}>
-                        <View style={styles.stepIndex}>
-                          <Text
-                            maxFontSizeMultiplier={1.3}
-                            style={styles.stepIndexText}
-                          >
-                            {index + 1}
-                          </Text>
-                        </View>
-                        <Text
-                          maxFontSizeMultiplier={1.3}
-                          style={styles.stepDescription}
-                        >
-                          {step}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
                 <Text maxFontSizeMultiplier={1.3} style={styles.fieldsTitle}>
                   Set / Tekrar / Dinlenme Süresi
                 </Text>
@@ -779,7 +753,32 @@ export default function ExerciseDetailScreen() {
                       Programa Ekle
                     </Text>
                   )}
-                </Pressable>
+                  </Pressable>
+                {exercise.steps.length > 0 ? (
+                  <View style={styles.stepsSection}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
+                      Nasıl yapılır?
+                    </Text>
+                    {exercise.steps.map((step, index) => (
+                      <View key={index} style={styles.stepRow}>
+                        <View style={styles.stepIndex}>
+                          <Text
+                            maxFontSizeMultiplier={1.3}
+                            style={styles.stepIndexText}
+                          >
+                            {index + 1}
+                          </Text>
+                        </View>
+                        <Text
+                          maxFontSizeMultiplier={1.3}
+                          style={styles.stepDescription}
+                        >
+                          {step}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </>
             ) : (
               <View style={styles.notFoundCard}>
@@ -1101,22 +1100,22 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   customInputError: {
     borderColor: colors.error,
   },
-  fieldError: {
-    minHeight: 44,
-    marginTop: 5,
-    color: colors.error,
-    fontSize: 10,
-    lineHeight: 13,
-    textAlign: "center",
-  },
-  addButton: {
-    height: 56,
-    marginTop: 18,
-    borderRadius: 20,
-    backgroundColor: colors.primaryBright,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+ fieldError: {
+  minHeight: 14,
+  marginTop: 4,
+  color: colors.error,
+  fontSize: 10,
+  lineHeight: 13,
+  textAlign: "center",
+},
+ addButton: {
+  height: 56,
+  marginTop: 10,
+  borderRadius: 20,
+  backgroundColor: colors.primaryBright,
+  alignItems: "center",
+  justifyContent: "center",
+},
   addButtonPressed: {
     backgroundColor: colors.primary,
   },
