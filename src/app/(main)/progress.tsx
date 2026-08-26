@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -63,18 +64,8 @@ const EMPTY_MEASUREMENT: MeasurementFields = {
   muscle: "",
 };
 
-const STEP_DAY_LABELS = ["P", "S", "Ç", "P", "C", "C", "P"];
-const STEP_DAY_NAMES = [
-  "Pazartesi",
-  "Salı",
-  "Çarşamba",
-  "Perşembe",
-  "Cuma",
-  "Cumartesi",
-  "Pazar",
-];
-
 export default function ProgressScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const isCompactWidth = windowWidth < 430;
@@ -111,7 +102,7 @@ export default function ProgressScreen() {
         setDashboard(result);
       } catch (error) {
         setLoadError(
-          error instanceof Error ? error.message : "İlerleme bilgileri yüklenemedi.",
+          error instanceof Error ? error.message : t("progress.loadError"),
         );
       } finally {
         if (isRefresh) setRefreshing(false);
@@ -187,14 +178,14 @@ export default function ProgressScreen() {
     ) {
       setTargetError(
         targetField === "all"
-          ? "Kilo 0–500; yağ ve kas hedefleri 0–100 arasında olmalıdır."
+          ? t("progress.targetErrorAll")
           : targetField === "weight"
-          ? "Kilo hedefi 0–500 arasında olmalıdır."
+          ? t("progress.targetErrorWeight")
           : targetField === "bodyFat"
-            ? "Yağ hedefi 0–100 arasında olmalıdır."
+            ? t("progress.targetErrorBodyFat")
             : targetField === "muscle"
-              ? "Kas hedefi 0–100 arasında olmalıdır."
-              : "Geçerli bir hedef girin.",
+              ? t("progress.targetErrorMuscle")
+              : t("progress.targetErrorGeneric"),
       );
       return;
     }
@@ -213,7 +204,7 @@ export default function ProgressScreen() {
       await load(true);
     } catch (error) {
       setTargetError(
-        error instanceof Error ? error.message : "Hedef kilo kaydedilemedi.",
+        error instanceof Error ? error.message : t("progress.targetSaveError"),
       );
     } finally {
       setSavingTarget(false);
@@ -236,7 +227,7 @@ export default function ProgressScreen() {
       await load(true);
     } catch (error) {
       setMeasurementError(
-        error instanceof Error ? error.message : "Ölçümler kaydedilemedi.",
+        error instanceof Error ? error.message : t("progress.measurementSaveError"),
       );
     } finally {
       setSavingMeasurement(false);
@@ -248,7 +239,7 @@ export default function ProgressScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.stateText}>İlerleme bilgilerin hazırlanıyor…</Text>
+          <Text style={styles.stateText}>{t("progress.loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -293,25 +284,25 @@ export default function ProgressScreen() {
 
   const header = (
     <View style={styles.headerContent}>
-      <Text style={styles.title}>İlerlemen</Text>
+      <Text style={styles.title}>{t("progress.title")}</Text>
       <PeriodSelector onChange={setPeriod} value={period} />
 
       <View style={styles.statsRow}>
         <StatCard
           detail={
             period === "week"
-              ? "bu hafta"
+              ? t("progress.thisWeek")
               : period === "month"
-                ? "bu ay"
-                : "bu yıl"
+                ? t("progress.thisMonth")
+                : t("progress.thisYear")
           }
-          label="ANTRENMAN"
+          label={t("progress.workoutLabel")}
           value={String(dashboard.periodCompletedCount)}
         />
         {period === "year" ? (
           <StatCard
-            detail="12 ay içinde"
-            label="AKTİF AY"
+            detail={t("progress.within12Months")}
+            label={t("progress.activeMonthLabel")}
             value={`${activeMonthCount}/12`}
           />
         ) : (
@@ -319,35 +310,35 @@ export default function ProgressScreen() {
             detail={
               period === "week" && dashboard.periodTargetDayCount > 0
                 ? remainingActiveDays > 0
-                  ? `hedefe ${remainingActiveDays} gün kaldı`
-                  : "hedef tamamlandı"
+                  ? t("progress.daysUntilGoal", { count: remainingActiveDays })
+                  : t("progress.goalCompleted")
                 : period === "week"
-                  ? "bu hafta"
-                  : "bu ay"
+                  ? t("progress.thisWeek")
+                  : t("progress.thisMonth")
             }
-            label="AKTİF GÜN"
-            value={`${activeDayCount} gün`}
+            label={t("progress.activeDayLabel")}
+            value={t("progress.dayCount", { count: activeDayCount })}
           />
         )}
         {period === "week" ? (
           <StatCard
-            detail={dashboard.currentStreak > 0 ? "Seriyi koru" : "Bugün başlat"}
+            detail={dashboard.currentStreak > 0 ? t("progress.keepStreak") : t("progress.startToday")}
             highlight
-            label="SERİ"
-            value={`${dashboard.currentStreak} gün`}
+            label={t("progress.streakLabel")}
+            value={t("progress.dayCount", { count: dashboard.currentStreak })}
           />
         ) : period === "month" ? (
           <StatCard
-            detail="antrenman / hafta"
-            label="HAFTALIK ORT."
+            detail={t("progress.workoutsPerWeek")}
+            label={t("progress.weeklyAverageLabel")}
             value={formatDecimal(monthlyWeeklyAverage)}
           />
         ) : (
           <StatCard
-            detail="bu yıl"
+            detail={t("progress.thisYear")}
             highlight
-            label="EN UZUN SERİ"
-            value={`${periodLongestStreak} gün`}
+            label={t("progress.longestStreakLabel")}
+            value={t("progress.dayCount", { count: periodLongestStreak })}
           />
         )}
       </View>
@@ -360,7 +351,7 @@ export default function ProgressScreen() {
           style={({ pressed }) => [styles.cardHeader, pressed && styles.pressed]}
         >
           <View style={styles.cardHeaderCopy}>
-            <Text style={styles.cardTitle}>Hareket Ağırlıkların</Text>
+            <Text style={styles.cardTitle}>{t("progress.exerciseWeightsTitle")}</Text>
           </View>
           <View style={styles.arrowButton}>
             <Ionicons name="chevron-forward" size={18} color={colors.text} />
@@ -376,7 +367,7 @@ export default function ProgressScreen() {
               onPress={openWeights}
               style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}
             >
-              <Text style={styles.secondaryButtonText}>Tüm hareketleri gör</Text>
+              <Text style={styles.secondaryButtonText}>{t("progress.viewAllExercises")}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.text} />
             </Pressable>
           </>
@@ -384,10 +375,10 @@ export default function ProgressScreen() {
           <>
             <EmptyContent
               icon="barbell-outline"
-              title="Henüz çalışma kilosu yok"
+              title={t("progress.noWeightsYetTitle")}
             />
             <Pressable onPress={openWeights} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Hareketleri aç</Text>
+              <Text style={styles.secondaryButtonText}>{t("progress.openExercises")}</Text>
             </Pressable>
           </>
         )}
@@ -398,7 +389,7 @@ export default function ProgressScreen() {
       <View style={styles.card}>
         <View style={styles.bodyHeader}>
           <View style={styles.cardHeaderCopy}>
-            <Text style={styles.cardTitle}>Vücut İlerlemen</Text>
+            <Text style={styles.cardTitle}>{t("progress.bodyProgressTitle")}</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -406,7 +397,7 @@ export default function ProgressScreen() {
             style={({ pressed }) => [styles.bodyTargetButton, pressed && styles.pressed]}
           >
             <Ionicons color={colors.primary} name="flag-outline" size={13} />
-            <Text style={styles.bodyTargetButtonText}>Hedef</Text>
+            <Text style={styles.bodyTargetButtonText}>{t("progress.target")}</Text>
           </Pressable>
         </View>
         <View style={styles.bodySummary}>
@@ -414,7 +405,7 @@ export default function ProgressScreen() {
             <ProgressTargetCard
               current={body.currentWeightKg}
               icon="scale-outline"
-              label="KİLO"
+              label={t("progress.weightLabel")}
               onPress={() => openTargetModal("weight")}
               target={body.targetWeightKg}
               unit="kg"
@@ -423,7 +414,7 @@ export default function ProgressScreen() {
               change={bodyFatChange}
               current={body.bodyFatPercentage}
               icon="water-outline"
-              label="YAĞ"
+              label={t("progress.fatLabel")}
               onPress={() => openTargetModal("bodyFat")}
               target={body.targetBodyFatPercentage}
             />
@@ -431,37 +422,37 @@ export default function ProgressScreen() {
               change={muscleChange}
               current={body.musclePercentage}
               icon="fitness-outline"
-              label="KAS"
+              label={t("progress.muscleLabel")}
               onPress={() => openTargetModal("muscle")}
               target={body.targetMusclePercentage}
             />
           </View>
           <View style={styles.bodyMetricsRow}>
-            <BodyMetric label="BAŞLANGIÇ" value={`${formatDecimal(body.startingWeightKg)} kg`} />
-            <BodyMetric label="YAĞ ORANI" value={`${formatDecimal(body.bodyFatPercentage)} %`} />
-            <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
+            <BodyMetric label={t("progress.startingLabel")} value={`${formatDecimal(body.startingWeightKg)} kg`} />
+            <BodyMetric label={t("progress.fatRatioLabel")} value={`${formatDecimal(body.bodyFatPercentage)} %`} />
+            <BodyMetric label={t("progress.muscleRatioLabel")} value={`${formatDecimal(body.musclePercentage)} %`} />
           </View>
         </View>
 
         <View style={styles.measurementSection}>
-          <Text style={styles.measurementTitle}>Yeni ölçüm ekle</Text>
+          <Text style={styles.measurementTitle}>{t("progress.addMeasurementTitle")}</Text>
           <View style={styles.inputRow}>
             <MeasurementInput
               error={measurementErrors.weight}
-              label="KİLO"
+              label={t("progress.weightLabel")}
               onChangeText={(weight) => setMeasurement((current) => ({ ...current, weight }))}
               suffix="kg"
               value={measurement.weight}
             />
             <MeasurementInput
               error={measurementErrors.bodyFat}
-              label="YAĞ"
+              label={t("progress.fatLabel")}
               onChangeText={(bodyFat) => setMeasurement((current) => ({ ...current, bodyFat }))}
               value={measurement.bodyFat}
             />
             <MeasurementInput
               error={measurementErrors.muscle}
-              label="KAS"
+              label={t("progress.muscleLabel")}
               onChangeText={(muscle) => setMeasurement((current) => ({ ...current, muscle }))}
               value={measurement.muscle}
             />
@@ -477,15 +468,15 @@ export default function ProgressScreen() {
             {savingMeasurement ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.primaryButtonText}>Ölçümlerimi kaydet</Text>
+              <Text style={styles.primaryButtonText}>{t("progress.saveMeasurements")}</Text>
             )}
           </Pressable>
         </View>
       </View>
       </View>
 
-      <SectionTitle action="Tümünü gör" onAction={() => listRef.current?.scrollToEnd()}>
-        GEÇMİŞ
+      <SectionTitle action={t("progress.viewAll")} onAction={() => listRef.current?.scrollToEnd()}>
+        {t("progress.historyLabel")}
       </SectionTitle>
     </View>
   );
@@ -500,9 +491,9 @@ export default function ProgressScreen() {
           ListEmptyComponent={
             <View style={styles.card}>
               <EmptyContent
-                description="Seçili dönemde tamamlanmış bir antrenman bulunmuyor."
+                description={t("progress.emptyHistoryDescription")}
                 icon="time-outline"
-                title="Henüz tamamlanmış antrenman yok"
+                title={t("progress.emptyHistoryTitle")}
               />
             </View>
           }
@@ -548,50 +539,50 @@ export default function ProgressScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>
               {targetField === "weight"
-                ? "Kilo hedefini değiştir"
+                ? t("progress.editWeightGoalTitle")
                 : targetField === "bodyFat"
-                  ? "Yağ hedefini değiştir"
+                  ? t("progress.editFatGoalTitle")
                   : targetField === "muscle"
-                    ? "Kas hedefini değiştir"
-                    : "Vücut hedeflerini değiştir"}
+                    ? t("progress.editMuscleGoalTitle")
+                    : t("progress.editBodyGoalsTitle")}
             </Text>
             {targetField === "all" || targetField === "weight" ? <>
-              <Text style={styles.modalInputLabel}>HEDEF KİLO (KG)</Text>
+              <Text style={styles.modalInputLabel}>{t("progress.targetWeightFieldLabel")}</Text>
               <TextInput
-              accessibilityLabel="Hedef kilo"
+              accessibilityLabel={t("progress.targetWeightAccessibility")}
               editable={!savingTarget}
               inputMode="decimal"
               keyboardType="decimal-pad"
               onChangeText={setTargetWeight}
-              placeholder="Örn. 70"
+              placeholder={t("progress.targetWeightPlaceholder")}
               placeholderTextColor={colors.placeholder}
               style={[styles.modalInput, targetError && styles.inputError]}
               value={targetWeight}
               />
             </> : null}
             {targetField === "all" || targetField === "bodyFat" ? <>
-              <Text style={styles.modalInputLabel}>HEDEF YAĞ ORANI</Text>
+              <Text style={styles.modalInputLabel}>{t("progress.targetBodyFatFieldLabel")}</Text>
               <TextInput
-              accessibilityLabel="Hedef yağ oranı"
+              accessibilityLabel={t("progress.targetBodyFatAccessibility")}
               editable={!savingTarget}
               inputMode="decimal"
               keyboardType="decimal-pad"
               onChangeText={setTargetBodyFat}
-              placeholder="Örn. 18"
+              placeholder={t("progress.targetBodyFatPlaceholder")}
               placeholderTextColor={colors.placeholder}
               style={[styles.modalInput, targetError && styles.inputError]}
               value={targetBodyFat}
               />
             </> : null}
             {targetField === "all" || targetField === "muscle" ? <>
-              <Text style={styles.modalInputLabel}>HEDEF KAS ORANI</Text>
+              <Text style={styles.modalInputLabel}>{t("progress.targetMuscleFieldLabel")}</Text>
               <TextInput
-              accessibilityLabel="Hedef kas oranı"
+              accessibilityLabel={t("progress.targetMuscleAccessibility")}
               editable={!savingTarget}
               inputMode="decimal"
               keyboardType="decimal-pad"
               onChangeText={setTargetMuscle}
-              placeholder="Örn. 35"
+              placeholder={t("progress.targetMusclePlaceholder")}
               placeholderTextColor={colors.placeholder}
               style={[styles.modalInput, targetError && styles.inputError]}
               value={targetMuscle}
@@ -604,7 +595,7 @@ export default function ProgressScreen() {
                 onPress={() => setTargetModalVisible(false)}
                 style={styles.modalSecondary}
               >
-                <Text style={styles.modalSecondaryText}>Vazgeç</Text>
+                <Text style={styles.modalSecondaryText}>{t("progress.discard")}</Text>
               </Pressable>
               <Pressable
                 disabled={savingTarget}
@@ -614,7 +605,7 @@ export default function ProgressScreen() {
                 {savingTarget ? (
                   <ActivityIndicator color={colors.onPrimary} />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Kaydet</Text>
+                  <Text style={styles.primaryButtonText}>{t("progress.save")}</Text>
                 )}
               </Pressable>
             </View>
@@ -642,13 +633,14 @@ function ProgressTargetCard({
   change?: string | null;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const distance =
     current !== null && target !== null ? Math.abs(current - target) : null;
   return (
     <Pressable
-      accessibilityLabel={`${label} hedefini düzenle`}
+      accessibilityLabel={t("progress.editGoalAccessibility", { label })}
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [styles.progressTargetCard, pressed && styles.pressed]}
@@ -665,18 +657,29 @@ function ProgressTargetCard({
       </Text>
       <View style={styles.targetCardDivider} />
       <Text numberOfLines={1} style={styles.targetCardGoal}>
-        Hedef {formatDecimal(target)}{unit ? ` ${unit}` : ""}
+        {t("progress.goalValue", { value: `${formatDecimal(target)}${unit ? ` ${unit}` : ""}` })}
       </Text>
       <Text numberOfLines={1} style={styles.targetCardChange}>
-        {change ?? (distance === null ? "Hedef belirle" : `Hedefe ${formatDecimal(distance)}${unit ? ` ${unit}` : ""}`)}
+        {change ?? (distance === null ? t("progress.setGoal") : t("progress.distanceToGoal", { value: `${formatDecimal(distance)}${unit ? ` ${unit}` : ""}` }))}
       </Text>
     </Pressable>
   );
 }
 
 function StepsChartCard() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const dayInitials = t("progress.dayInitials", { returnObjects: true }) as string[];
+  const dayNames = [
+    t("days.monFull"),
+    t("days.tueFull"),
+    t("days.wedFull"),
+    t("days.thuFull"),
+    t("days.friFull"),
+    t("days.satFull"),
+    t("days.sunFull"),
+  ];
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(null);
   const [weekSteps, setWeekSteps] = useState<number[]>(() => new Array(7).fill(0));
   const [unavailable, setUnavailable] = useState(false);
@@ -694,7 +697,6 @@ function StepsChartCard() {
       try {
         await syncTodaySteps();
       } catch {
-        // senkron başarısız olsa da Supabase'deki son bilinen veriyi göstermeye devam ederiz
       }
       const week = await loadWeeklySteps();
       if (active) setWeekSteps(week);
@@ -717,12 +719,12 @@ function StepsChartCard() {
   return (
     <View style={styles.stepsCard}>
       <View style={styles.stepsWidgetHeader}>
-        <Text style={styles.stepsTitle}>Günlük Hareket</Text>
+        <Text style={styles.stepsTitle}>{t("progress.dailyActivityTitle")}</Text>
       </View>
 
       {unavailable ? (
         <Text style={styles.stepsUnavailable}>
-          Bu cihazda adım sayar verisi bulunamadı.
+          {t("progress.pedometerUnavailable")}
         </Text>
       ) : null}
 
@@ -736,15 +738,15 @@ function StepsChartCard() {
             </Text>
           </View>
         </View>
-        <View accessibilityLabel="Haftalık adım grafiği" style={styles.stepsMiniChart}>
+        <View accessibilityLabel={t("progress.weeklyStepsChartAccessibility")} style={styles.stepsMiniChart}>
           {stepCounts.map((value, index) => {
             const isSelected = index === displayDayIndex;
             const isFuture = index > todayIndex;
             return (
               <Pressable
-                accessibilityLabel={`${STEP_DAY_NAMES[index]} ${formatSteps(value)} adım`}
+                accessibilityLabel={t("progress.stepsAccessibility", { day: dayNames[index], count: formatSteps(value) })}
                 accessibilityRole="button"
-                key={`${STEP_DAY_LABELS[index]}-${index}`}
+                key={`${dayInitials[index]}-${index}`}
                 onPress={() => setSelectedDayIndex(index)}
                 style={({ pressed }) => [
                   styles.stepsMiniColumn,
@@ -763,7 +765,7 @@ function StepsChartCard() {
                   />
                 </View>
                 <Text style={[styles.stepsMiniDay, isSelected && styles.stepsMiniDayActive]}>
-                  {STEP_DAY_LABELS[index]}
+                  {dayInitials[index]}
                 </Text>
               </Pressable>
             );

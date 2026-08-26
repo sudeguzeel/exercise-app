@@ -1,8 +1,3 @@
-// Supabase'deki exercises/body_parts/equipments/muscles referans tabloları
-// İngilizce (ExerciseDB kaynaklı) isimlerle geliyor; uygulamanın geri kalanı
-// Türkçe olduğu için burada görüntüleme amaçlı çeviri sözlükleri tutuluyor.
-// Sözlükte karşılığı olmayan bir isim gelirse (yeni satır eklenirse vb.)
-// ham İngilizce isim aynen gösterilir — uygulama hiçbir zaman çökmez.
 
 import type { Ionicons } from "@expo/vector-icons";
 import type { ComponentProps } from "react";
@@ -139,9 +134,6 @@ export function translateMuscle(rawName: string | null | undefined): string | nu
   return MUSCLE_TR[rawName] ?? rawName;
 }
 
-// exercises.level (beginner/intermediate/advanced) şu an veri setinde dolu
-// değil (bkz. add_exercise_level_column migration'ı) — null gelirse servis
-// de null döner, ekran alanı sadece değer varsa gösterir.
 export const LEVEL_TR: Record<string, string> = {
   beginner: "Başlangıç",
   intermediate: "Orta seviye",
@@ -153,8 +145,6 @@ export function translateLevel(rawLevel: string | null | undefined): string | nu
   return LEVEL_TR[rawLevel] ?? rawLevel;
 }
 
-// exercises.exercise_type de level gibi şu an veri setinde dolu değil
-// (bkz. add_exercise_type_and_recommended_values migration'ı).
 export const EXERCISE_TYPE_TR: Record<string, string> = {
   compound: "Bileşik",
   isolation: "İzolasyon",

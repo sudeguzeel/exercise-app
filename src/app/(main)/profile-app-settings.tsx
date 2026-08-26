@@ -3,6 +3,7 @@ import type { AppThemeColors, AppThemeMode } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Pressable,
   SafeAreaView,
@@ -13,45 +14,46 @@ import {
 } from "react-native";
 
 export default function ProfileAppSettingsScreen() {
+  const { t } = useTranslation();
   const { colors, mode, setMode } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Header colors={colors} styles={styles} title="Uygulama Ayarları" />
+        <Header colors={colors} styles={styles} title={t("profileAppSettings.headerTitle")} />
 
         <View style={styles.intro}>
           <View style={styles.iconCircle}>
             <Ionicons name="settings-outline" size={34} color={colors.primary} />
           </View>
           <Text style={styles.introText}>
-            Uygulama deneyimini kendi tercihlerine göre özelleştir.
+            {t("profileAppSettings.intro")}
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Tema</Text>
+          <Text style={styles.label}>{t("profileAppSettings.themeLabel")}</Text>
           <View style={styles.segment}>
             <Option
               mode="light"
               selected={mode === "light"}
               setMode={setMode}
               styles={styles}
-              text="Açık"
+              text={t("profileAppSettings.light")}
             />
             <Option
               mode="dark"
               selected={mode === "dark"}
               setMode={setMode}
               styles={styles}
-              text="Koyu"
+              text={t("profileAppSettings.dark")}
             />
           </View>
         </View>
 
         <Text style={styles.note}>
-          Tema tercihin bu cihazda saklanır ve sonraki açılışta yeniden uygulanır.
+          {t("profileAppSettings.note")}
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -96,10 +98,11 @@ function Header({
   styles: Styles;
   title: string;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <Pressable
-        accessibilityLabel="Profile dön"
+        accessibilityLabel={t("profileAppSettings.backAccessibility")}
         accessibilityRole="button"
         onPress={() => router.replace("/(main)/profile")}
         style={styles.back}

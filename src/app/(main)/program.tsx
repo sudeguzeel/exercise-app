@@ -208,9 +208,6 @@ export default function ProgramScreen() {
 
     const confirmMessage = t("program.resetConfirmMessage");
 
-    // react-native-web'de Alert.alert no-op — butonlu bir dialog hiç
-    // görünmüyor, onPress asla tetiklenmiyor. Web'de window.confirm'e
-    // düşülüyor, native'de normal Alert.alert kullanılıyor.
     if (Platform.OS === "web") {
       if (window.confirm(confirmMessage)) performReset();
       return;

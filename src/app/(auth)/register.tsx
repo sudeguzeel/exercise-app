@@ -119,9 +119,6 @@ export default function RegisterScreen() {
       resetOnboarding();
 
       if (!data.session) {
-        // Supabase projesinde "Confirm email" kapalıysa buraya hiç
-        // düşülmez (signUp anında session döner). Açık olduğu ihtimale
-        // karşı doğrulama bekleme ekranına yönlendiriyoruz.
         await rememberPendingVerificationEmail(email.trim());
 
         router.replace({
@@ -131,8 +128,6 @@ export default function RegisterScreen() {
         return;
       }
 
-      // "Confirm email" kapalı olduğu için normal durum bu: hesap anında
-      // hazır, doğrulama beklemeden direkt onboarding'e geçiyoruz.
       router.replace("/onboarding/personal-info");
     } catch {
       Alert.alert(t("common.genericErrorTitle"), t("common.genericErrorMessage"));

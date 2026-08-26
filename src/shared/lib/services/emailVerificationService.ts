@@ -29,7 +29,6 @@ export async function rememberPendingVerificationEmail(email: string) {
       normalizeEmail(email),
     );
   } catch {
-    // Kayıt işlemi yalnızca yardımcı e-posta bilgisinin saklanmasına bağlı değil.
   }
 }
 
@@ -45,7 +44,6 @@ export async function clearPendingVerificationEmail() {
   try {
     await AsyncStorage.removeItem(PENDING_VERIFICATION_EMAIL_KEY);
   } catch {
-    // Doğrulanan oturum, yardımcı e-posta kaydı silinemese de geçerlidir.
   }
 }
 

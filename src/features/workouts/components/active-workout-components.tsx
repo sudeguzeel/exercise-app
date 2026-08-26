@@ -7,6 +7,7 @@ import type {
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -26,11 +27,12 @@ export function WorkoutTopBar({
   onBack: () => void;
   onExit: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, styles } = useWorkoutComponentTheme();
   return (
     <View style={styles.topBar}>
       <Pressable
-        accessibilityLabel="Geri dön"
+        accessibilityLabel={t("activeWorkoutComponents.backAccessibility")}
         accessibilityRole="button"
         hitSlop={6}
         onPress={onBack}
@@ -39,14 +41,14 @@ export function WorkoutTopBar({
         <Ionicons name="chevron-back" size={22} color={colors.text} />
       </Pressable>
       <Text
-        accessibilityLabel={`${elapsed} geçen süre`}
+        accessibilityLabel={t("activeWorkoutComponents.elapsedAccessibility", { elapsed })}
         accessibilityRole="timer"
         style={styles.elapsedLabel}
       >
-        <Text style={styles.elapsedValue}>{elapsed}</Text> geçen süre
+        <Text style={styles.elapsedValue}>{elapsed}</Text> {t("activeWorkoutComponents.elapsedSuffix")}
       </Text>
       <Pressable
-        accessibilityLabel="Antrenmanı kapat"
+        accessibilityLabel={t("activeWorkoutComponents.exitAccessibility")}
         accessibilityRole="button"
         hitSlop={6}
         onPress={onExit}
@@ -67,10 +69,14 @@ export function ExerciseInfoCard({
   exerciseIndex: number;
   totalExercises: number;
 }) {
+  const { t } = useTranslation();
   const { styles } = useWorkoutComponentTheme();
   const detail = [
     exercise.muscleGroupName,
-    `${exercise.targetSets} set × ${exercise.targetReps} tekrar`,
+    t("activeWorkoutComponents.setsRepsSummary", {
+      sets: exercise.targetSets,
+      reps: exercise.targetReps,
+    }),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -80,7 +86,10 @@ export function ExerciseInfoCard({
       <View style={styles.infoAccent} />
       <View style={styles.infoCopy}>
         <Text style={styles.infoEyebrow}>
-          HAREKET {exerciseIndex + 1} / {totalExercises}
+          {t("activeWorkoutComponents.moveCounter", {
+            current: exerciseIndex + 1,
+            total: totalExercises,
+          })}
         </Text>
         <Text numberOfLines={3} style={styles.exerciseTitle}>
           {exercise.name}
@@ -100,6 +109,7 @@ export function ExerciseMedia({
   exerciseName: string;
   mediaUrl: string | null;
 }) {
+  const { t } = useTranslation();
   const { colors, styles } = useWorkoutComponentTheme();
   const [state, setState] = useState<"loading" | "playing" | "error">(
     "loading",
@@ -112,7 +122,7 @@ export function ExerciseMedia({
       {mediaUrl && state !== "error" ? (
         <View style={styles.mediaFrame}>
           <Image
-            accessibilityLabel={`${exerciseName} hareket animasyonu`}
+            accessibilityLabel={t("activeWorkoutComponents.mediaAccessibility", { exerciseName })}
             autoplay
             contentFit="contain"
             onError={() => setState("error")}
@@ -133,8 +143,8 @@ export function ExerciseMedia({
       {state === "error" || !mediaUrl ? (
         <Text style={styles.mediaCaption}>
           {state === "error"
-            ? "Hareket videosu yüklenemedi"
-            : "Bu hareket için medya bulunmuyor"}
+            ? t("activeWorkoutComponents.mediaLoadError")
+            : t("activeWorkoutComponents.mediaUnavailable")}
         </Text>
       ) : null}
     </View>
@@ -148,6 +158,7 @@ export function SetSelector({
   sets: WorkoutSetSnapshot[];
   activeSetId: string | null;
 }) {
+  const { t } = useTranslation();
   const { styles } = useWorkoutComponentTheme();
   return (
     <ScrollView
@@ -159,10 +170,18 @@ export function SetSelector({
       {sets.map((set) => {
         const completed = Boolean(set.completedAt);
         const active = set.id === activeSetId;
+        const status = completed
+          ? t("activeWorkoutComponents.statusCompleted")
+          : active
+            ? t("activeWorkoutComponents.statusActive")
+            : t("activeWorkoutComponents.statusPending");
         return (
           <View
             accessible
-            accessibilityLabel={`Set ${set.setNumber}${completed ? ", tamamlandı" : active ? ", aktif" : ", bekliyor"}`}
+            accessibilityLabel={t("activeWorkoutComponents.setAccessibility", {
+              setNumber: set.setNumber,
+              status,
+            })}
             accessibilityRole="text"
             key={set.id}
             style={[
@@ -173,7 +192,8 @@ export function SetSelector({
             ]}
           >
             <Text style={[styles.setText, active && styles.activeSetText]}>
-              Set {set.setNumber}{completed ? " ✓" : ""}
+              {t("activeWorkoutComponents.setLabel", { setNumber: set.setNumber })}
+              {completed ? " ✓" : ""}
             </Text>
           </View>
         );
@@ -183,25 +203,22 @@ export function SetSelector({
 }
 
 export function TargetRepetitionCard({ value }: { value: number }) {
+  const { t } = useTranslation();
   const { styles } = useWorkoutComponentTheme();
   return (
     <View
-      accessibilityLabel={`Hedef tekrar: ${value}`}
+      accessibilityLabel={t("activeWorkoutComponents.targetRepsAccessibility", { value })}
       accessible
       style={styles.targetCard}
     >
       <Text adjustsFontSizeToFit numberOfLines={1} style={styles.targetValue}>
         {value}
       </Text>
-      <Text style={styles.targetUnit}>TEKRAR</Text>
+      <Text style={styles.targetUnit}>{t("activeWorkoutComponents.repsUnit")}</Text>
     </View>
   );
 }
 
-// Program kaç hareketten oluşuyorsa o kadar nokta gösterir; aktif nokta
-// büyür, kullanıcı bir noktaya dokunarak doğrudan o harekete atlayabilir.
-// Nokta sayısı ekrana sığmazsa şerit yatay kaydırılabilir ve aktif nokta
-// otomatik olarak ekranın ortasına gelecek şekilde kaydırılır.
 export function ExerciseDotPagination({
   count,
   activeIndex,
@@ -211,6 +228,7 @@ export function ExerciseDotPagination({
   activeIndex: number;
   onSelect: (index: number) => void;
 }) {
+  const { t } = useTranslation();
   const { styles } = useWorkoutComponentTheme();
   const scrollRef = useRef<ScrollView>(null);
   const containerWidthRef = useRef(0);
@@ -246,7 +264,7 @@ export function ExerciseDotPagination({
         const active = index === activeIndex;
         return (
           <Pressable
-            accessibilityLabel={`${index + 1}. harekete git`}
+            accessibilityLabel={t("activeWorkoutComponents.goToMove", { index: index + 1 })}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             hitSlop={8}

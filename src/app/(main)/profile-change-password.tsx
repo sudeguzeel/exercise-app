@@ -4,12 +4,14 @@ import { supabase } from "@/shared/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type PasswordField = "current" | "next" | "repeat";
 
 export default function ProfileChangePasswordScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -26,19 +28,19 @@ export default function ProfileChangePasswordScreen() {
     if (submitting) return;
     setError("");
     if (!currentPassword || !newPassword || !repeatPassword) {
-      setError("Lütfen tüm alanları doldurun.");
+      setError(t("profileChangePassword.allFieldsRequired"));
       return;
     }
     if (newPassword !== repeatPassword) {
-      setError("Şifreler eşleşmiyor.");
+      setError(t("profileChangePassword.passwordsDontMatch"));
       return;
     }
     if (newPassword === currentPassword) {
-      setError("Yeni şifre mevcut şifreyle aynı olmamalı.");
+      setError(t("profileChangePassword.sameAsCurrent"));
       return;
     }
     if (newPassword.length < 8 || !/\p{L}/u.test(newPassword) || !/\d/.test(newPassword)) {
-      setError("Yeni şifre en az 8 karakter, bir harf ve bir rakam içermelidir.");
+      setError(t("profileChangePassword.passwordRequirements"));
       return;
     }
 
@@ -46,23 +48,23 @@ export default function ProfileChangePasswordScreen() {
     const { data: userData } = await supabase.auth.getUser();
     const email = userData.user?.email;
     if (!email) {
-      setError("Oturum bilgisi bulunamadı.");
+      setError(t("profileChangePassword.sessionNotFound"));
       setSubmitting(false);
       return;
     }
     const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
     if (verifyError) {
-      setError("Mevcut şifre yanlış.");
+      setError(t("profileChangePassword.currentPasswordWrong"));
       setSubmitting(false);
       return;
     }
     const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
     setSubmitting(false);
     if (updateError) {
-      setError("Şifre güncellenemedi. Lütfen tekrar deneyin.");
+      setError(t("profileChangePassword.updateFailed"));
       return;
     }
-    setSuccess("Şifren başarıyla güncellendi.");
+    setSuccess(t("profileChangePassword.success"));
     setTimeout(() => router.back(), 1200);
   };
 
@@ -71,24 +73,24 @@ export default function ProfileChangePasswordScreen() {
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Pressable accessibilityLabel="Geri dön" onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
-            <Text style={styles.headerTitle}>Şifreyi değiştir</Text>
+            <Pressable accessibilityLabel={t("profileChangePassword.backAccessibility")} onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
+            <Text style={styles.headerTitle}>{t("profileChangePassword.headerTitle")}</Text>
             <View style={styles.headerSpacer} />
           </View>
 
           <View style={styles.card}>
-            <PasswordInput label="Mevcut şifre" value={currentPassword} visible={visible.current} onChangeText={setCurrentPassword} onToggle={() => toggleVisible("current")} />
-            <PasswordInput label="Yeni şifre" value={newPassword} visible={visible.next} onChangeText={setNewPassword} onToggle={() => toggleVisible("next")} />
-            <PasswordInput label="Yeni şifreyi tekrar gir" value={repeatPassword} visible={visible.repeat} onChangeText={setRepeatPassword} onToggle={() => toggleVisible("repeat")} />
-            <View style={styles.infoRow}><Ionicons name="information-circle-outline" size={18} color={colors.primary} /><Text style={styles.infoText}>En az 8 karakter; bir harf ve bir rakam içermelidir.</Text></View>
+            <PasswordInput label={t("profileChangePassword.currentPasswordLabel")} value={currentPassword} visible={visible.current} onChangeText={setCurrentPassword} onToggle={() => toggleVisible("current")} />
+            <PasswordInput label={t("profileChangePassword.newPasswordLabel")} value={newPassword} visible={visible.next} onChangeText={setNewPassword} onToggle={() => toggleVisible("next")} />
+            <PasswordInput label={t("profileChangePassword.repeatPasswordLabel")} value={repeatPassword} visible={visible.repeat} onChangeText={setRepeatPassword} onToggle={() => toggleVisible("repeat")} />
+            <View style={styles.infoRow}><Ionicons name="information-circle-outline" size={18} color={colors.primary} /><Text style={styles.infoText}>{t("profileChangePassword.infoText")}</Text></View>
             {error ? <Text accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
             {success ? <Text accessibilityLiveRegion="polite" style={styles.success}>{success}</Text> : null}
           </View>
 
           <Pressable disabled={submitting || Boolean(success)} onPress={() => void updatePassword()} style={({ pressed }) => [styles.submitButton, pressed && styles.pressed, (submitting || Boolean(success)) && styles.disabled]}>
-            {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.submitText}>Şifreyi güncelle</Text>}
+            {submitting ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.submitText}>{t("profileChangePassword.submit")}</Text>}
           </Pressable>
-          <Pressable onPress={() => router.push("/forgot-password")} style={styles.forgotButton}><Text style={styles.forgotText}>Şifreni mi unuttun?</Text></Pressable>
+          <Pressable onPress={() => router.push("/forgot-password")} style={styles.forgotButton}><Text style={styles.forgotText}>{t("profileChangePassword.forgotPassword")}</Text></Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -96,9 +98,10 @@ export default function ProfileChangePasswordScreen() {
 }
 
 function PasswordInput({ label, value, visible, onChangeText, onToggle }: { label: string; value: string; visible: boolean; onChangeText: (value: string) => void; onToggle: () => void }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.inputRow}><TextInput autoCapitalize="none" autoCorrect={false} onChangeText={onChangeText} secureTextEntry={!visible} style={styles.input} value={value} /><Pressable accessibilityLabel={visible ? "Şifreyi gizle" : "Şifreyi göster"} onPress={onToggle} style={styles.eyeButton}><Ionicons name={visible ? "eye-off-outline" : "eye-outline"} size={21} color={colors.textSecondary} /></Pressable></View></View>;
+  return <View style={styles.field}><Text style={styles.label}>{label}</Text><View style={styles.inputRow}><TextInput autoCapitalize="none" autoCorrect={false} onChangeText={onChangeText} secureTextEntry={!visible} style={styles.input} value={value} /><Pressable accessibilityLabel={visible ? t("profileChangePassword.hidePasswordAccessibility") : t("profileChangePassword.showPasswordAccessibility")} onPress={onToggle} style={styles.eyeButton}><Ionicons name={visible ? "eye-off-outline" : "eye-outline"} size={21} color={colors.textSecondary} /></Pressable></View></View>;
 }
 
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({

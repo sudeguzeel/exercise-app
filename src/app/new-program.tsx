@@ -314,9 +314,6 @@ export default function NewProgramScreen() {
                           <Text style={styles.reminderTitle}>
                             {t("newProgram.reminderTitle")}
                           </Text>
-                          <Text style={styles.reminderDescription}>
-                            {t("newProgram.reminderDescription")}
-                          </Text>
                         </View>
                         <View style={styles.reminderToggleLabel}>
                           <View
@@ -698,11 +695,6 @@ const baseStyles = StyleSheet.create({
     color: MainColors.text,
     fontSize: 15,
     fontWeight: "800",
-  },
-  reminderDescription: {
-    marginTop: 3,
-    color: MainColors.mutedText,
-    fontSize: 12,
   },
   reminderToggleLabel: {
     flexDirection: "row",

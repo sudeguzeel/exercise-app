@@ -19,17 +19,6 @@ export type HomeSourceData = {
   categories: BodyPartOption[];
 };
 
-/**
- * Ana sayfa dashboard'unun (HomeScreen) ihtiyaç duyduğu her şeyi tek seferde
- * toplar: kullanıcının programları (user_workout_programs +
- * user_workout_program_exercises), bu programlardaki egzersizlerin isim/ikon/
- * vücut-bölgesi bilgisi ve bu haftaki tamamlanma kayıtları
- * (user_completed_exercises).
- *
- * Tamamlanma kayıtları mevcut Supabase kaynağıyla cihazdaki aktif antrenman
- * repository'sinden birleştirilir. Backend akışı hazır olduğunda ekranın veri
- * sözleşmesi değişmeden yerel kaynak kaldırılabilir.
- */
 export async function getHomeSourceData(): Promise<HomeSourceData> {
   const programs = await programRepository.listPrograms();
   const exerciseIds = [

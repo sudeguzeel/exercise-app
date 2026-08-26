@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -26,11 +27,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const WEIGHT_STEP_KG = 2.5;
-const ALL_FILTER = "Tümü";
+const ALL_FILTER = "__all__";
 
 export default function ExerciseWeightsScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const savingIdsRef = useRef(new Set<string>());
   const [items, setItems] = useState<ExerciseWeightItem[]>();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -53,12 +55,14 @@ export default function ExerciseWeightsScreen() {
       );
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : "Hareket kiloları yüklenemedi.",
+        error instanceof Error
+          ? error.message
+          : t("exerciseWeights.loadErrorMessage"),
       );
     } finally {
       if (isRefresh) setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -108,7 +112,7 @@ export default function ExerciseWeightsScreen() {
       if (!Number.isFinite(parsed) || parsed < 0 || parsed > 500) {
         setErrors((current) => ({
           ...current,
-          [item.programExerciseId]: "0–500 arasında geçerli bir kilo girin.",
+          [item.programExerciseId]: t("exerciseWeights.invalidWeightMessage"),
         }));
         return;
       }
@@ -143,7 +147,9 @@ export default function ExerciseWeightsScreen() {
         setErrors((current) => ({
           ...current,
           [item.programExerciseId]:
-            error instanceof Error ? error.message : "Kilo güncellenemedi.",
+            error instanceof Error
+              ? error.message
+              : t("exerciseWeights.updateFailedMessage"),
         }));
       } finally {
         savingIdsRef.current.delete(item.programExerciseId);
@@ -154,11 +160,11 @@ export default function ExerciseWeightsScreen() {
         });
       }
     },
-    [drafts],
+    [drafts, t],
   );
 
   if (!items && !loadError) {
-    return <ScreenState loading text="Hareketlerin yükleniyor…" />;
+    return <ScreenState loading text={t("exerciseWeights.loadingText")} />;
   }
   if (!items || loadError) {
     return (
@@ -179,26 +185,23 @@ export default function ExerciseWeightsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyCard}>
             <Ionicons name="barbell-outline" size={34} color={colors.primary} />
-            <Text style={styles.emptyTitle}>Bu filtrede hareket yok</Text>
-            <Text style={styles.emptyDescription}>
-              Başka bir kas grubu seçebilir veya programına hareket ekleyebilirsin.
-            </Text>
+            <Text style={styles.emptyTitle}>{t("exerciseWeights.emptyFilterTitle")}</Text>
           </View>
         }
         ListHeaderComponent={
           <View style={styles.header}>
             <View style={styles.topBar}>
               <RoundBackButton onPress={() => router.replace("/progress" as never)} />
-              <Text style={styles.topTitle}>İlerlemen</Text>
+              <Text style={styles.topTitle}>{t("exerciseWeights.progressTitle")}</Text>
               <View style={styles.headerSpacer} />
             </View>
-            <Text style={styles.title}>Hareket Kilolarını Güncelle</Text>
+            <Text style={styles.title}>{t("exerciseWeights.screenTitle")}</Text>
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
                 <Ionicons name="barbell-outline" size={25} color={colors.onPrimary} />
               </View>
               <View style={styles.summaryCopy}>
-                <Text style={styles.summaryTitle}>Çalışma kiloların</Text>
+                <Text style={styles.summaryTitle}>{t("exerciseWeights.summaryTitle")}</Text>
               </View>
               <Text style={styles.summaryCount}>{items.length}</Text>
             </View>
@@ -218,7 +221,7 @@ export default function ExerciseWeightsScreen() {
                     style={[styles.filterButton, selected && styles.filterSelected]}
                   >
                     <Text style={[styles.filterText, selected && styles.filterTextSelected]}>
-                      {filter}
+                      {filter === ALL_FILTER ? t("exerciseWeights.allFilter") : filter}
                     </Text>
                   </Pressable>
                 );
@@ -252,7 +255,14 @@ export default function ExerciseWeightsScreen() {
                 <View style={styles.exerciseCopy}>
                   <Text numberOfLines={2} style={styles.exerciseName}>{item.exerciseName}</Text>
                   <Text numberOfLines={2} style={styles.exerciseMeta}>
-                    {[item.muscleGroupName, item.programName, `${item.sets} set × ${item.reps} tekrar`]
+                    {[
+                      item.muscleGroupName,
+                      item.programName,
+                      t("exerciseWeights.setsRepsMeta", {
+                        sets: item.sets,
+                        reps: item.reps,
+                      }),
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </Text>
@@ -261,13 +271,15 @@ export default function ExerciseWeightsScreen() {
                   <Text style={styles.currentValue}>
                     {item.hasWeightRecord ? formatWeightKg(item.weightKg) : "—"}
                   </Text>
-                  <Text style={styles.currentLabel}>GÜNCEL</Text>
+                  <Text style={styles.currentLabel}>{t("exerciseWeights.currentLabel")}</Text>
                 </View>
               </View>
               <View style={styles.divider} />
               <View style={styles.controlRow}>
                 <Pressable
-                  accessibilityLabel={`${item.exerciseName} kilosunu azalt`}
+                  accessibilityLabel={t("exerciseWeights.decreaseWeight", {
+                    name: item.exerciseName,
+                  })}
                   onPress={() => changeWeight(item.programExerciseId, -WEIGHT_STEP_KG)}
                   style={styles.controlButton}
                 >
@@ -275,7 +287,9 @@ export default function ExerciseWeightsScreen() {
                 </Pressable>
                 <View style={[styles.inputShell, errors[item.programExerciseId] && styles.errorBorder]}>
                   <TextInput
-                    accessibilityLabel={`${item.exerciseName} çalışma kilosu`}
+                    accessibilityLabel={t("exerciseWeights.workingWeight", {
+                      name: item.exerciseName,
+                    })}
                     inputMode="decimal"
                     keyboardType="decimal-pad"
                     onChangeText={(value) => {
@@ -285,10 +299,12 @@ export default function ExerciseWeightsScreen() {
                     style={styles.input}
                     value={draft}
                   />
-                  <Text style={styles.inputSuffix}>kg</Text>
+                  <Text style={styles.inputSuffix}>{t("exerciseWeights.kgUnit")}</Text>
                 </View>
                 <Pressable
-                  accessibilityLabel={`${item.exerciseName} kilosunu artır`}
+                  accessibilityLabel={t("exerciseWeights.increaseWeight", {
+                    name: item.exerciseName,
+                  })}
                   onPress={() => changeWeight(item.programExerciseId, WEIGHT_STEP_KG)}
                   style={styles.controlButton}
                 >
@@ -304,7 +320,7 @@ export default function ExerciseWeightsScreen() {
                   {saving ? (
                     <ActivityIndicator color={colors.onPrimary} />
                   ) : (
-                    <Text style={styles.updateText}>Güncelle</Text>
+                    <Text style={styles.updateText}>{t("exerciseWeights.updateButton")}</Text>
                   )}
                 </Pressable>
               </View>
@@ -373,7 +389,6 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   errorText: { marginTop: 8, color: colors.error, fontSize: 11, textAlign: "center" },
   emptyCard: { padding: 28, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface, alignItems: "center" },
   emptyTitle: { marginTop: 12, color: colors.text, fontSize: 18, fontWeight: "900" },
-  emptyDescription: { marginTop: 7, color: colors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center" },
   centerState: { flex: 1, padding: 24, alignItems: "center", justifyContent: "center", gap: 12 },
   stateText: { color: colors.textSecondary, fontSize: 14 },
 });

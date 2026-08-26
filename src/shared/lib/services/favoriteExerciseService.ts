@@ -44,11 +44,6 @@ type FavoriteExerciseRow = {
   } | null;
 };
 
-/**
- * user_favorite_exercises + exercises join'inden, en son favorilenen en
- * üstte olacak şekilde (created_at desc) kullanıcının favori listesini
- * getirir. RLS zaten sadece auth.uid() = user_id satırlarını döndürür.
- */
 export async function listFavoriteExercises(): Promise<ExerciseSummary[]> {
   const { data, error } = await supabase
     .from("user_favorite_exercises")
@@ -86,11 +81,6 @@ export async function listFavoriteExercises(): Promise<ExerciseSummary[]> {
     });
 }
 
-/**
- * Favorilere ekler. Aynı egzersiz için tekrar çağrılırsa (aynı user_id +
- * exercise_id çifti unique constraint'e takılır) bunu hata saymayız —
- * sonuç zaten istenen durumla (favoride) aynı.
- */
 export async function addFavoriteExercise(exerciseId: string): Promise<void> {
   const userId = await requireUserId();
 

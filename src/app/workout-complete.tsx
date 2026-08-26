@@ -12,6 +12,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   BackHandler,
@@ -27,20 +28,8 @@ function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function getCompletionMessage(completion: WorkoutCompletion) {
-  if (!completion.plannedDay) {
-    return "Seçtiğin antrenmanı tamamladın. Plan dışı bu çalışma da ilerlemene eklendi.";
-  }
-  if (completion.currentStreak > 1) {
-    return `Seçtiğin antrenmanı tamamladın. Serin ${completion.currentStreak} güne ulaştı.`;
-  }
-  if (completion.currentStreak === 1) {
-    return "Seçtiğin antrenmanı tamamladın. Yeni serinin ilk gününü başarıyla bitirdin.";
-  }
-  return "Seçtiğin antrenmanı tamamladın. Sonucun ilerlemene eklendi.";
-}
-
 export default function WorkoutCompleteScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const params = useLocalSearchParams<{
@@ -64,7 +53,7 @@ export default function WorkoutCompleteScreen() {
   const loadCompletion = useCallback(async () => {
     if (!isValidWorkoutSessionId(workoutSessionId)) {
       setCompletion(null);
-      setLoadError("Antrenman sonucu bağlantısı geçersiz.");
+      setLoadError(t("workoutComplete.errors.invalidLink"));
       return;
     }
     setCompletion(undefined);
@@ -73,7 +62,7 @@ export default function WorkoutCompleteScreen() {
       const result = await workoutRepository.getCompletion(workoutSessionId);
       if (!result) {
         setCompletion(null);
-        setLoadError("Tamamlanan antrenman kaydı bulunamadı.");
+        setLoadError(t("workoutComplete.errors.notFound"));
         return;
       }
 
@@ -90,15 +79,13 @@ export default function WorkoutCompleteScreen() {
           currentStreak: dashboard.streakDays,
         });
       } catch {
-        // Ana sayfa verisi geçici olarak alınamazsa kayıt sırasında hesaplanan
-        // seri değeri yine de sonuç ekranını kullanılabilir tutar.
         setCompletion(result);
       }
     } catch {
       setCompletion(null);
-      setLoadError("Antrenman sonucu yüklenemedi.");
+      setLoadError(t("workoutComplete.errors.loadFailed"));
     }
-  }, [workoutSessionId]);
+  }, [t, workoutSessionId]);
 
   useEffect(() => {
     void loadCompletion();
@@ -121,25 +108,28 @@ export default function WorkoutCompleteScreen() {
       {completion === undefined && !loadError ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.stateText}>Antrenman sonucu hazırlanıyor…</Text>
+          <Text style={styles.stateText}>{t("workoutComplete.loading")}</Text>
         </View>
       ) : completion ? (
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.description}>{getCompletionMessage(completion)}</Text>
-
           <View style={styles.summaryRow}>
             <SummaryCard
-              label="SÜRE"
+              label={t("workoutComplete.metrics.duration")}
               value={formatCompletionDuration(completion.durationMs)}
             />
             <SummaryCard
-              label="HAREKET"
+              label={t("workoutComplete.metrics.exercise")}
               value={String(completion.completedExerciseCount)}
             />
-            <SummaryCard label="SERİ" value={`${completion.currentStreak} gün`} />
+            <SummaryCard
+              label={t("workoutComplete.metrics.streak")}
+              value={t("workoutComplete.metrics.streakValue", {
+                count: completion.currentStreak,
+              })}
+            />
           </View>
 
           <View style={styles.actions}>
@@ -151,7 +141,7 @@ export default function WorkoutCompleteScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.primaryButtonText}>İlerlememi gör</Text>
+              <Text style={styles.primaryButtonText}>{t("workoutComplete.viewProgress")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -161,7 +151,7 @@ export default function WorkoutCompleteScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.secondaryButtonText}>Ana sayfaya dön</Text>
+              <Text style={styles.secondaryButtonText}>{t("workoutComplete.backToHome")}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -172,17 +162,17 @@ export default function WorkoutCompleteScreen() {
             size={42}
             color={colors.primary}
           />
-          <Text style={styles.stateTitle}>Sonuç açılamadı</Text>
+          <Text style={styles.stateTitle}>{t("workoutComplete.errors.openFailedTitle")}</Text>
           <Text style={styles.stateText}>{loadError}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => void loadCompletion()}
             style={styles.primaryButton}
           >
-            <Text style={styles.primaryButtonText}>Yeniden dene</Text>
+            <Text style={styles.primaryButtonText}>{t("workoutComplete.retry")}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={goHome}>
-            <Text style={styles.homeLink}>Ana sayfaya dön</Text>
+            <Text style={styles.homeLink}>{t("workoutComplete.backToHome")}</Text>
           </Pressable>
         </View>
       )}
@@ -217,14 +207,6 @@ const baseStyles = StyleSheet.create({
     paddingBottom: 42,
     alignItems: "center",
     justifyContent: "center",
-  },
-  description: {
-    maxWidth: 400,
-    marginTop: 12,
-    color: MainColors.mutedText,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
   },
   summaryRow: {
     width: "100%",

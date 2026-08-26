@@ -43,13 +43,6 @@ export default function LoginScreen() {
     void isAppleAuthAvailable().then(setAppleAvailable);
   }, []);
 
-  // Web'de Google girişi tam sayfa yönlendirmesiyle çalışıyor (bkz.
-  // handleGoogleLogin'deki web dalı): Google'dan dönüşte tarayıcı bu sayfaya
-  // (`redirectTo` = ".../login") token'ları URL fragment'ında taşıyarak geri
-  // geliyor (`#access_token=...&refresh_token=...`). `detectSessionInUrl`
-  // kapalı olduğu için (bkz. supabase.ts) bunu burada elle işlememiz
-  // gerekiyor — aksi halde kullanıcı hesabı seçtikten sonra login
-  // ekranına döner ama hiçbir zaman oturum açılmış olmaz.
   useEffect(() => {
     if (Platform.OS !== "web" || typeof window === "undefined") {
       return;
@@ -75,8 +68,6 @@ export default function LoginScreen() {
 
         if (sessionError) throw sessionError;
 
-        // Token'ları URL'den temizle — sayfa yenilendiğinde ya da geri
-        // gidildiğinde aynı token'lar tekrar işlenmeye çalışılmasın.
         window.history.replaceState(null, "", window.location.pathname);
 
         const { data: sessionData } = await supabase.auth.getSession();
@@ -195,36 +186,17 @@ const handleGoogleLogin = async () => {
   try {
     setLoading(true);
 
-    // Giriş başarılı olduktan sonra uygulamanın geri döneceği adres.
-    // `scheme` bilerek verilmiyor: Expo Go'da app.json'daki özel scheme
-    // ("exercise-app") hiçbir zaman çalışmaz (Expo Go sadece kendi "exp://"
-    // şemasını tanır) — scheme'i sabitlersek Expo Go bunu sessizce görmezden
-    // gelip ne döndüreceği belirsizleşiyordu. Scheme'i boş bırakınca Expo
-    // Go'da otomatik "exp://<ip>:<port>/--/login", dev-client/production
-    // build'de ise app.json'daki "exercise-app://login" üretilir.
     const redirectTo = AuthSession.makeRedirectUri({ path: 'login' });
 
-    // Bu adresi Supabase'in "Redirect URLs" listesine eklemen gerekiyor.
-    // Metro terminalinde/browser konsolunda bu satırı arayıp tam adresi
-    // görebilirsin.
     console.log('[Google OAuth] redirectTo:', redirectTo);
 
     if (Platform.OS === 'web') {
-      // Web'de WebBrowser.openAuthSessionAsync (popup + polling) güvenilir
-      // çalışmıyor — Google hesap seçiminden sonra pencere hiç kapanmadan
-      // asılı kalabiliyor. Bunun yerine tam sayfa yönlendirmesi kullanılıyor;
-      // `skipBrowserRedirect` verilmediğinde supabase-js web'de otomatik
-      // olarak `window.location`'ı Google'a yönlendirir. Dönüşü yukarıdaki
-      // useEffect (URL fragment'ından token okuyup setSession çağıran) ele
-      // alıyor.
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo },
       });
 
       if (error) throw error;
-      // Tarayıcı burada Google'a yönlendiği için fonksiyon devam etmeyecek;
-      // finally bloğu loading'i kapatmaya çalışsa da sayfa zaten ayrılıyor.
       return;
     }
 
@@ -239,17 +211,9 @@ const handleGoogleLogin = async () => {
     if (error) throw error;
 
     if (data?.url) {
-      // Google oturum açma sayfasını mobil tarayıcıda açar
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type === 'success' && result.url) {
-        // supabase.ts içinde detectSessionInUrl kapalı (web SSR'ı çökertmemek
-        // için) ve React Native'de zaten otomatik URL algılama çalışmıyor;
-        // bu yüzden tarayıcıdan dönen token'ları burada elle okuyup session
-        // kurmamız gerekiyor. Proje flowType:"implicit" kullandığı için
-        // token'lar `?code=` değil `#access_token=&refresh_token=` şeklinde
-        // geliyor — önceden burada code exchange deneniyordu, hiç eşleşmediği
-        // için Google ile girişte session hiç kurulmuyordu.
         const parameters = getAuthCallbackParameters(result.url);
         const accessToken = parameters.get('access_token');
         const refreshToken = parameters.get('refresh_token');
@@ -297,7 +261,6 @@ const handleGoogleLogin = async () => {
         onboardingCompleted ? "/(main)" : "/onboarding/personal-info",
       );
     } catch (error: any) {
-      // Kullanıcı Apple onay ekranını kendisi kapattıysa hata gösterme.
       if (error?.code === "ERR_REQUEST_CANCELED") return;
       Alert.alert(
         t("login.appleErrorTitle"),

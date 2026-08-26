@@ -37,11 +37,6 @@ export async function saveWeeklyTrainingDays(
     return { success: false, message: error.message };
   }
 
-  // login.tsx (ve Google OAuth girişi) kullanıcıyı onboarding'e mi yoksa
-  // ana ekrana mı yönlendireceğine bu auth metadata bayrağına bakarak karar
-  // veriyor; DB tarafındaki user_onboarding_status.completed zaten RPC
-  // tarafından işaretlendi, burada login akışının okuduğu alanı da senkron
-  // tutuyoruz.
   const { error: metadataError } = await supabase.auth.updateUser({
     data: { onboarding_completed: true },
   });

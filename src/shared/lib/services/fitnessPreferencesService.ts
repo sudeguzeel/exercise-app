@@ -53,11 +53,6 @@ export async function saveFitnessPreferences(
     return validation;
   }
 
-  // Not: bu tercihler "cardio / strength / flexibility" odak alanlarıdır ve
-  // public.user_fitness_focus_areas tablosunda tutulur. public.fitness_preferences
-  // tablosu farklı bir amaca hizmet eder — personal-info ekranındaki "hedef"
-  // (kilo verme / kas kazanma / genel fitness) alanını saklar ve
-  // save_onboarding_personal_info RPC'si tarafından yazılır.
   const { data, error } = await supabase.rpc("save_onboarding_fitness_focus", {
     p_focus_areas: validation.preferences,
   });
