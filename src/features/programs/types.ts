@@ -3,7 +3,6 @@ import type { ProgramSelectionPayload } from "@/features/exercises/program-selec
 
 export type ProgramExercise = ProgramSelectionPayload;
 
-// user_workout_program_exercises satırına yazıldıktan sonra DB'nin ürettiği id.
 export type PersistedProgramExercise = ProgramExercise & {
   id: string;
   name: string;

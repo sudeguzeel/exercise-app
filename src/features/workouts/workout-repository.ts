@@ -138,13 +138,6 @@ async function requireUserId() {
   return user.id;
 }
 
-// user_completed_exercises satırlarını (set değil, egzersiz+tarih bazında)
-// backend'e yazan yardımcı — tablo set seviyesinde tutmuyor, "bu egzersizin
-// tüm setleri şu tarihte tamamlandı" bilgisini tutuyor (dashboard/seri
-// hesaplarının zaten okuduğu tablo, bkz. getCurrentStreak). RLS
-// (auth.uid() = user_id) sayesinde kullanıcı sadece kendi kaydını
-// oluşturabilir. `onConflict` ile idempotent: aynı egzersiz aynı tarihte
-// tekrar tamamlanmaya çalışılırsa (retry, çift tıklama) yeni satır açmaz.
 async function upsertCompletedExercise(
   userId: string,
   record: { programExerciseId: string; exerciseId: string; workoutDate: string },
@@ -203,11 +196,6 @@ async function readSessions(userId: string) {
     .map(normalizeSession);
 }
 
-// Tamamlanmış antrenman geçmişi (sessions'ın aksine) Supabase'de tutulur —
-// cihaz değişse/uygulama silinse bile GEÇMİŞ, TOPLAM/SERİ istatistikleri ve
-// çalışma kilosu geri düşüşü (bkz. progress-domain.getLatestCompletedWeights)
-// kaybolmasın diye. Aktif antrenman oturumu (sessions) hâlâ cihaz içi kalır —
-// o ekrana özel, geçici durum.
 const WORKOUT_COMPLETION_SELECT =
   "id, workout_session_id, user_id, program_id, program_name, workout_date, completed_date, started_at, completed_at, duration_ms, completed_exercise_count, planned_day, user_workout_completion_sets(program_exercise_id, exercise_id, exercise_order_index, exercise_name, muscle_group_name, set_number, actual_reps, weight_kg, completed_at)";
 
@@ -296,9 +284,6 @@ function mapCompletionRow(row: WorkoutCompletionRow): WorkoutCompletion {
     completedExerciseCount: row.completed_exercise_count,
     exercises,
     plannedDay: row.planned_day,
-    // Sunucuda saklanmıyor — yalnızca completeWorkout()'un döndürdüğü anlık
-    // sonuçta (workout-complete.tsx tebrik ekranı) anlamlı; geçmişten tekrar
-    // okunduğunda kullanılmıyor.
     currentStreak: 0,
     status: "completed",
   };
@@ -389,11 +374,6 @@ async function deleteCompletionsForProgramDate(
   }
 }
 
-// completeWorkout() tarafından bir kere üretilen final WorkoutCompletion'ı
-// Supabase'e yazar. Aynı session için daha önce (tutarsız/yarım) bir kayıt
-// varsa önce silinir — FK cascade ile setleri de gider — sonra temiz bir
-// kayıt eklenir. İki adım da başarısız olursa (özellikle setler) üst kayıt
-// da geri alınır ki geçmişte "hareketsiz" bir antrenman kalmasın.
 async function persistCompletion(userId: string, completion: WorkoutCompletion) {
   await deleteCompletionBySessionId(userId, completion.workoutSessionId);
 
@@ -494,7 +474,6 @@ async function buildExerciseSnapshot(
     mediaUrl = detail?.gifUrl ?? null;
     recommendedRestSeconds = detail?.recommendedRestSeconds ?? null;
   } catch {
-    // Medya/meta verisi antrenmanın başlamasını engellemez.
   }
   const workingWeight = await getWorkingWeight(exercise.id, userId).catch(
     () => null,
@@ -710,7 +689,6 @@ async function getCurrentStreak(
       }));
     }
   } catch {
-    // Çevrimdışıyken cihazdaki tamamlanmalarla güvenli biçimde devam edilir.
   }
   const uniqueRecords = new Map<string, CompletedExerciseRecord>();
   for (const record of [...remoteRecords, ...localRecords]) {
@@ -999,9 +977,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         );
       }
 
-      // Kullanıcı hareketler arasında serbestçe geçebildiği için "önceki
-      // set" artık dizideki son eleman değil, gerçek zamanda en son
-      // tamamlanan settir (bkz. findMostRecentlyCompletedPosition).
       const previous = findMostRecentlyCompletedPosition(session);
       if (!previous) return clone(session);
 
@@ -1073,11 +1048,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
           "Devam etmeden önce mevcut antrenman adımını tamamlayın.",
         );
       }
-      // Setler kendi hareketi içinde sırayla tamamlanmalı, ama hangi
-      // hareketle çalışılacağı serbest — kullanıcı ekranda hareketler
-      // arasında kaydırabiliyor (bkz. workout.tsx). Bu yüzden "aktif set"
-      // artık antrenman genelinde değil, yalnızca bu setin ait olduğu
-      // hareket içinde ilk tamamlanmamış set olmalı.
       const firstIncompleteIndexInExercise = findFirstIncompleteSetIndexInExercise(
         position.exercise,
       );
@@ -1095,9 +1065,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       position.set.completedAt = completedAt;
       session.lastCompletedSetId = position.set.id;
 
-      // Dinlenme sadece AYNI hareketin bir sonraki setine yönlendirir —
-      // hareketler arası otomatik geçiş yok, kullanıcı bir sonraki harekete
-      // ne zaman geçeceğine kendisi karar verir (skip edip sonra dönebilir).
       const nextSetIndexInExercise = findFirstIncompleteSetIndexInExercise(
         position.exercise,
       );
@@ -1124,9 +1091,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
         session.restEndsAt = null;
         session.restDurationSeconds = null;
       } else {
-        // Bu hareket bitti ama antrenmanda başka tamamlanmamış hareket var —
-        // otomatik olarak başka bir harekete geçilmez, ekran "active" kalır
-        // ve kullanıcı kaydırarak devam edeceği hareketi kendisi seçer.
         session.phase = "active";
         session.pendingTarget = null;
         session.restStartedAt = null;
@@ -1135,11 +1099,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       }
 
       if (isWorkoutExerciseCompleted(position.exercise)) {
-        // Egzersizin son seti tamamlandı — bu, backend'e (Supabase)
-        // yazılması gereken an. Yazma başarısız olursa burada throw
-        // edip fonksiyondan çıkıyoruz; `saveSession` hiç çağrılmadığı
-        // için set yerel olarak da "tamamlandı" kaydedilmiyor — ekran
-        // gerçek durumu yanlış yansıtmıyor, kullanıcı tekrar deneyebilir.
         await upsertCompletedExercise(userId, {
           programExerciseId: position.exercise.programExerciseId,
           exerciseId: position.exercise.exerciseId,
@@ -1378,9 +1337,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
     const userId = await requireUserId();
     const completions = await readCompletions(userId);
 
-    // Tamamlanmış antrenman geçmişinin kalıcı kaynağı Supabase'dir. Yerel
-    // session yalnızca aktif antrenmanı sürdürür; cihaz değişince veya yerel
-    // veri temizlenince sunucudaki geçmişi gizlememelidir.
     const unique = new Map<string, WorkoutCompletion>();
     for (const completion of completions) {
       if (completion.userId === userId) {
@@ -1417,11 +1373,6 @@ class AsyncStorageWorkoutRepository implements WorkoutRepository {
       ),
     ];
 
-    // Egzersiz check-mark'ları ve seri hesabı `user_completed_exercises`
-    // (Supabase) tablosundan besleniyor — sadece local kaydı silmek
-    // sıfırlamayı görünmez kılar (liste hâlâ tamamlanmış görünür). Bu
-    // yüzden önce sunucudaki satırlar siliniyor; başarısız olursa local
-    // durum bozulmadan hata fırlatılıyor.
     if (programExerciseIds.length > 0) {
       const { error } = await supabase
         .from("user_completed_exercises")

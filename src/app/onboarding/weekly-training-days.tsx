@@ -73,7 +73,6 @@ export default function WeeklyTrainingDaysScreen() {
         return;
       }
 
-      // Tamamlandı mesajı gösterilmeden ana sayfaya geçilir.
       router.replace("/(main)");
     } finally {
       setIsCreating(false);

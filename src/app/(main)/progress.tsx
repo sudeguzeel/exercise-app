@@ -694,7 +694,6 @@ function StepsChartCard() {
       try {
         await syncTodaySteps();
       } catch {
-        // senkron başarısız olsa da Supabase'deki son bilinen veriyi göstermeye devam ederiz
       }
       const week = await loadWeeklySteps();
       if (active) setWeekSteps(week);

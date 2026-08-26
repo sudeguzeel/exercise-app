@@ -198,10 +198,6 @@ export function TargetRepetitionCard({ value }: { value: number }) {
   );
 }
 
-// Program kaç hareketten oluşuyorsa o kadar nokta gösterir; aktif nokta
-// büyür, kullanıcı bir noktaya dokunarak doğrudan o harekete atlayabilir.
-// Nokta sayısı ekrana sığmazsa şerit yatay kaydırılabilir ve aktif nokta
-// otomatik olarak ekranın ortasına gelecek şekilde kaydırılır.
 export function ExerciseDotPagination({
   count,
   activeIndex,

@@ -61,8 +61,6 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLanguageState(nextLanguage);
     void i18n.changeLanguage(nextLanguage);
     void AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage).catch(() => {
-      // Dil bellek içinde uygulanmaya devam eder; sonraki açılışta cihaz
-      // diline göre yeniden belirlenir.
     });
   }, []);
 

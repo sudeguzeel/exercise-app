@@ -169,7 +169,6 @@ export default function VerifyEmailScreen() {
             return;
           }
         } catch {
-          // Bir sonraki platform uyumlu yöntemi dene.
         }
       }
 

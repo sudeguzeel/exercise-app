@@ -405,7 +405,6 @@ export default function ProgramEditScreen() {
               <Ionicons name="notifications-outline" size={22} color={colors.primary} />
               <View style={styles.reminderTitleContent}>
                 <Text style={styles.reminderTitle}>{t("newProgram.reminderTitle")}</Text>
-                <Text style={styles.reminderDescription}>{t("newProgram.reminderDescription")}</Text>
               </View>
               <View style={styles.reminderToggleLabel}>
                 <View style={[styles.reminderStatusDot, reminderEnabled && styles.reminderStatusDotActive]} />
@@ -670,7 +669,6 @@ const baseStyles = StyleSheet.create({
   reminderHeader: { minHeight: 78, paddingHorizontal: 18, paddingVertical: 14, flexDirection: "row", alignItems: "center", gap: 12 },
   reminderTitleContent: { flex: 1 },
   reminderTitle: { color: MainColors.text, fontSize: 15, fontWeight: "800" },
-  reminderDescription: { marginTop: 3, color: MainColors.mutedText, fontSize: 12 },
   reminderToggleLabel: { flexDirection: "row", alignItems: "center", gap: 5 },
   reminderStatusDot: { width: 11, height: 11, borderWidth: 1.5, borderColor: MainColors.mutedText, borderRadius: 6 },
   reminderStatusDotActive: { borderColor: MainColors.primary, backgroundColor: MainColors.primary },

@@ -79,11 +79,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void loadFavorites();
 
-    // Uygulama açılışında/oturum değişikliklerinde (giriş, çıkış, token
-    // yenileme) favori listesini güncel tutar. FavoritesProvider tüm
-    // navigasyon ağacının üzerinde tek sefer mount olduğu için (bkz.
-    // src/app/_layout.tsx), login/logout sonrası yeniden yüklemenin tek
-    // yolu bu event'i dinlemek.
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (event) => {
         if (event === "SIGNED_OUT") {
@@ -122,8 +117,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
             ),
           ];
 
-      // Optimistic update: sunucu yanıtını beklemeden UI'ı güncelle, istek
-      // başarısız olursa önceki listeye geri dön.
       favoritesRef.current = nextFavorites;
       setFavorites(nextFavorites);
       showSnackbar(

@@ -73,9 +73,6 @@ export default function WorkoutScreen() {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [finishDialogVisible, setFinishDialogVisible] = useState(false);
-  // Kullanıcının o an kaydırarak baktığı hareket — sette olduğu gibi hareket
-  // sırası artık zorunlu değil, kullanıcı istediği harekete geçip
-  // (ör. alet doluysa) sonra geri dönebilir. bkz. resolveDefaultExerciseIndex.
   const [viewedExerciseIndex, setViewedExerciseIndex] = useState<
     number | null
   >(null);
@@ -254,11 +251,6 @@ export default function WorkoutScreen() {
     return () => clearInterval(timer);
   }, [session]);
 
-  // Hangi hareketin gösterileceğine yalnızca session yeniden yüklendiğinde
-  // (ekran ilk açıldığında veya dinlenmeden dönüldüğünde) karar verilir;
-  // kullanıcı zaten bir harekete bakıyorsa (viewedExerciseIndex dolu) bu
-  // seçim korunur — bir set tamamlandığında otomatik olarak başka bir
-  // harekete atlanmaz.
   useEffect(() => {
     if (!session || viewedExerciseIndex !== null) return;
     setViewedExerciseIndex(resolveDefaultExerciseIndex(session) ?? 0);
@@ -285,10 +277,6 @@ export default function WorkoutScreen() {
       requestExit();
       return;
     }
-    // Geri dönülecek hareket her zaman şu an bakılan hareket olmayabilir
-    // (kullanıcı başka bir harekete kaydırmış olabilir) — geri alınan setin
-    // gerçekte hangi harekete ait olduğunu geri dönmeden önce yakalayıp
-    // görünümü ona göre kaydırıyoruz.
     const revertedPosition = findMostRecentlyCompletedPosition(current);
 
     transitionInProgressRef.current = true;
@@ -390,8 +378,6 @@ export default function WorkoutScreen() {
       }
 
       if (!workoutIsComplete) {
-        // Bu hareket bitti ama antrenmanda başka tamamlanmamış hareket var —
-        // ekranda kal, kullanıcı kaydırarak devam edeceği harekete geçsin.
         return;
       }
 
