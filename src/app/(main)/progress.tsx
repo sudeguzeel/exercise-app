@@ -436,6 +436,11 @@ export default function ProgressScreen() {
               target={body.targetMusclePercentage}
             />
           </View>
+          <View style={styles.bodyMetricsRow}>
+            <BodyMetric label="BAŞLANGIÇ" value={`${formatDecimal(body.startingWeightKg)} kg`} />
+            <BodyMetric label="YAĞ ORANI" value={`${formatDecimal(body.bodyFatPercentage)} %`} />
+            <BodyMetric label="KAS ORANI" value={`${formatDecimal(body.musclePercentage)} %`} />
+          </View>
         </View>
 
         <View style={styles.measurementSection}>
@@ -689,7 +694,6 @@ function StepsChartCard() {
       try {
         await syncTodaySteps();
       } catch {
-        // senkron başarısız olsa da Supabase'deki son bilinen veriyi göstermeye devam ederiz
       }
       const week = await loadWeeklySteps();
       if (active) setWeekSteps(week);
@@ -766,6 +770,19 @@ function StepsChartCard() {
         </View>
       </View>
 
+    </View>
+  );
+}
+
+function BodyMetric({ label, value }: { label: string; value: string }) {
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
+    <View style={styles.bodyMetric}>
+      <Text style={styles.bodyMetricLabel}>{label}</Text>
+      <Text adjustsFontSizeToFit numberOfLines={1} style={styles.bodyMetricValue}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -871,6 +888,10 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   targetCardDivider: { marginVertical: 9, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   targetCardGoal: { color: colors.textSecondary, fontSize: isCompactWidth ? 9 : 10, fontWeight: "800" },
   targetCardChange: { marginTop: 5, color: colors.primaryBright, fontSize: isCompactWidth ? 9 : 10, fontWeight: "900" },
+  bodyMetricsRow: { marginTop: 13, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, flexDirection: "row", gap: 10 },
+  bodyMetric: { flex: 1, minWidth: 0 },
+  bodyMetricLabel: { color: colors.textSecondary, fontSize: 8, fontWeight: "800" },
+  bodyMetricValue: { marginTop: 5, color: colors.text, fontSize: 13, fontWeight: "900" },
   measurementSection: { marginTop: 12, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   measurementTitle: { color: colors.text, fontSize: 16, fontWeight: "900" },
   inputRow: { marginTop: 12, flexDirection: "row", alignItems: "flex-start", gap: 8 },

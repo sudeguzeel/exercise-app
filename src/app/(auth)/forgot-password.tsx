@@ -39,13 +39,11 @@ export default function ForgotPasswordScreen() {
 
     const trimmedEmail = email.trim();
 
-    // 1. Boş E-posta Kontrolü
     if (!trimmedEmail) {
       setEmailError(t("common.emailRequired"));
       return;
     }
 
-    // 2. Format Doğrulaması
     if (!isValidEmail(trimmedEmail)) {
       setEmailError(t("common.emailInvalid"));
       return;
@@ -54,12 +52,10 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
 
-      // 3. Supabase Şifre Sıfırlama İsteği
       const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
         redirectTo: getPasswordResetRedirectUrl(),
       });
 
-      // 4. Kayıtlı Olmayan Kullanıcı / Hata Durumu
       if (error) {
         Alert.alert(
           t("forgotPassword.failedTitle"),
@@ -70,7 +66,6 @@ export default function ForgotPasswordScreen() {
         return;
       }
 
-      // 5. Başarılı Durumda Yönlendirme
       router.push({
         pathname: "/email-sent",
         params: {

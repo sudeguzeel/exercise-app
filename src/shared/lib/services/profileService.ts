@@ -78,9 +78,6 @@ export async function loadProfilePersonalInfo(): Promise<ProfilePersonalInfoResu
   };
 }
 
-// Canlı şema analizine göre bu RPC yalnızca profiles, body_metrics ve
-// fitness_preferences.goal alanlarını günceller. Onboarding status, haftalık
-// günler ve focus alanları bu RPC'nin kapsamında değildir.
 export async function saveProfilePersonalInfo(personalInfo: PersonalInfo) {
   return savePersonalInfo(personalInfo);
 }

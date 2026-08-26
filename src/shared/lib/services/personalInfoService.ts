@@ -15,8 +15,6 @@ const GENDER_MAP: Record<
   other: "prefer_not_to_say",
 };
 
-// personal-info.tsx ekranindaki goalOptions ve OnboardingContext'teki Goal tipi
-// sadece bu ucu tanimliyor/sunuyor.
 const GOAL_MAP: Record<
   "build-muscle" | "lose-weight" | "stay-fit",
   "muscle_gain" | "fat_loss" | "general_fitness"

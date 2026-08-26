@@ -20,8 +20,6 @@ export function ExerciseCard({
 }: ExerciseCardProps) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  // Her kart kendi görsel yükleme hatasını takip eder — bir egzersizin
-  // görseli 404 verirse yalnızca o kart ikon placeholder'a düşer.
   const [imageFailed, setImageFailed] = useState(false);
 
   return (

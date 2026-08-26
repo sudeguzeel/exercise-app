@@ -131,8 +131,6 @@ async function requireUserId(): Promise<string> {
 const PROGRAM_SELECT_WITH_EXERCISES =
   "id, name, training_days, muscle_group_ids, user_workout_program_exercises(id, exercise_id, sets, reps, rest_seconds, order_index, exercises(name))";
 
-// Program akışındaki istemci sınırları. Eski kayıtlar map aşamasında bu
-// aralığa normalize edilir; yeni değerler DB'ye gitmeden doğrulanır.
 const VALUE_RANGES = {
   sets: { min: 1, max: 10 },
   reps: { min: 1, max: 100 },
@@ -157,11 +155,6 @@ function assertValidExerciseValues(exercise: ProgramExercise) {
   }
 }
 
-// user_workout_programs.id uuid tipinde; PostgREST'e geçersiz formatlı bir
-// id ile `.in()` sorgusu atılırsa tüm sorgu hata döner ve diğer, geçerli
-// program id'leri de etkilenir. Bu yüzden DB'ye gitmeden önce format
-// doğrulaması yapılıyor — geçersiz formatlı id'ler ayrı "failed" sonucu
-// olarak işaretlenir, geri kalan geçerli id'ler normal akışına devam eder.
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -171,18 +164,11 @@ export function isValidProgramId(value: string | null | undefined) {
 
 class SupabaseProgramRepository implements ProgramRepository {
   async listPrograms(): Promise<UserProgram[]> {
-    // RLS zaten sadece auth.uid() = user_id satırlarını döndürür, ama oturum
-    // yoksa bunu "başarılı ama boş liste" yerine açık bir AUTH_REQUIRED
-    // hatası olarak ele almak istiyoruz (diğer repository metotlarıyla aynı
-    // desen — bkz. createProgramWithExercise).
     await requireUserId();
 
     const { data, error } = await supabase
       .from("user_workout_programs")
       .select(PROGRAM_SELECT_WITH_EXERCISES)
-      // "created_at" tek başına sıralama için yeterli değil: aynı anda
-      // oluşturulan iki program varsa sıra garanti olmaz. "id" ikincil
-      // anahtar olarak eklenince sıralama deterministik olur.
       .order("created_at", { ascending: true })
       .order("id", { ascending: true });
 
@@ -229,12 +215,8 @@ class SupabaseProgramRepository implements ProgramRepository {
     }
     assertValidExerciseValues(exercise);
 
-    // RLS zaten satırları sahibine göre süzüyor, ama oturum yoksa bunu açık
-    // bir AUTH_REQUIRED hatası olarak ele almak istiyoruz (bkz. listPrograms).
     await requireUserId();
 
-    // Geçersiz egzersiz id'sinde hiçbir programa dokunulmamalı — bu yüzden
-    // programlara gitmeden önce egzersizin gerçekten var olduğu doğrulanıyor.
     const { data: exerciseRow, error: exerciseError } = await supabase
       .from("exercises")
       .select("id")
@@ -293,9 +275,6 @@ class SupabaseProgramRepository implements ProgramRepository {
         continue;
       }
 
-      // RLS nedeniyle başka kullanıcıya ait ya da hiç var olmayan program
-      // id'leri burada da "bulunamadı" olarak görünür — ikisi de aynı
-      // güvenli sonuca (erişim yok) indirgeniyor.
       const program = programsById.get(programId);
 
       if (!program) {
@@ -333,12 +312,6 @@ class SupabaseProgramRepository implements ProgramRepository {
           order_index: nextOrderIndex,
         });
 
-      // "alreadyExists" kontrolü yukarıda önceden çekilmiş veriyle yapıldığı
-      // için küçük bir yarış penceresi var (aynı egzersiz aynı programa eş
-      // zamanlı iki istekle eklenmeye çalışılırsa). DB'deki
-      // uwpe_program_exercise_unique (program_id, exercise_id) constraint'i
-      // bunu Postgres seviyesinde de engelliyor; 23505 burada "failed"
-      // yerine "alreadyExists" olarak ele alınıyor.
       let status: AddExerciseResultItem["status"] = "added";
       if (insertError) {
         status = insertError.code === "23505" ? "alreadyExists" : "failed";
@@ -370,13 +343,6 @@ class SupabaseProgramRepository implements ProgramRepository {
     }
     assertValidExerciseValues(input.exercise);
 
-    // Program oluşturma + ilk egzersizi ekleme tek bir DB fonksiyonu
-    // (create_program_with_exercise, SECURITY INVOKER) içinde, tek
-    // transaction olarak yürütülüyor: fonksiyon içindeki iki insert'ten
-    // biri başarısız olursa (örn. sets/reps/rest CHECK constraint'i) tüm
-    // fonksiyon exception fırlatır ve PostgREST isteği rollback eder — bu
-    // yüzden client tarafında "programı geri al" gibi telafi edici bir
-    // ikinci çağrıya gerek yok.
     const { data, error } = await supabase.rpc("create_program_with_exercise", {
       p_name: trimmedName,
       p_training_days: toDayCodes(input.trainingDays),
@@ -571,14 +537,12 @@ function mapCreateProgramError(error: { code?: string; message?: string } | null
   ) {
     return new ProgramRepositoryError("INVALID_INPUT", i18n.t("programRepo.programInfoInvalid"));
   }
-  // Postgres unique_violation: (user_id, lower(btrim(name))) çakışması.
   if (error?.code === "23505") {
     return new ProgramRepositoryError(
       "DUPLICATE_NAME",
       i18n.t("programRepo.duplicateProgramName"),
     );
   }
-  // check_violation: sets (1-10) / reps (1-100) / rest_seconds (0-600) aralık dışı.
   if (error?.code === "23514") {
     return new ProgramRepositoryError(
       "INVALID_INPUT",
