@@ -2,6 +2,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 export function WorkoutExitDialog({
@@ -13,6 +14,7 @@ export function WorkoutExitDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
@@ -25,12 +27,12 @@ export function WorkoutExitDialog({
     >
       <View style={styles.backdrop}>
         <View
-          accessibilityLabel="Antrenmandan çıkış onayı"
+          accessibilityLabel={t("workoutExitDialog.dialogAccessibility")}
           accessibilityViewIsModal
           style={styles.dialog}
         >
           <Pressable
-            accessibilityLabel="Pencereyi kapat ve antrenmana devam et"
+            accessibilityLabel={t("workoutExitDialog.closeAccessibility")}
             accessibilityRole="button"
             hitSlop={8}
             onPress={onCancel}
@@ -44,10 +46,9 @@ export function WorkoutExitDialog({
           <View style={styles.iconCircle}>
             <Ionicons name="exit-outline" size={25} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Antrenmanı bırakmak mı istiyorsun?</Text>
+          <Text style={styles.title}>{t("workoutExitDialog.title")}</Text>
           <Text style={styles.description}>
-            Tamamladığın setler korunacak, ancak bu antrenman tamamlandı olarak
-            işaretlenmeyecek.
+            {t("workoutExitDialog.description")}
           </Text>
           <View style={styles.actions}>
             <Pressable
@@ -59,7 +60,7 @@ export function WorkoutExitDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.continueText}>Antrenmana Devam Et</Text>
+              <Text style={styles.continueText}>{t("workoutExitDialog.continueButton")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -70,7 +71,7 @@ export function WorkoutExitDialog({
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.exitText}>Antrenmandan Çık</Text>
+              <Text style={styles.exitText}>{t("workoutExitDialog.exitButton")}</Text>
             </Pressable>
           </View>
         </View>

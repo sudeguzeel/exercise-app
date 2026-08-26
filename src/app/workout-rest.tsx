@@ -25,6 +25,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -43,6 +44,7 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutRestScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const insets = useSafeAreaInsets();
@@ -78,7 +80,7 @@ export default function WorkoutRestScreen() {
   const loadSession = useCallback(async () => {
     if (!isValidWorkoutSessionId(workoutSessionId)) {
       setSession(null);
-      setLoadError("Dinlenme bağlantısı geçersiz.");
+      setLoadError(t("workoutRest.errors.invalidLink"));
       return;
     }
 
@@ -90,7 +92,7 @@ export default function WorkoutRestScreen() {
       let nextSession = await workoutRepository.getSession(workoutSessionId);
       if (!nextSession) {
         setSession(null);
-        setLoadError("Antrenman oturumu bulunamadı.");
+        setLoadError(t("workoutRest.errors.sessionNotFound"));
         return;
       }
       if (
@@ -103,9 +105,7 @@ export default function WorkoutRestScreen() {
           return;
         }
         setSession(null);
-        setLoadError(
-          "Antrenman tamamlanma kaydı ilerleme verileriyle uyuşmuyor.",
-        );
+        setLoadError(t("workoutRest.errors.completionMismatch"));
         return;
       }
       if (nextSession.status === "paused") {
@@ -123,7 +123,7 @@ export default function WorkoutRestScreen() {
         !findSetPosition(nextSession, nextSession.lastCompletedSetId)
       ) {
         setSession(null);
-        setLoadError("Dinlenme adımı için gerekli set bilgisi bulunamadı.");
+        setLoadError(t("workoutRest.errors.missingSetInfo"));
         return;
       }
 
@@ -131,11 +131,9 @@ export default function WorkoutRestScreen() {
       setNow(Date.now());
     } catch {
       setSession(null);
-      setLoadError(
-        "Dinlenme bilgileri yüklenemedi. Bağlantını kontrol edip yeniden dene.",
-      );
+      setLoadError(t("workoutRest.errors.loadFailed"));
     }
-  }, [replaceWithCompletion, replaceWithWorkout, workoutSessionId]);
+  }, [replaceWithCompletion, replaceWithWorkout, t, workoutSessionId]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -171,12 +169,12 @@ export default function WorkoutRestScreen() {
       await workoutRepository.revertLastCompletedSet(workoutSessionId);
       replaceWithWorkout();
     } catch {
-      setActionError("Önceki sete dönülemedi. Lütfen yeniden dene.");
+      setActionError(t("workoutRest.errors.revertSetFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [replaceWithWorkout, workoutSessionId]);
+  }, [replaceWithWorkout, t, workoutSessionId]);
 
   const remainingSeconds = session
     ? getRestRemainingSeconds(session.restEndsAt, now)
@@ -193,21 +191,19 @@ export default function WorkoutRestScreen() {
       if (updated.phase === "completed") {
         const completion = await workoutRepository.getCompletion(workoutSessionId);
         if (!completion) {
-          throw new Error("Tamamlanma kaydı ilerleme verileriyle uyuşmuyor.");
+          throw new Error(t("workoutRest.errors.completionMismatch"));
         }
         replaceWithCompletion();
       } else {
         replaceWithWorkout();
       }
     } catch {
-      setActionError(
-        "Sıradaki set açılamadı. İlerlemen korunuyor; yeniden deneyebilirsin.",
-      );
+      setActionError(t("workoutRest.errors.advanceSetFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsTransitioning(false);
     }
-  }, [replaceWithCompletion, replaceWithWorkout, workoutSessionId]);
+  }, [replaceWithCompletion, replaceWithWorkout, t, workoutSessionId]);
 
   useEffect(() => {
     if (
@@ -236,12 +232,12 @@ export default function WorkoutRestScreen() {
         setNow(Date.now());
       }
     } catch {
-      setActionError("Dinlenme süresi artırılamadı. Lütfen yeniden dene.");
+      setActionError(t("workoutRest.errors.extendRestFailed"));
     } finally {
       transitionInProgressRef.current = false;
       if (mountedRef.current) setIsExtending(false);
     }
-  }, [remainingSeconds, workoutSessionId]);
+  }, [remainingSeconds, t, workoutSessionId]);
 
   const completedPosition = useMemo(
     () =>
@@ -259,7 +255,7 @@ export default function WorkoutRestScreen() {
     return (
       <ScreenState>
         <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={styles.stateText}>Dinlenme süresi hazırlanıyor…</Text>
+        <Text style={styles.stateText}>{t("workoutRest.loading")}</Text>
       </ScreenState>
     );
   }
@@ -268,17 +264,17 @@ export default function WorkoutRestScreen() {
     return (
       <ScreenState>
         <Ionicons name="alert-circle-outline" size={42} color={colors.primary} />
-        <Text style={styles.stateTitle}>Dinlenme ekranı açılamadı</Text>
-        <Text style={styles.stateText}>{loadError ?? "Dinlenme verisi eksik."}</Text>
+        <Text style={styles.stateTitle}>{t("workoutRest.errors.openFailedTitle")}</Text>
+        <Text style={styles.stateText}>{loadError ?? t("workoutRest.errors.dataMissing")}</Text>
         <Pressable
           accessibilityRole="button"
           onPress={() => void loadSession()}
           style={styles.statePrimaryButton}
         >
-          <Text style={styles.statePrimaryText}>Yeniden dene</Text>
+          <Text style={styles.statePrimaryText}>{t("workoutRest.retry")}</Text>
         </Pressable>
         <Pressable accessibilityRole="button" onPress={requestExit}>
-          <Text style={styles.stateLink}>Ana sayfaya dön</Text>
+          <Text style={styles.stateLink}>{t("workoutRest.backToHome")}</Text>
         </Pressable>
       </ScreenState>
     );
@@ -332,7 +328,7 @@ export default function WorkoutRestScreen() {
         ) : null}
         <View style={styles.actionRow}>
           <Pressable
-            accessibilityLabel="Dinlenme süresine 15 saniye ekle"
+            accessibilityLabel={t("workoutRest.addTimeAccessibilityLabel")}
             accessibilityRole="button"
             accessibilityState={{ busy: isExtending, disabled: addDisabled }}
             disabled={addDisabled}
@@ -346,11 +342,11 @@ export default function WorkoutRestScreen() {
             {isExtending ? (
               <ActivityIndicator color={colors.onPrimary} size="small" />
             ) : (
-              <Text style={styles.addButtonText}>+15sn</Text>
+              <Text style={styles.addButtonText}>{t("workoutRest.addSecondsLabel")}</Text>
             )}
           </Pressable>
           <Pressable
-            accessibilityLabel="Dinlenmeyi atla ve sıradaki sete geç"
+            accessibilityLabel={t("workoutRest.skipRestAccessibilityLabel")}
             accessibilityRole="button"
             accessibilityState={{ busy: isTransitioning, disabled: isTransitioning }}
             disabled={isTransitioning}
@@ -364,7 +360,7 @@ export default function WorkoutRestScreen() {
             {isTransitioning ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.skipButtonText}>Dinlenmeyi atla</Text>
+              <Text style={styles.skipButtonText}>{t("workoutRest.skipRest")}</Text>
             )}
           </Pressable>
         </View>
