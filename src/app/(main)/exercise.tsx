@@ -27,6 +27,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   FlatList,
@@ -44,6 +45,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SEARCH_DEBOUNCE_MS = 300;
 
 export default function ExerciseScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -95,16 +97,16 @@ const [selectedEquipmentId, setSelectedEquipmentId] = useState<string | null>(
   const hasSuccessfulDataRef = useRef(false);
   useScrollToTop(listRef);
   const selectedBodyPartName = selectedCategoryId
-  ? bodyParts.find((item) => item.id === selectedCategoryId)?.name ?? "Tümü"
-  : "Tümü";
+  ? bodyParts.find((item) => item.id === selectedCategoryId)?.name ?? t("exercise.all")
+  : t("exercise.all");
 const selectedEquipmentName = selectedEquipmentId
-  ? equipments.find((item) => item.id === selectedEquipmentId)?.name ?? "Tümü"
-  : "Tümü";
+  ? equipments.find((item) => item.id === selectedEquipmentId)?.name ?? t("exercise.all")
+  : t("exercise.all");
   const activeFilterOptions =
   activeFilter === "bodyPart" ? bodyParts : equipments;
 
 const activeFilterTitle =
-  activeFilter === "bodyPart" ? "Bölge Seç" : "Ekipman Seç";
+  activeFilter === "bodyPart" ? t("exercise.selectBodyPart") : t("exercise.selectEquipment");
 
 const activeSelectedId =
   activeFilter === "bodyPart"
@@ -257,7 +259,7 @@ const activeSelectedId =
     <View style={styles.programActionRow}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Programlara geri dön"
+        accessibilityLabel={t("exercise.backToPrograms")}
         onPress={() =>
           router.replace({
             pathname: "/(main)/program" as never,
@@ -270,7 +272,7 @@ const activeSelectedId =
       </Pressable>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Favorileri aç"
+        accessibilityLabel={t("exercise.openFavorites")}
         onPress={() => router.push("/(main)/favorites" as never)}
         style={styles.profileButton}
       >
@@ -280,7 +282,7 @@ const activeSelectedId =
   ) : isProgramEditSelection ? (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Program düzenlemeye geri dön"
+      accessibilityLabel={t("exercise.backToProgramEdit")}
       onPress={() =>
         router.replace({
           pathname: "/program-edit" as never,
@@ -297,7 +299,7 @@ const activeSelectedId =
   ) : (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Favorileri aç"
+      accessibilityLabel={t("exercise.openFavorites")}
       onPress={() => router.push("/(main)/favorites" as never)}
       style={styles.profileButton}
     >
@@ -307,7 +309,7 @@ const activeSelectedId =
 </View>
 
   <Text maxFontSizeMultiplier={1.3} style={styles.title}>
-    {isProgramEditSelection ? "Programa egzersiz ekle" : "Egzersizler"}
+    {isProgramEditSelection ? t("exercise.addToProgramTitle") : t("exercise.title")}
   </Text>
 
             <View style={styles.searchContainer}>
@@ -317,13 +319,13 @@ const activeSelectedId =
                 color={colors.textSecondary}
               />
               <TextInput
-                accessibilityLabel="Egzersiz ara"
+                accessibilityLabel={t("exercise.searchAccessibility")}
                 autoCapitalize="none"
                 autoCorrect={false}
                 clearButtonMode="while-editing"
                 maxFontSizeMultiplier={1.3}
                 onChangeText={setSearchText}
-                placeholder="Egzersiz ara..."
+                placeholder={t("exercise.searchPlaceholder")}
                 placeholderTextColor={colors.placeholder}
                 returnKeyType="search"
                 style={styles.searchInput}
@@ -332,7 +334,7 @@ const activeSelectedId =
             </View>
             <View style={styles.filterRow}>
   <View style={styles.filterColumn}>
-    <Text style={styles.filterLabel}>Bölge</Text>
+    <Text style={styles.filterLabel}>{t("exercise.bodyPartLabel")}</Text>
 
     <Pressable
       onPress={() => setActiveFilter("bodyPart")}
@@ -396,7 +398,7 @@ const activeSelectedId =
           setActiveFilter(null);
         }}
       >
-        <Text style={styles.filterOptionText}>Tümü</Text>
+        <Text style={styles.filterOptionText}>{t("exercise.all")}</Text>
 
         <Ionicons
           name={activeSelectedId === null ? "radio-button-on" : "radio-button-off"}
@@ -446,7 +448,7 @@ const activeSelectedId =
   </Pressable>
 </Modal>
   <View style={styles.filterColumn}>
-    <Text style={styles.filterLabel}>Ekipman</Text>
+    <Text style={styles.filterLabel}>{t("exercise.equipmentLabel")}</Text>
 
     <Pressable
       onPress={() => setActiveFilter("equipment")}
@@ -492,7 +494,7 @@ const activeSelectedId =
                 color={colors.textSecondary}
               />
               <Text maxFontSizeMultiplier={1.3} style={styles.emptyText}>
-                Eşleşen egzersiz bulunamadı
+                {t("exercise.noResults")}
               </Text>
             </View>
           )

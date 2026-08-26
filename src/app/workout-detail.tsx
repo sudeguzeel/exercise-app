@@ -18,6 +18,7 @@ import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Pressable,
@@ -35,6 +36,7 @@ function singleParam(value: string | string[] | undefined) {
 
 
 export default function WorkoutDetailScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const { width: windowWidth } = useWindowDimensions();
   const isCompactWidth = windowWidth < 430;
@@ -59,10 +61,10 @@ export default function WorkoutDetailScreen() {
       setCompletion(await workoutRepository.getCompletion(workoutSessionId));
     } catch (error) {
       setLoadError(
-        error instanceof Error ? error.message : "Antrenman detayı yüklenemedi.",
+        error instanceof Error ? error.message : t("workoutDetail.errors.loadFailed"),
       );
     }
-  }, [workoutSessionId]);
+  }, [t, workoutSessionId]);
 
   useEffect(() => {
     void load();
@@ -96,7 +98,7 @@ export default function WorkoutDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.stateText}>Antrenman detayı hazırlanıyor…</Text>
+          <Text style={styles.stateText}>{t("workoutDetail.loading")}</Text>
         </View>
       </SafeAreaView>
     );
@@ -120,15 +122,15 @@ export default function WorkoutDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.centerState}>
           <Ionicons name="document-outline" size={44} color={colors.primary} />
-          <Text style={styles.stateTitle}>Antrenman detayı bulunamadı</Text>
+          <Text style={styles.stateTitle}>{t("workoutDetail.notFoundTitle")}</Text>
           <Text style={styles.stateText}>
-            Geçerli ve tamamlanmış bir antrenman kaydı seçilmedi.
+            {t("workoutDetail.notFoundDescription")}
           </Text>
           <Pressable
             onPress={() => router.replace("/(main)/progress" as never)}
             style={styles.backToProgress}
           >
-            <Text style={styles.backToProgressText}>İlerlemene dön</Text>
+            <Text style={styles.backToProgressText}>{t("workoutDetail.backToProgress")}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -139,7 +141,7 @@ export default function WorkoutDetailScreen() {
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
       <View style={styles.fixedTopBar}>
         <RoundBackButton onPress={() => router.back()} />
-        <Text style={styles.topTitle}>Antrenman detayı</Text>
+        <Text style={styles.topTitle}>{t("workoutDetail.title")}</Text>
         <View style={styles.headerSpacer} />
       </View>
       <ScrollView
@@ -153,23 +155,23 @@ export default function WorkoutDetailScreen() {
           <Text style={styles.summaryName}>{completion.programName}</Text>
           <View style={styles.summaryStats}>
             <SummaryMetric
-              label="HAREKET"
+              label={t("workoutDetail.metrics.exercise")}
               value={String(completion.completedExerciseCount)}
             />
-            <SummaryMetric label="TOPLAM SET" value={String(completedSetCount)} />
-            <SummaryMetric label="TOPLAM TEKRAR" value={String(completedRepCount)} />
+            <SummaryMetric label={t("workoutDetail.metrics.totalSets")} value={String(completedSetCount)} />
+            <SummaryMetric label={t("workoutDetail.metrics.totalReps")} value={String(completedRepCount)} />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>HAREKETLER</Text>
+        <Text style={styles.sectionTitle}>{t("workoutDetail.exercisesSection")}</Text>
         {completion.exercises.length > 0 ? (
           completion.exercises.map((exercise) => (
             <ExerciseDetailCard exercise={exercise} key={exercise.programExerciseId} />
           ))
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.stateTitle}>Hareket kaydı bulunmuyor</Text>
-            <Text style={styles.stateText}>Bu tamamlanmada egzersiz snapshot’ı yok.</Text>
+            <Text style={styles.stateTitle}>{t("workoutDetail.noExercisesTitle")}</Text>
+            <Text style={styles.stateText}>{t("workoutDetail.noExercisesDescription")}</Text>
           </View>
         )}
       </ScrollView>
@@ -189,6 +191,7 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
 }
 
 function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
@@ -196,16 +199,16 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
       <View style={styles.exerciseHeader}>
         <View style={styles.exerciseCopy}>
           <Text style={styles.exerciseName}>{exercise.name}</Text>
-          <Text style={styles.exerciseMuscle}>{exercise.muscleGroupName ?? "Kas grubu bilinmiyor"}</Text>
+          <Text style={styles.exerciseMuscle}>{exercise.muscleGroupName ?? t("workoutDetail.unknownMuscleGroup")}</Text>
         </View>
         <View style={styles.exerciseIcon}>
           <Ionicons name="barbell-outline" size={21} color={colors.textSecondary} />
         </View>
       </View>
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, styles.setColumn]}>SET</Text>
-        <Text style={[styles.tableHeaderText, styles.dataColumn]}>KG</Text>
-        <Text style={[styles.tableHeaderText, styles.dataColumn]}>TEKRAR</Text>
+        <Text style={[styles.tableHeaderText, styles.setColumn]}>{t("workoutDetail.table.set")}</Text>
+        <Text style={[styles.tableHeaderText, styles.dataColumn]}>{t("workoutDetail.table.weight")}</Text>
+        <Text style={[styles.tableHeaderText, styles.dataColumn]}>{t("workoutDetail.table.reps")}</Text>
         <View style={styles.statusColumn} />
       </View>
       {exercise.sets.map((set) => {
@@ -220,7 +223,7 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
               <Text style={styles.setValue}>{set.actualReps}</Text>
             </View>
             <View
-              accessibilityLabel={completed ? "Set tamamlandı" : "Set tamamlanmadı"}
+              accessibilityLabel={completed ? t("workoutDetail.setCompleted") : t("workoutDetail.setNotCompleted")}
               style={[styles.setStatus, !completed && styles.setStatusPending]}
             >
               <Ionicons

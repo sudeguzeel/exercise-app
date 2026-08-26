@@ -5,6 +5,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 
 const RING_SIZE = 196;
@@ -15,13 +16,16 @@ export function RestHeaderCard({
 }: {
   completedSetNumber: number;
 }) {
+  const { t } = useTranslation();
   const { styles } = useRestComponentTheme();
   return (
     <View style={styles.headerCard}>
       <View style={styles.headerAccent} />
       <View style={styles.headerCopy}>
-        <Text style={styles.eyebrow}>SET {completedSetNumber} TAMAMLANDI</Text>
-        <Text style={styles.headerTitle}>Dinlenme zamanı</Text>
+        <Text style={styles.eyebrow}>
+          {t("restWorkoutComponents.setCompleted", { setNumber: completedSetNumber })}
+        </Text>
+        <Text style={styles.headerTitle}>{t("restWorkoutComponents.restTime")}</Text>
       </View>
     </View>
   );
@@ -34,6 +38,7 @@ export function RestProgressRing({
   durationSeconds: number;
   remainingSeconds: number;
 }) {
+  const { t } = useTranslation();
   const { styles } = useRestComponentTheme();
   const safeRemaining = Math.min(
     MAX_REST_SECONDS,
@@ -47,7 +52,7 @@ export function RestProgressRing({
 
   return (
     <View
-      accessibilityLabel={`${formatted}, dinlenme süresi kaldı`}
+      accessibilityLabel={t("restWorkoutComponents.remainingRestTime", { time: formatted })}
       accessibilityRole="timer"
       style={styles.ring}
     >
@@ -73,16 +78,21 @@ export function RestProgressRing({
       <Text adjustsFontSizeToFit numberOfLines={1} style={styles.timeValue}>
         {formatted}
       </Text>
-      <Text style={styles.timeCaption}>SANİYE KALDI</Text>
+      <Text style={styles.timeCaption}>{t("restWorkoutComponents.secondsLeft")}</Text>
     </View>
   );
 }
 
 export function NextWorkoutCard({ target }: { target: WorkoutSetPosition }) {
+  const { t } = useTranslation();
   const { colors, styles } = useRestComponentTheme();
   return (
     <View
-      accessibilityLabel={`Sıradaki: Set ${target.set.setNumber}, ${target.exercise.name}, ${target.set.targetReps} tekrar`}
+      accessibilityLabel={t("restWorkoutComponents.nextAccessibility", {
+        setNumber: target.set.setNumber,
+        exerciseName: target.exercise.name,
+        targetReps: target.set.targetReps,
+      })}
       accessible
       style={styles.nextCard}
     >
@@ -90,10 +100,13 @@ export function NextWorkoutCard({ target }: { target: WorkoutSetPosition }) {
         <Ionicons name="barbell-outline" size={20} color={colors.textSecondary} />
       </View>
       <View style={styles.nextTextWrap}>
-        <Text style={styles.nextLabel}>SIRADAKİ</Text>
+        <Text style={styles.nextLabel}>{t("restWorkoutComponents.nextLabel")}</Text>
         <Text numberOfLines={3} style={styles.nextText}>
-          Set {target.set.setNumber} · {target.exercise.name} · {target.set.targetReps}{" "}
-          tekrar
+          {t("restWorkoutComponents.nextSummary", {
+            setNumber: target.set.setNumber,
+            exerciseName: target.exercise.name,
+            targetReps: target.set.targetReps,
+          })}
         </Text>
       </View>
     </View>

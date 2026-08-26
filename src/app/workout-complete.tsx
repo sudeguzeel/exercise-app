@@ -12,6 +12,7 @@ import { useAppTheme } from "@/providers/AppThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   BackHandler,
@@ -28,6 +29,7 @@ function singleParam(value: string | string[] | undefined) {
 }
 
 export default function WorkoutCompleteScreen() {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useThemedScreenStyles(baseStyles);
   const params = useLocalSearchParams<{
@@ -51,7 +53,7 @@ export default function WorkoutCompleteScreen() {
   const loadCompletion = useCallback(async () => {
     if (!isValidWorkoutSessionId(workoutSessionId)) {
       setCompletion(null);
-      setLoadError("Antrenman sonucu bağlantısı geçersiz.");
+      setLoadError(t("workoutComplete.errors.invalidLink"));
       return;
     }
     setCompletion(undefined);
@@ -60,7 +62,7 @@ export default function WorkoutCompleteScreen() {
       const result = await workoutRepository.getCompletion(workoutSessionId);
       if (!result) {
         setCompletion(null);
-        setLoadError("Tamamlanan antrenman kaydı bulunamadı.");
+        setLoadError(t("workoutComplete.errors.notFound"));
         return;
       }
 
@@ -81,9 +83,9 @@ export default function WorkoutCompleteScreen() {
       }
     } catch {
       setCompletion(null);
-      setLoadError("Antrenman sonucu yüklenemedi.");
+      setLoadError(t("workoutComplete.errors.loadFailed"));
     }
-  }, [workoutSessionId]);
+  }, [t, workoutSessionId]);
 
   useEffect(() => {
     void loadCompletion();
@@ -106,7 +108,7 @@ export default function WorkoutCompleteScreen() {
       {completion === undefined && !loadError ? (
         <View style={styles.centerState}>
           <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.stateText}>Antrenman sonucu hazırlanıyor…</Text>
+          <Text style={styles.stateText}>{t("workoutComplete.loading")}</Text>
         </View>
       ) : completion ? (
         <ScrollView
@@ -115,14 +117,19 @@ export default function WorkoutCompleteScreen() {
         >
           <View style={styles.summaryRow}>
             <SummaryCard
-              label="SÜRE"
+              label={t("workoutComplete.metrics.duration")}
               value={formatCompletionDuration(completion.durationMs)}
             />
             <SummaryCard
-              label="HAREKET"
+              label={t("workoutComplete.metrics.exercise")}
               value={String(completion.completedExerciseCount)}
             />
-            <SummaryCard label="SERİ" value={`${completion.currentStreak} gün`} />
+            <SummaryCard
+              label={t("workoutComplete.metrics.streak")}
+              value={t("workoutComplete.metrics.streakValue", {
+                count: completion.currentStreak,
+              })}
+            />
           </View>
 
           <View style={styles.actions}>
@@ -134,7 +141,7 @@ export default function WorkoutCompleteScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.primaryButtonText}>İlerlememi gör</Text>
+              <Text style={styles.primaryButtonText}>{t("workoutComplete.viewProgress")}</Text>
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -144,7 +151,7 @@ export default function WorkoutCompleteScreen() {
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.secondaryButtonText}>Ana sayfaya dön</Text>
+              <Text style={styles.secondaryButtonText}>{t("workoutComplete.backToHome")}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -155,17 +162,17 @@ export default function WorkoutCompleteScreen() {
             size={42}
             color={colors.primary}
           />
-          <Text style={styles.stateTitle}>Sonuç açılamadı</Text>
+          <Text style={styles.stateTitle}>{t("workoutComplete.errors.openFailedTitle")}</Text>
           <Text style={styles.stateText}>{loadError}</Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => void loadCompletion()}
             style={styles.primaryButton}
           >
-            <Text style={styles.primaryButtonText}>Yeniden dene</Text>
+            <Text style={styles.primaryButtonText}>{t("workoutComplete.retry")}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" onPress={goHome}>
-            <Text style={styles.homeLink}>Ana sayfaya dön</Text>
+            <Text style={styles.homeLink}>{t("workoutComplete.backToHome")}</Text>
           </Pressable>
         </View>
       )}
