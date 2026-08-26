@@ -690,6 +690,7 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     minHeight: 58,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: colors.error,
