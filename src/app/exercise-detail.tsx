@@ -24,6 +24,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -47,15 +48,15 @@ const INITIAL_CUSTOM_VALUES: CustomExerciseValues = {
 
 const CUSTOM_FIELDS: {
   key: CustomExerciseValueKey;
-  label: string;
+  labelKey: string;
   placeholder: string;
   maxLength: number;
 }[] = [
-  { key: "sets", label: "SET", placeholder: "1–10", maxLength: 2 },
-  { key: "reps", label: "TEKRAR", placeholder: "1–100", maxLength: 3 },
+  { key: "sets", labelKey: "exerciseDetail.fields.sets", placeholder: "1–10", maxLength: 2 },
+  { key: "reps", labelKey: "exerciseDetail.fields.reps", placeholder: "1–100", maxLength: 3 },
   {
     key: "restSeconds",
-    label: "DİNLENME",
+    labelKey: "exerciseDetail.fields.rest",
     placeholder: "0–300",
     maxLength: 4,
   },
@@ -89,11 +90,12 @@ function MetricCard({
 }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   return (
     <View style={styles.metricCard}>
       <View style={styles.metricControlRow}>
         <Pressable
-          accessibilityLabel={`${label} değerini azalt`}
+          accessibilityLabel={t("exerciseDetail.decreaseValue", { label })}
           accessibilityRole="button"
           onPress={onDecrement}
           style={({ pressed }) => [
@@ -107,7 +109,7 @@ function MetricCard({
           {value}
         </Text>
         <Pressable
-          accessibilityLabel={`${label} değerini artır`}
+          accessibilityLabel={t("exerciseDetail.increaseValue", { label })}
           accessibilityRole="button"
           onPress={onIncrement}
           style={({ pressed }) => [
@@ -128,6 +130,7 @@ function MetricCard({
 export default function ExerciseDetailScreen() {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const { t } = useTranslation();
   const { isFavorite, toggleFavorite } = useFavorites();
   const searchParams = useLocalSearchParams<ProgramSelectionSearchParams & {
     selectionMode?: string | string[];
@@ -332,13 +335,16 @@ export default function ExerciseDetailScreen() {
         exercise.name,
       );
       if (result === "duplicate") {
-        Alert.alert("Egzersiz zaten mevcut", "Bu egzersiz programda zaten bulunuyor.");
+        Alert.alert(
+          t("exerciseDetail.duplicateExerciseTitle"),
+          t("exerciseDetail.duplicateExerciseMessage"),
+        );
         return;
       }
       if (result === "missing-draft") {
         Alert.alert(
-          "Taslak bulunamadı",
-          "Program düzenleme bilgileri artık mevcut değil. Lütfen programa geri dönün.",
+          t("exerciseDetail.draftNotFoundTitle"),
+          t("exerciseDetail.draftNotFoundMessage"),
         );
         return;
       }
@@ -405,7 +411,7 @@ export default function ExerciseDetailScreen() {
           <View style={styles.content}>
             <View style={styles.topBar}>
               <Pressable
-                accessibilityLabel="Egzersizlere geri dön"
+                accessibilityLabel={t("exerciseDetail.backToExercises")}
                 accessibilityRole="button"
                 onPress={() => router.back()}
                 style={({ pressed }) => [
@@ -423,8 +429,8 @@ export default function ExerciseDetailScreen() {
               <Pressable
                 accessibilityLabel={
                   exercise && isFavorite(exercise.id)
-                    ? "Favorilerden çıkar"
-                    : "Favorilere ekle"
+                    ? t("exerciseDetail.removeFromFavorites")
+                    : t("exerciseDetail.addToFavorites")
                 }
                 accessibilityRole="button"
                 accessibilityState={{
@@ -464,17 +470,17 @@ export default function ExerciseDetailScreen() {
                   color={colors.primary}
                 />
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundTitle}>
-                  Egzersiz yüklenemedi
+                  {t("exerciseDetail.loadErrorTitle")}
                 </Text>
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundText}>
-                  Bağlantınızı kontrol edip tekrar deneyin.
+                  {t("exerciseDetail.loadErrorMessage")}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => void loadExercise()}
                   style={styles.notFoundButton}
                 >
-                  <Text style={styles.notFoundButtonText}>Yeniden dene</Text>
+                  <Text style={styles.notFoundButtonText}>{t("exerciseDetail.retry")}</Text>
                 </Pressable>
               </View>
             ) : exercise === undefined ? (
@@ -503,7 +509,9 @@ export default function ExerciseDetailScreen() {
 
                   {exercise.gifUrl && !gifFailed ? (
                     <Image
-                      accessibilityLabel={`${exercise.name} egzersiz animasyonu`}
+                      accessibilityLabel={t("exerciseDetail.exerciseAnimation", {
+                        name: exercise.name,
+                      })}
                       onError={() => setGifFailed(true)}
                       resizeMode="contain"
                       source={{ uri: exercise.gifUrl }}
@@ -511,7 +519,9 @@ export default function ExerciseDetailScreen() {
                     />
                   ) : (
                     <View
-                      accessibilityLabel={`${exercise.name} egzersiz görseli`}
+                      accessibilityLabel={t("exerciseDetail.exerciseImage", {
+                        name: exercise.name,
+                      })}
                       style={styles.mediaPlaceholder}
                     >
                       <Ionicons
@@ -528,7 +538,7 @@ export default function ExerciseDetailScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.mediaMuscleInfoLabel}
                       >
-                        🔴 Birincil Kas
+                        {t("exerciseDetail.primaryMuscle")}
                       </Text>
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -542,7 +552,7 @@ export default function ExerciseDetailScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.mediaMuscleInfoLabel}
                       >
-                        🟡 İkincil Kaslar
+                        {t("exerciseDetail.secondaryMuscles")}
                       </Text>
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -558,7 +568,7 @@ export default function ExerciseDetailScreen() {
                         maxFontSizeMultiplier={1.3}
                         style={styles.mediaMuscleInfoLabel}
                       >
-                        ⚙️ Ekipman
+                        {t("exerciseDetail.equipment")}
                       </Text>
                       <Text
                         maxFontSizeMultiplier={1.3}
@@ -577,7 +587,7 @@ export default function ExerciseDetailScreen() {
                 {exercise.steps.length > 0 ? (
                   <View style={styles.stepsSection}>
                     <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
-                      Nasıl yapılır?
+                      {t("exerciseDetail.howToTitle")}
                     </Text>
                     {exercise.steps.map((step, index) => (
                       <View key={index} style={styles.stepRow}>
@@ -601,7 +611,7 @@ export default function ExerciseDetailScreen() {
                 ) : null}
 
                 <Text maxFontSizeMultiplier={1.3} style={styles.fieldsTitle}>
-                  Set / Tekrar / Dinlenme Süresi
+                  {t("exerciseDetail.fieldsTitle")}
                 </Text>
 
                 {hasRecommendedValues &&
@@ -611,24 +621,26 @@ export default function ExerciseDetailScreen() {
                 !useCustomValues ? (
                   <View style={styles.metricRow}>
                     <MetricCard
-                      label="SET"
+                      label={t("exerciseDetail.fields.sets")}
                       value={String(exercise.recommendedSets)}
                       onDecrement={() => adjustRecommendedValue("sets", -1)}
                       onIncrement={() => adjustRecommendedValue("sets", 1)}
                     />
                     <MetricCard
-                      label="TEKRAR"
+                      label={t("exerciseDetail.fields.reps")}
                       value={String(exercise.recommendedReps)}
                       onDecrement={() => adjustRecommendedValue("reps", -1)}
                       onIncrement={() => adjustRecommendedValue("reps", 1)}
                     />
                     <MetricCard
-                      label="DİNLENME"
-                      value={`${resolveProgramExerciseRestSeconds({
-                        customRestSeconds: null,
-                        recommendedRestSeconds:
-                          exercise.recommendedRestSeconds,
-                      })} sn`}
+                      label={t("exerciseDetail.fields.rest")}
+                      value={t("exerciseDetail.secondsValue", {
+                        seconds: resolveProgramExerciseRestSeconds({
+                          customRestSeconds: null,
+                          recommendedRestSeconds:
+                            exercise.recommendedRestSeconds,
+                        }),
+                      })}
                       onDecrement={() =>
                         adjustRecommendedValue("restSeconds", -1)
                       }
@@ -667,21 +679,22 @@ export default function ExerciseDetailScreen() {
                       maxFontSizeMultiplier={1.3}
                       style={styles.customToggleText}
                     >
-                      Kendi set, tekrar ve dinlenme değerlerimi belirlemek
-                      istiyorum.
+                      {t("exerciseDetail.customToggleText")}
                     </Text>
                   </Pressable>
                 ) : null}
 
                 {useCustomValues || !hasRecommendedValues ? (
                 <View style={styles.customFieldRow}>
-                  {CUSTOM_FIELDS.map((field) => (
+                  {CUSTOM_FIELDS.map((field) => {
+                    const fieldLabel = t(field.labelKey);
+                    return (
                     <View key={field.key} style={styles.customField}>
                       <Text
                         maxFontSizeMultiplier={1.3}
                         style={styles.customFieldLabel}
                       >
-                        {field.label}
+                        {fieldLabel}
                       </Text>
                       <View
                         style={[
@@ -690,7 +703,9 @@ export default function ExerciseDetailScreen() {
                         ]}
                       >
                         <Pressable
-                          accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini azalt`}
+                          accessibilityLabel={t("exerciseDetail.decreaseValue", {
+                            label: fieldLabel,
+                          })}
                           accessibilityRole="button"
                           onPress={() => adjustCustomValue(field.key, -1)}
                           style={({ pressed }) => [
@@ -705,9 +720,7 @@ export default function ExerciseDetailScreen() {
                           />
                         </Pressable>
                         <TextInput
-                          accessibilityLabel={`${field.label.toLocaleLowerCase(
-                            "tr-TR",
-                          )}`}
+                          accessibilityLabel={fieldLabel}
                           inputMode="numeric"
                           keyboardType="number-pad"
                           maxFontSizeMultiplier={1.3}
@@ -726,12 +739,16 @@ export default function ExerciseDetailScreen() {
                           style={styles.customInput}
                           value={
                             field.key === "restSeconds"
-                              ? `${customValues[field.key]}s`
+                              ? t("exerciseDetail.secondsSuffix", {
+                                  value: customValues[field.key],
+                                })
                               : customValues[field.key]
                           }
                         />
                         <Pressable
-                          accessibilityLabel={`${field.label.toLocaleLowerCase("tr-TR")} değerini artır`}
+                          accessibilityLabel={t("exerciseDetail.increaseValue", {
+                            label: fieldLabel,
+                          })}
                           accessibilityRole="button"
                           onPress={() => adjustCustomValue(field.key, 1)}
                           style={({ pressed }) => [
@@ -754,7 +771,8 @@ export default function ExerciseDetailScreen() {
                         {errors[field.key] ?? " "}
                       </Text>
                     </View>
-                  ))}
+                    );
+                  })}
                 </View>
                 ) : null}
 
@@ -772,7 +790,7 @@ export default function ExerciseDetailScreen() {
                     <ActivityIndicator color={colors.onPrimary} />
                   ) : (
                     <Text maxFontSizeMultiplier={1.3} style={styles.addButtonText}>
-                      Programa Ekle
+                      {t("exerciseDetail.addToProgram")}
                     </Text>
                   )}
                 </Pressable>
@@ -785,10 +803,10 @@ export default function ExerciseDetailScreen() {
                   color={colors.primary}
                 />
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundTitle}>
-                  Egzersiz bulunamadı
+                  {t("exerciseDetail.exerciseNotFoundTitle")}
                 </Text>
                 <Text maxFontSizeMultiplier={1.3} style={styles.notFoundText}>
-                  İstenen egzersiz kaydı mevcut değil.
+                  {t("exerciseDetail.exerciseNotFoundMessage")}
                 </Text>
                 <Pressable
                   accessibilityRole="button"
@@ -796,7 +814,7 @@ export default function ExerciseDetailScreen() {
                   style={styles.notFoundButton}
                 >
                   <Text style={styles.notFoundButtonText}>
-                    Egzersizlere dön
+                    {t("exerciseDetail.backToExercisesButton")}
                   </Text>
                 </Pressable>
               </View>
