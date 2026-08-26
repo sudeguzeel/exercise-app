@@ -2,35 +2,20 @@ import { formatRestDuration } from "@/features/exercises/program-exercise-rest";
 import { MAX_REST_SECONDS } from "@/features/workouts/workout-domain";
 import type { WorkoutSetPosition } from "@/features/workouts/types";
 import { useAppTheme } from "@/providers/AppThemeContext";
-import { RandomMascot } from "@/shared/components/random-mascot";
-import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
-import { REST_MASCOTS } from "@/shared/constants/mascot-assets";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useMemo } from "react";
-import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 const RING_SIZE = 196;
 const RING_RADIUS = 87;
 const RING_SEGMENTS = 48;
-const REST_MASCOT_VARIANT_STYLES = [
-  undefined,
-  { transform: [{ scale: 1.12 }] },
-  undefined,
-] as const;
-
 export function RestHeaderCard({
   completedSetNumber,
-  phaseKey,
-  mascotMessage,
 }: {
   completedSetNumber: number;
-  phaseKey: string;
-  mascotMessage: string;
 }) {
   const { styles } = useRestComponentTheme();
-  const { width: windowWidth } = useWindowDimensions();
-  const isCompactWidth = windowWidth < 430;
   return (
     <View style={styles.headerCard}>
       <View style={styles.headerAccent} />
@@ -38,26 +23,6 @@ export function RestHeaderCard({
         <Text style={styles.eyebrow}>SET {completedSetNumber} TAMAMLANDI</Text>
         <Text style={styles.headerTitle}>Dinlenme zamanı</Text>
       </View>
-      <View pointerEvents="none" style={styles.headerMascotSlot}>
-        <RandomMascot
-          key={phaseKey}
-          accessibilityLabel="Dinlenen FitRehber tavşan maskotu"
-          sources={REST_MASCOTS}
-          style={styles.headerMascot}
-          variantStyles={REST_MASCOT_VARIANT_STYLES}
-        />
-      </View>
-      <MascotSpeechBubble
-        compact
-        message={mascotMessage}
-        tailDirection="bottom-right"
-        style={[
-          styles.headerSpeechBubble,
-          isCompactWidth
-            ? styles.headerSpeechBubbleCompact
-            : styles.headerSpeechBubbleWide,
-        ]}
-      />
     </View>
   );
 }
@@ -157,11 +122,6 @@ function createStyles(colors: AppThemeColors, isDark: boolean) {
   },
   headerAccent: { position: "absolute", right: -20, bottom: -48, width: 180, height: 115, borderRadius: 90, backgroundColor: colors.primarySoft, opacity: 0.18 },
   headerCopy: { flex: 1, minWidth: 0, alignItems: "flex-start" },
-  headerMascotSlot: { position: "absolute", top: 0, right: 6, bottom: 0, width: "35%", minWidth: 104, maxWidth: 158, alignItems: "center", justifyContent: "center" },
-  headerMascot: { width: "100%", height: "100%" },
-  headerSpeechBubble: { position: "absolute", top: 7, width: 140, maxWidth: 140, zIndex: 2 },
-  headerSpeechBubbleCompact: { right: "32%" },
-  headerSpeechBubbleWide: { right: 116 },
   eyebrow: { color: colors.textSecondary, fontSize: 11, fontWeight: "800" },
   headerTitle: {
     marginTop: 7,

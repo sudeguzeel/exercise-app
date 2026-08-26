@@ -13,12 +13,9 @@ import type {
   WorkoutExerciseSnapshot,
 } from "@/features/workouts/types";
 import { DataErrorState } from "@/shared/components/data-error-state";
-import { MascotSpeechBubble } from "@/shared/components/mascot-speech-bubble";
-import { WORKOUT_DETAIL_MASCOTS } from "@/shared/constants/mascot-assets";
 import { useAppTheme } from "@/providers/AppThemeContext";
 import type { AppThemeColors } from "@/shared/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -36,30 +33,6 @@ function singleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-const WORKOUT_DETAIL_MESSAGES = [
-  "Harika bir antrenmandı! 💪",
-  "Bugün de tamam! ✨",
-  "Emeğinin karşılığı geliyor! 🌱",
-] as const;
-
-function getStableWorkoutDetailIndex(workoutSessionId: string) {
-  let hash = 0;
-  for (let index = 0; index < workoutSessionId.length; index += 1) {
-    hash = (hash * 31 + workoutSessionId.charCodeAt(index)) >>> 0;
-  }
-  return hash % WORKOUT_DETAIL_MESSAGES.length;
-}
-
-function getWorkoutDetailResult(workoutSessionId: string) {
-  const index = getStableWorkoutDetailIndex(workoutSessionId);
-  return {
-    message: WORKOUT_DETAIL_MESSAGES[index],
-    mascot:
-      index === 0
-        ? WORKOUT_DETAIL_MASCOTS.shakerThumbsUp
-        : WORKOUT_DETAIL_MASCOTS.standing,
-  };
-}
 
 export default function WorkoutDetailScreen() {
   const { colors } = useAppTheme();
@@ -118,10 +91,6 @@ export default function WorkoutDetailScreen() {
       ) ?? 0,
     [completion],
   );
-  const mascotResult = completion
-    ? getWorkoutDetailResult(workoutSessionId)
-    : null;
-
   if (completion === undefined && !loadError) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -190,20 +159,6 @@ export default function WorkoutDetailScreen() {
             />
             <SummaryMetric label="TOPLAM SET" value={String(completedSetCount)} />
             <SummaryMetric label="TOPLAM TEKRAR" value={String(completedRepCount)} />
-          </View>
-          <View pointerEvents="none" style={styles.summaryMascotArea}>
-            <MascotSpeechBubble
-              compact
-              message={mascotResult?.message ?? ""}
-              tailDirection="bottom-right"
-              style={styles.summarySpeechBubble}
-            />
-            <Image
-              accessibilityLabel="Antrenman sonucu FitRehber tavşan maskotu"
-              contentFit="contain"
-              source={mascotResult?.mascot}
-              style={styles.summaryMascot}
-            />
           </View>
         </View>
 
@@ -295,15 +250,6 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   summaryMetric: { flex: 1, minWidth: 0 },
   summaryMetricValue: { color: colors.text, fontSize: 19, fontWeight: "900" },
   summaryMetricLabel: { marginTop: 4, color: colors.textSecondary, fontSize: 10, fontWeight: "900" },
-  summaryMascotArea: isCompactWidth
-    ? { position: "absolute", top: 8, right: 8, width: 211, height: 112 }
-    : { position: "absolute", top: 8, right: 10, width: 276, height: 136 },
-  summarySpeechBubble: isCompactWidth
-    ? { position: "absolute", top: 0, left: 0, width: 126, maxWidth: 126, zIndex: 2 }
-    : { position: "absolute", top: 2, left: 0, width: 158, maxWidth: 158, zIndex: 2 },
-  summaryMascot: isCompactWidth
-    ? { position: "absolute", right: 0, bottom: 0, width: 101, height: 101 }
-    : { position: "absolute", right: 0, bottom: 0, width: 128, height: 128 },
   sectionTitle: { marginTop: 2, color: colors.textSecondary, fontSize: 15, fontWeight: "900", letterSpacing: 0.4 },
   exerciseCard: { padding: 18, borderWidth: 1.5, borderColor: colors.border, borderRadius: 24, backgroundColor: colors.surface },
   exerciseHeader: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
