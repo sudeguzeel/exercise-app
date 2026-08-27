@@ -570,35 +570,43 @@ export default function ExerciseDetailScreen() {
                   {formatExerciseName(exercise.name)}
                 </Text>
 
-                {exercise.steps.length > 0 ? (
-                  <View style={styles.stepsSection}>
-                    <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
-                      {t("exerciseDetail.howToTitle")}
-                    </Text>
-                    {exercise.steps.map((step, index) => (
-                      <View key={index} style={styles.stepRow}>
-                        <View style={styles.stepIndex}>
-                          <Text
-                            maxFontSizeMultiplier={1.3}
-                            style={styles.stepIndexText}
-                          >
-                            {index + 1}
-                          </Text>
-                        </View>
-                        <Text
-                          maxFontSizeMultiplier={1.3}
-                          style={styles.stepDescription}
-                        >
-                          {step}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-
+                <View style={styles.programBox}>
                 <Text maxFontSizeMultiplier={1.3} style={styles.fieldsTitle}>
                   {t("exerciseDetail.fieldsTitle")}
                 </Text>
+
+                {hasRecommendedValues ? (
+                  <Pressable
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: useCustomValues }}
+                    onPress={handleCustomToggle}
+                    style={({ pressed }) => [
+                      styles.customToggle,
+                      pressed && styles.buttonPressed,
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.checkbox,
+                        useCustomValues && styles.checkboxSelected,
+                      ]}
+                    >
+                      {useCustomValues ? (
+                        <Ionicons
+                          name="checkmark"
+                          size={20}
+                          color={colors.onPrimary}
+                        />
+                      ) : null}
+                    </View>
+                    <Text
+                      maxFontSizeMultiplier={1.3}
+                      style={styles.customToggleText}
+                    >
+                      {t("exerciseDetail.customToggleText")}
+                    </Text>
+                  </Pressable>
+                ) : null}
 
                 {hasRecommendedValues &&
                 exercise.recommendedSets !== null &&
@@ -635,39 +643,6 @@ export default function ExerciseDetailScreen() {
                       }
                     />
                   </View>
-                ) : null}
-
-                {hasRecommendedValues ? (
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: useCustomValues }}
-                    onPress={handleCustomToggle}
-                    style={({ pressed }) => [
-                      styles.customToggle,
-                      pressed && styles.buttonPressed,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        useCustomValues && styles.checkboxSelected,
-                      ]}
-                    >
-                      {useCustomValues ? (
-                        <Ionicons
-                          name="checkmark"
-                          size={20}
-                          color={colors.onPrimary}
-                        />
-                      ) : null}
-                    </View>
-                    <Text
-                      maxFontSizeMultiplier={1.3}
-                      style={styles.customToggleText}
-                    >
-                      {t("exerciseDetail.customToggleText")}
-                    </Text>
-                  </Pressable>
                 ) : null}
 
                 {useCustomValues || !hasRecommendedValues ? (
@@ -780,6 +755,33 @@ export default function ExerciseDetailScreen() {
                     </Text>
                   )}
                 </Pressable>
+                </View>
+
+                {exercise.steps.length > 0 ? (
+                  <View style={styles.stepsSection}>
+                    <Text maxFontSizeMultiplier={1.3} style={styles.stepsTitle}>
+                      {t("exerciseDetail.howToTitle")}
+                    </Text>
+                    {exercise.steps.map((step, index) => (
+                      <View key={index} style={styles.stepRow}>
+                        <View style={styles.stepIndex}>
+                          <Text
+                            maxFontSizeMultiplier={1.3}
+                            style={styles.stepIndexText}
+                          >
+                            {index + 1}
+                          </Text>
+                        </View>
+                        <Text
+                          maxFontSizeMultiplier={1.3}
+                          style={styles.stepDescription}
+                        >
+                          {step}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </>
             ) : (
               <View style={styles.notFoundCard}>
@@ -982,14 +984,21 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     lineHeight: 27,
     fontWeight: "600",
   },
+  programBox: {
+    marginTop: 24,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+  },
   fieldsTitle: {
-    marginTop: 28,
     color: colors.text,
     fontSize: 16,
     fontWeight: "900",
   },
   metricRow: {
-    marginTop: 14,
+    marginTop: 10,
     flexDirection: "row",
     gap: 8,
   },
@@ -1034,7 +1043,7 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     fontWeight: "800",
   },
   customToggle: {
-    marginTop: 14,
+    marginTop: 8,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -1060,7 +1069,7 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     fontWeight: "700",
   },
   customFieldRow: {
-    marginTop: 14,
+    marginTop: 8,
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
@@ -1123,7 +1132,7 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   },
   addButton: {
     height: 56,
-    marginTop: 18,
+    marginTop: 10,
     borderRadius: 20,
     backgroundColor: colors.primaryBright,
     alignItems: "center",
