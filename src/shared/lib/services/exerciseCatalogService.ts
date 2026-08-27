@@ -23,16 +23,8 @@ export type ExerciseFilterOption = {
   name: string;
 };
 
-// Görsel ve GIF lisans bilgileri için repo NOTICE.md dosyasına bakın.
-const LEGACY_EXERCISE_MEDIA_BASE_URL =
-  "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/";
-
 export function buildMediaUrl(relativePath: string | null | undefined): string | null {
-  if (!relativePath) return null;
-  if (relativePath.startsWith("http://") || relativePath.startsWith("https://")) {
-    return relativePath;
-  }
-  return `${LEGACY_EXERCISE_MEDIA_BASE_URL}${relativePath}`;
+  return relativePath ?? null;
 }
 
 export type ExerciseSummary = {
