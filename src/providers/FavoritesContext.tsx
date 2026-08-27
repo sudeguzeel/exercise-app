@@ -17,6 +17,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { StyleSheet, Text, View } from "react-native";
 
 export type FavoritesStatus = "loading" | "success" | "error";
@@ -36,6 +37,7 @@ const FavoritesContext = createContext<FavoritesContextValue | undefined>(
 const SNACKBAR_DURATION_MS = 2200;
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [favorites, setFavorites] = useState<ExerciseListItem[]>([]);
@@ -120,7 +122,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       favoritesRef.current = nextFavorites;
       setFavorites(nextFavorites);
       showSnackbar(
-        alreadyFavorite ? "Favorilerden çıkarıldı" : "Favorilere eklendi",
+        alreadyFavorite ? t("favorites.removed") : t("favorites.added"),
       );
 
       const persist = alreadyFavorite
@@ -130,10 +132,10 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       persist.catch(() => {
         favoritesRef.current = previousFavorites;
         setFavorites(previousFavorites);
-        showSnackbar("Bir hata oluştu, tekrar deneyin");
+        showSnackbar(t("favorites.toggleFailed"));
       });
     },
-    [showSnackbar],
+    [showSnackbar, t],
   );
 
   const value = useMemo(

@@ -434,7 +434,10 @@
     "errorDescription": "Favorilerin yüklenirken bir hata oluştu. Lütfen daha sonra tekrar dene.",
     "emptyTitle": "Henüz favori egzersizin yok",
     "emptyDescription": "Beğendiğin egzersizleri favoriye ekleyerek burada kolayca görüntüleyebilirsin.",
-    "discover": "Egzersizleri keşfet"
+    "discover": "Egzersizleri keşfet",
+    "added": "Favorilere eklendi",
+    "removed": "Favorilerden çıkarıldı",
+    "toggleFailed": "Bir hata oluştu, tekrar deneyin"
   },
   "profileAppSettings": {
     "headerTitle": "Uygulama Ayarları",

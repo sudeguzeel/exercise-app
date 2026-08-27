@@ -434,7 +434,10 @@
     "errorDescription": "Something went wrong while loading your favorites. Please try again later.",
     "emptyTitle": "You don't have any favorite exercises yet",
     "emptyDescription": "Add exercises you like to your favorites to easily view them here.",
-    "discover": "Discover exercises"
+    "discover": "Discover exercises",
+    "added": "Added to favorites",
+    "removed": "Removed from favorites",
+    "toggleFailed": "Something went wrong, please try again"
   },
   "profileAppSettings": {
     "headerTitle": "App Settings",
