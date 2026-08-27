@@ -215,6 +215,12 @@ export default function NewProgramScreen() {
         style={styles.keyboardView}
       >
         <View style={styles.screen}>
+          <View style={styles.fixedHeader}>
+            <ProgramFlowHeader
+              onBack={() => router.back()}
+              title={t("newProgram.headerTitle")}
+            />
+          </View>
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardDismissMode="on-drag"
@@ -222,11 +228,6 @@ export default function NewProgramScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.content}>
-              <ProgramFlowHeader
-                onBack={() => router.back()}
-                title={t("newProgram.headerTitle")}
-              />
-
               {isRouteValid ? (
                 <>
                   <View style={styles.section}>
@@ -601,6 +602,15 @@ const baseStyles = StyleSheet.create({
     maxWidth: 560,
     alignSelf: "center",
     paddingHorizontal: 20,
+  },
+  fixedHeader: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+    backgroundColor: MainColors.background,
+    zIndex: 10,
   },
   section: {
     marginTop: 28,

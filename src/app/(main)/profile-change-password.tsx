@@ -70,14 +70,13 @@ export default function ProfileChangePasswordScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.header}>
+        <Pressable accessibilityLabel={t("profileChangePassword.backAccessibility")} onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
+        <Text style={styles.headerTitle}>{t("profileChangePassword.headerTitle")}</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.header}>
-            <Pressable accessibilityLabel={t("profileChangePassword.backAccessibility")} onPress={() => router.back()} style={styles.backButton}><Ionicons name="chevron-back" size={22} color={colors.primary} /></Pressable>
-            <Text style={styles.headerTitle}>{t("profileChangePassword.headerTitle")}</Text>
-            <View style={styles.headerSpacer} />
-          </View>
-
           <View style={styles.card}>
             <PasswordInput label={t("profileChangePassword.currentPasswordLabel")} value={currentPassword} visible={visible.current} onChangeText={setCurrentPassword} onToggle={() => toggleVisible("current")} />
             <PasswordInput label={t("profileChangePassword.newPasswordLabel")} value={newPassword} visible={visible.next} onChangeText={setNewPassword} onToggle={() => toggleVisible("next")} />
@@ -106,8 +105,8 @@ function PasswordInput({ label, value, visible, onChangeText, onToggle }: { labe
 
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background }, flex: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 32 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 30 },
+  content: { paddingHorizontal: 20, paddingBottom: 32 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 18, backgroundColor: colors.background, zIndex: 10 },
   backButton: { width: 42, height: 42, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 21, backgroundColor: colors.surface },
   headerTitle: { color: colors.text, fontSize: 19, fontWeight: "900" }, headerSpacer: { width: 42 },
   card: { padding: 18, borderWidth: 1, borderColor: colors.border, borderRadius: 20, backgroundColor: colors.surface },

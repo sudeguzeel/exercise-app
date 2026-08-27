@@ -139,16 +139,15 @@ export default function WorkoutDetailScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+      <View style={styles.fixedTopBar}>
+        <RoundBackButton onPress={() => router.back()} />
+        <Text style={styles.topTitle}>{t("workoutDetail.title")}</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.topBar}>
-          <RoundBackButton onPress={() => router.back()} />
-          <Text style={styles.topTitle}>{t("workoutDetail.title")}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-
         <View style={styles.summaryCard}>
           <Text style={styles.summaryDate}>
             {formatLocalWorkoutDate(completion.completedAt)} · {formatLocalWorkoutTime(completion.completedAt)}
@@ -243,6 +242,7 @@ function ExerciseDetailCard({ exercise }: { exercise: WorkoutExerciseSnapshot })
 const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   content: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 30, gap: 18 },
+  fixedTopBar: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.background, zIndex: 10 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },
   headerSpacer: { width: 42 },

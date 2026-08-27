@@ -349,43 +349,34 @@ export default function ProgramScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.fixedTopRow}>
+        <Text numberOfLines={1} style={styles.greeting}>
+          {t("program.greeting")}
+          <Text style={styles.greetingName}>
+            {profileLoading ? " …" : ` ${displayName ?? t("program.athleteFallback")}`}
+          </Text>
+        </Text>
+        <Pressable
+          accessibilityLabel={t("program.profileAccessibility")}
+          accessibilityRole="button"
+          onPress={() => router.push("/(main)/profile")}
+          style={({ pressed }) => [styles.notificationButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="person-outline" size={23} color={colors.text} />
+        </Pressable>
+      </View>
+      <View style={styles.fixedDaysRow}>
+        <WeekDaySelector
+          onSelect={setSelectedDateKey}
+          selectedDateKey={selectedDateKey}
+          week={week}
+        />
+      </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
       >
-        <View style={styles.topRow}>
-          <Text numberOfLines={1} style={styles.greeting}>
-            {t("program.greeting")}
-            <Text style={styles.greetingName}>
-              {profileLoading ? " …" : ` ${displayName ?? t("program.athleteFallback")}`}
-            </Text>
-          </Text>
-        <Pressable
-  accessibilityLabel={t("program.profileAccessibility")}
-  accessibilityRole="button"
-  onPress={() => router.push("/(main)/profile")}
-  style={({ pressed }) => [
-    styles.notificationButton,
-    pressed && styles.pressed,
-  ]}
->
-  <Ionicons
-    name="person-outline"
-    size={23}
-    color={colors.text}
-  />
-</Pressable>
-        </View>
-
-        <View style={styles.fullBleed}>
-          <WeekDaySelector
-            onSelect={setSelectedDateKey}
-            selectedDateKey={selectedDateKey}
-            week={week}
-          />
-        </View>
-
         {programState === "loading" && !hasSuccessfulProgramsRef.current ? (
           <SectionState loading text={t("program.loadingPrograms")} />
         ) : dailyPrograms.length > 0 ? (
@@ -562,12 +553,26 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     paddingBottom: 24,
     gap: 18,
   },
-  topRow: {
+  fixedTopRow: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 18,
     minHeight: 72,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 16,
+    backgroundColor: colors.background,
+    zIndex: 10,
+  },
+  fixedDaysRow: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingBottom: 14,
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   greeting: { flex: 1, color: colors.textSecondary, fontSize: 16, fontWeight: "500" },
   greetingName: { color: colors.primary, fontWeight: "800" },
@@ -581,7 +586,6 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  fullBleed: { marginHorizontal: -18 },
   programCards: { gap: 12 },
   sectionTitle: { marginTop: 2, color: colors.textSecondary, fontSize: 15, fontWeight: "700" },
   inlineEmpty: { color: colors.textSecondary, fontSize: 14 },

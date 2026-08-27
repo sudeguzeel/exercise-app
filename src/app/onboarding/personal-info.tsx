@@ -305,24 +305,21 @@ export default function PersonalInfoScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <View style={styles.fixedHeader}>
+        <View style={styles.header}>
+          <Pressable style={styles.backButton} onPress={() => router.replace("/login")}>
+            <Ionicons name="chevron-back" size={20} color={colors.text} />
+          </Pressable>
+          <Text style={styles.stepText}>
+            {t("onboarding.step")} <Text style={styles.activeStep}>2</Text> / 4
+          </Text>
+        </View>
+      </View>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.replace("/login")}
-          >
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
-          </Pressable>
-
-          <Text style={styles.stepText}>
-            {t("onboarding.step")} <Text style={styles.activeStep}>2</Text> / 4
-          </Text>
-        </View>
-
         <View style={styles.progressRow}>
           <View style={[styles.progressItem, styles.progressActive]} />
           <View style={[styles.progressItem, styles.progressActive]} />
@@ -627,7 +624,6 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingTop: Platform.OS === "ios" ? 18 : 24,
     paddingHorizontal: 16,
     paddingBottom: 46,
   },
@@ -635,7 +631,10 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
+  fixedHeader: { paddingTop: Platform.OS === "ios" ? 18 : 24, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: colors.background, zIndex: 10 },
   backButton: {
     width: 34,
     height: 34,

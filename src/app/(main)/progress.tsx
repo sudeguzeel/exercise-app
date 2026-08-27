@@ -284,9 +284,6 @@ export default function ProgressScreen() {
 
   const header = (
     <View style={styles.headerContent}>
-      <Text style={styles.title}>{t("progress.title")}</Text>
-      <PeriodSelector onChange={setPeriod} value={period} />
-
       <View style={styles.statsRow}>
         <StatCard
           detail={
@@ -483,6 +480,10 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+      <View style={styles.fixedTitle}>
+        <Text style={styles.title}>{t("progress.title")}</Text>
+        <PeriodSelector onChange={setPeriod} value={period} />
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
@@ -828,6 +829,7 @@ const createStyles = (colors: AppThemeColors, isCompactWidth = false) => StyleSh
   flex: { flex: 1 },
   safeArea: { flex: 1, backgroundColor: colors.background },
   listContent: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22 },
+  fixedTitle: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 14, backgroundColor: colors.background, gap: 16, zIndex: 10 },
   headerContent: { paddingTop: 8, paddingBottom: 14, gap: 22 },
   title: { color: colors.text, fontSize: 31, lineHeight: 37, fontWeight: "900" },
   statsRow: { flexDirection: "row", gap: 10 },

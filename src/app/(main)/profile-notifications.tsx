@@ -28,8 +28,7 @@ export default function ProfileNotificationsScreen() {
     );
   };
 
-  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.content}>
-    <Header title="Bildirimler" />
+  return <SafeAreaView style={s.safe}><Header title="Bildirimler" /><ScrollView contentContainerStyle={s.content}>
     <View style={s.intro}><View style={s.iconCircle}><Ionicons name="notifications-outline" size={31} color={GREEN} /></View><Text style={s.introText}>Hangi bildirimleri almak istediğini seçebilirsin.</Text></View>
     <View style={s.card}>{ITEMS.map(([title, description], index) => <View key={title} style={[s.row, index < ITEMS.length - 1 && s.border]}><View style={s.rowText}><Text style={s.title}>{title}</Text><Text style={s.description}>{description}</Text></View><Switch style={s.switch} value={preferences[index]} onValueChange={(value) => togglePreference(index, value)} trackColor={{ false: colors.disabled, true: colors.primary }} thumbColor={colors.surfaceElevated} /></View>)}</View>
     <Text style={s.note}>Bildirim tercihleri geçicidir ve henüz kalıcı olarak kaydedilmez.</Text>
