@@ -253,14 +253,7 @@ const activeSelectedId =
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <FlatList
-        ref={listRef}
-        data={exercises}
-        renderItem={renderExercise}
-        keyExtractor={(exercise) => exercise.id}
-        ItemSeparatorComponent={ExerciseSeparator}
-        ListHeaderComponent={
-          <View style={styles.header}>
+      <View style={styles.header}>
           <View style={styles.headerRow}>
   {isNewProgramSelection ? (
     <View style={styles.programActionRow}>
@@ -481,8 +474,13 @@ const activeSelectedId =
   </View>
 </View>
 
-          </View>
-        }
+      </View>
+      <FlatList
+        ref={listRef}
+        data={exercises}
+        renderItem={renderExercise}
+        keyExtractor={(exercise) => exercise.id}
+        ItemSeparatorComponent={ExerciseSeparator}
         ListEmptyComponent={
           listState === "loading" ? (
             <View style={styles.emptyState}>
@@ -548,7 +546,13 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     paddingBottom: 28,
   },
   header: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 20,
     paddingBottom: 28,
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   headerRow: {
     minHeight: 64,

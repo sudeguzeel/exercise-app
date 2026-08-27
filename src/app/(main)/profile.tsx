@@ -301,80 +301,76 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <View style={styles.fixedIdentityRow}>
+        <View style={styles.identityLeft}>
+          <Pressable
+            accessibilityHint={t("profile.changePhotoHint")}
+            accessibilityLabel={t("profile.changePhotoLabel")}
+            accessibilityRole="button"
+            onPress={() => setPhotoMenuVisible(true)}
+            style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
+          >
+            <View style={styles.avatarClip}>
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  resizeMode="cover"
+                  style={[
+                    styles.avatarImage,
+                    {
+                      transform: [
+                        { translateX: photoTransform.x * (82 / EDITOR_SIZE) },
+                        { translateY: photoTransform.y * (82 / EDITOR_SIZE) },
+                        { scale: photoTransform.scale },
+                      ],
+                    },
+                  ]}
+                />
+              ) : (
+                <Image
+                  source={
+                    isDark
+                      ? require("../../../assets/images/fitrehber_dark_profil_icon_sn.png")
+                      : require("../../../assets/images/fitrehber_light_profil_icon_sn_1.png")
+                  }
+                  resizeMode="contain"
+                  style={styles.defaultAvatarImage}
+                />
+              )}
+            </View>
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={13} color={colors.onPrimary} />
+            </View>
+          </Pressable>
+          <View style={styles.identityText}>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.email} numberOfLines={1}>
+              {email || t("profile.emailMissing")}
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/(main)/profile-personal-info")}
+              style={({ pressed }) => [styles.editProfileButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
+            </Pressable>
+          </View>
+        </View>
+        <Pressable
+          accessibilityLabel={t("profile.goBack")}
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+      </View>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.identityRow}>
-          <View style={styles.identityLeft}>
-            <Pressable
-              accessibilityHint={t("profile.changePhotoHint")}
-              accessibilityLabel={t("profile.changePhotoLabel")}
-              accessibilityRole="button"
-              onPress={() => setPhotoMenuVisible(true)}
-              style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
-            >
-              <View style={styles.avatarClip}>
-              {profileImage ? (
-  <Image
-    source={{ uri: profileImage }}
-    resizeMode="cover"
-    style={[
-      styles.avatarImage,
-      {
-        transform: [
-          { translateX: photoTransform.x * (82 / EDITOR_SIZE) },
-          { translateY: photoTransform.y * (82 / EDITOR_SIZE) },
-          { scale: photoTransform.scale },
-        ],
-      },
-    ]}
-  />
-) : (
-  <Image
-  source={
-    isDark
-      ? require("../../../assets/images/fitrehber_dark_profil_icon_sn.png")
-      : require("../../../assets/images/fitrehber_light_profil_icon_sn_1.png")
-  }
-  resizeMode="contain"
-  style={styles.defaultAvatarImage}
-/>
-)}
-              </View>
-              <View style={styles.cameraBadge}>
-                <Ionicons name="camera" size={13} color={colors.onPrimary} />
-              </View>
-            </Pressable>
-            <View style={styles.identityText}>
-              <Text style={styles.name}>{displayName}</Text>
-              <Text style={styles.email} numberOfLines={1}>
-                {email || t("profile.emailMissing")}
-              </Text>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => router.push("/(main)/profile-personal-info")}
-                style={({ pressed }) => [styles.editProfileButton, pressed && styles.pressed]}
-              >
-                <Text style={styles.editProfileText}>{t("profile.editProfile")}</Text>
-              </Pressable>
-            </View>
-          </View>
-          <Pressable
-            accessibilityLabel={t("profile.goBack")}
-            accessibilityRole="button"
-            hitSlop={8}
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
-          </Pressable>
-        </View>
-
-                <SectionLabel>{t("profile.sectionAccount")}</SectionLabel>
+        <SectionLabel>{t("profile.sectionAccount")}</SectionLabel>
         <View style={styles.menuCard}>
           <MenuItem
             icon="person-outline"
@@ -613,10 +609,18 @@ function clampTransform(transform: PhotoTransform): PhotoTransform {
 
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  content: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 30, paddingBottom: 28 },
-  identityRow: {
+  content: { flexGrow: 1, paddingHorizontal: 20, paddingBottom: 28 },
+  fixedIdentityRow: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingTop: 30,
+    paddingBottom: 14,
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: colors.background,
+    zIndex: 10,
     justifyContent: "space-between",
     marginBottom: 28,
   },

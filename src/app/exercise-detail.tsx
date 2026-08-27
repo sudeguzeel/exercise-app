@@ -402,6 +402,45 @@ export default function ExerciseDetailScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
+        <View style={styles.fixedTopBar}>
+          <Pressable
+            accessibilityLabel={t("exerciseDetail.backToExercises")}
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            style={({ pressed }) => [
+              styles.roundButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel={
+              exercise && isFavorite(exercise.id)
+                ? t("exerciseDetail.removeFromFavorites")
+                : t("exerciseDetail.addToFavorites")
+            }
+            accessibilityRole="button"
+            accessibilityState={{
+              disabled: !exercise,
+              selected: exercise ? isFavorite(exercise.id) : false,
+            }}
+            disabled={!exercise}
+            onPress={() => {
+              if (exercise) toggleFavorite(exercise);
+            }}
+            style={({ pressed }) => [
+              styles.roundButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Ionicons
+              name={exercise && isFavorite(exercise.id) ? "heart" : "heart-outline"}
+              size={25}
+              color={exercise && isFavorite(exercise.id) ? colors.primary : colors.text}
+            />
+          </Pressable>
+        </View>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardDismissMode="on-drag"
@@ -409,59 +448,6 @@ export default function ExerciseDetailScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-            <View style={styles.topBar}>
-              <Pressable
-                accessibilityLabel={t("exerciseDetail.backToExercises")}
-                accessibilityRole="button"
-                onPress={() => router.back()}
-                style={({ pressed }) => [
-                  styles.roundButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Ionicons
-                  name="chevron-back"
-                  size={24}
-                  color={colors.text}
-                />
-              </Pressable>
-
-              <Pressable
-                accessibilityLabel={
-                  exercise && isFavorite(exercise.id)
-                    ? t("exerciseDetail.removeFromFavorites")
-                    : t("exerciseDetail.addToFavorites")
-                }
-                accessibilityRole="button"
-                accessibilityState={{
-                  disabled: !exercise,
-                  selected: exercise ? isFavorite(exercise.id) : false,
-                }}
-                disabled={!exercise}
-                onPress={() => {
-                  if (exercise) toggleFavorite(exercise);
-                }}
-                style={({ pressed }) => [
-                  styles.roundButton,
-                  pressed && styles.buttonPressed,
-                ]}
-              >
-                <Ionicons
-                  name={
-                    exercise && isFavorite(exercise.id)
-                      ? "heart"
-                      : "heart-outline"
-                  }
-                  size={25}
-                  color={
-                    exercise && isFavorite(exercise.id)
-                      ? colors.primary
-                      : colors.text
-                  }
-                />
-              </Pressable>
-            </View>
-
             {loadError ? (
               <View style={styles.notFoundCard}>
                 <Ionicons
@@ -843,6 +829,18 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
     maxWidth: 680,
     alignSelf: "center",
     paddingHorizontal: 20,
+  },
+  fixedTopBar: {
+    width: "100%",
+    maxWidth: 680,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.background,
+    zIndex: 10,
   },
   topBar: {
     flexDirection: "row",

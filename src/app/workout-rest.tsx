@@ -296,15 +296,17 @@ export default function WorkoutRestScreen() {
         onConfirm={confirmExit}
         visible={exitDialogVisible}
       />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.fixedTopBar}>
         <WorkoutTopBar
           elapsed={elapsed}
           onBack={() => void goBackOneStep()}
           onExit={requestExit}
         />
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <RestHeaderCard
           completedSetNumber={completedPosition.set.setNumber}
         />
@@ -389,6 +391,14 @@ const baseStyles = StyleSheet.create({
     paddingHorizontal: 17,
     paddingBottom: 20,
     gap: 14,
+  },
+  fixedTopBar: {
+    width: "100%",
+    maxWidth: 560,
+    alignSelf: "center",
+    paddingHorizontal: 20,
+    backgroundColor: MainColors.background,
+    zIndex: 10,
   },
   footer: {
     width: "100%",

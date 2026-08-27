@@ -18,7 +18,9 @@ export default function MainLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: {
+          flex: 1,
           paddingBottom: tabBarSpacing,
+          overflow: "hidden",
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,

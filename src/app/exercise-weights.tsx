@@ -181,6 +181,11 @@ export default function ExerciseWeightsScreen() {
 
   return (
     <SafeAreaView edges={["top", "left", "right"]} style={styles.safeArea}>
+      <View style={styles.fixedTopBar}>
+        <RoundBackButton onPress={() => router.replace("/progress" as never)} />
+        <Text style={styles.topTitle}>{t("exerciseWeights.progressTitle")}</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <FlatList
         ListEmptyComponent={
           <View style={styles.emptyCard}>
@@ -190,11 +195,6 @@ export default function ExerciseWeightsScreen() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.topBar}>
-              <RoundBackButton onPress={() => router.replace("/progress" as never)} />
-              <Text style={styles.topTitle}>{t("exerciseWeights.progressTitle")}</Text>
-              <View style={styles.headerSpacer} />
-            </View>
             <Text style={styles.title}>{t("exerciseWeights.screenTitle")}</Text>
             <View style={styles.summaryCard}>
               <View style={styles.summaryIcon}>
@@ -352,6 +352,7 @@ function ScreenState({ loading, text }: { loading?: boolean; text: string }) {
 const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
   listContent: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingBottom: 30 },
+  fixedTopBar: { width: "100%", maxWidth: 680, alignSelf: "center", paddingHorizontal: 22, paddingTop: 8, paddingBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.background, zIndex: 10 },
   header: { paddingTop: 8, paddingBottom: 18 },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   topTitle: { color: colors.textSecondary, fontSize: 17, fontWeight: "700" },

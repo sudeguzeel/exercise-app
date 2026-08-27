@@ -20,9 +20,8 @@ export default function ProfileAppSettingsScreen() {
 
   return (
     <SafeAreaView style={styles.safe}>
+      <Header colors={colors} styles={styles} title={t("profileAppSettings.headerTitle")} />
       <ScrollView contentContainerStyle={styles.content}>
-        <Header colors={colors} styles={styles} title={t("profileAppSettings.headerTitle")} />
-
         <View style={styles.intro}>
           <View style={styles.iconCircle}>
             <Ionicons name="settings-outline" size={34} color={colors.primary} />
@@ -118,12 +117,16 @@ function Header({
 function createStyles(colors: AppThemeColors) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
-    content: { padding: 20, paddingTop: 14, paddingBottom: 30 },
+    content: { paddingHorizontal: 20, paddingBottom: 30 },
     header: {
-      marginBottom: 28,
+      marginHorizontal: 20,
+      paddingTop: 14,
+      paddingBottom: 18,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      backgroundColor: colors.background,
+      zIndex: 10,
     },
     back: {
       width: 38,
