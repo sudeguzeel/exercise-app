@@ -46,7 +46,7 @@ import { getWorkingWeight } from "@/features/progress/progress-storage";
 import { getExerciseDetail } from "@/shared/lib/services/exerciseCatalogService";
 import { supabase } from "@/shared/lib/supabase";
 
-const STORAGE_PREFIX = "@exercise-app/workouts/v1";
+const STORAGE_PREFIX = "@fitrehber/workouts/v1";
 const startLocks = new Set<string>();
 const setCompletionLocks = new Set<string>();
 const setRevertLocks = new Set<string>();

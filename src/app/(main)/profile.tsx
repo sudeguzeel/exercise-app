@@ -438,13 +438,13 @@ export default function ProfileScreen() {
           <MenuItem
             icon="chatbubble-ellipses-outline"
             label={t("profile.feedback")}
-            onPress={() => void Linking.openURL("mailto:destek@exerciseapp.com?subject=Exercise%20App%20Geri%20Bildirim")}
+            onPress={() => void Linking.openURL("mailto:destek@fitrehber.com?subject=FitRehber%20Geri%20Bildirim")}
           />
           <MenuItem
             icon="information-circle-outline"
             label={t("profile.about")}
             isLast
-            onPress={() => Alert.alert("Exercise App", t("profile.aboutMessage"))}
+            onPress={() => Alert.alert("FitRehber", t("profile.aboutMessage"))}
           />
         </View>
 
