@@ -76,6 +76,7 @@ export default function ProfileScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
   const [photoTransform, setPhotoTransform] = useState(DEFAULT_TRANSFORM);
   const [photoMenuVisible, setPhotoMenuVisible] = useState(false);
   const [photoSourceVisible, setPhotoSourceVisible] = useState(false);
@@ -100,11 +101,14 @@ export default function ProfileScreen() {
         setEmail(data.user?.email ?? "");
         setProfileImage(avatar.url);
         if (avatar.transform) setPhotoTransform(avatar.transform);
+        setAvatarLoaded(true);
         if (profileResult.success) {
           setFullName(profileResult.personalInfo.fullName);
         }
       },
-    );
+    ).catch(() => {
+      if (active) setAvatarLoaded(true);
+    });
     return () => {
       active = false;
     };
@@ -374,7 +378,9 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
           >
             <View style={styles.avatarClip}>
-              {profileImage ? (
+              {!avatarLoaded ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : profileImage ? (
                 <Image
                   source={{ uri: profileImage }}
                   resizeMode="cover"
