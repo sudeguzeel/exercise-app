@@ -32,8 +32,41 @@ type MenuItemProps = {
 };
 
 const EDITOR_SIZE = 280;
+const MAX_PROFILE_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_PHOTO_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+const ALLOWED_PROFILE_PHOTO_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp"]);
 type PhotoTransform = { x: number; y: number; scale: number };
 const DEFAULT_TRANSFORM: PhotoTransform = { x: 0, y: 0, scale: 1 };
+
+function getBase64FileSize(base64: string) {
+  const cleanBase64 = base64.replace(/^data:.*;base64,/, "");
+  const padding = cleanBase64.endsWith("==")
+    ? 2
+    : cleanBase64.endsWith("=")
+      ? 1
+      : 0;
+  return Math.floor((cleanBase64.length * 3) / 4) - padding;
+}
+
+function isAllowedProfilePhotoType(asset: ImagePicker.ImagePickerAsset) {
+  const mimeType = asset.mimeType?.toLowerCase();
+  if (mimeType && !ALLOWED_PROFILE_PHOTO_MIME_TYPES.has(mimeType)) return false;
+
+  const sourceName = asset.fileName ?? asset.uri.split(/[?#]/)[0];
+  const extensionMatch = sourceName.match(/\.([a-z0-9]+)$/i);
+  const extension = extensionMatch?.[1].toLowerCase();
+  if (extension && !ALLOWED_PROFILE_PHOTO_EXTENSIONS.has(extension)) return false;
+
+  return Boolean(
+    (mimeType && ALLOWED_PROFILE_PHOTO_MIME_TYPES.has(mimeType)) ||
+      (extension && ALLOWED_PROFILE_PHOTO_EXTENSIONS.has(extension)),
+  );
+}
 
 export default function ProfileScreen() {
   const { colors, isDark } = useAppTheme();
@@ -43,9 +76,11 @@ export default function ProfileScreen() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
   const [photoTransform, setPhotoTransform] = useState(DEFAULT_TRANSFORM);
   const [photoMenuVisible, setPhotoMenuVisible] = useState(false);
   const [photoSourceVisible, setPhotoSourceVisible] = useState(false);
+  const [galleryPermissionVisible, setGalleryPermissionVisible] = useState(false);
   const [removeConfirmVisible, setRemoveConfirmVisible] = useState(false);
   const [editorImage, setEditorImage] = useState<string | null>(null);
   const [editorTransform, setEditorTransform] = useState(DEFAULT_TRANSFORM);
@@ -66,11 +101,14 @@ export default function ProfileScreen() {
         setEmail(data.user?.email ?? "");
         setProfileImage(avatar.url);
         if (avatar.transform) setPhotoTransform(avatar.transform);
+        setAvatarLoaded(true);
         if (profileResult.success) {
           setFullName(profileResult.personalInfo.fullName);
         }
       },
-    );
+    ).catch(() => {
+      if (active) setAvatarLoaded(true);
+    });
     return () => {
       active = false;
     };
@@ -219,6 +257,25 @@ export default function ProfileScreen() {
         : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
+      if (!isAllowedProfilePhotoType(asset)) {
+        Alert.alert(
+          t("profile.photoUnsupportedTypeTitle"),
+          t("profile.photoUnsupportedTypeMessage"),
+        );
+        return;
+      }
+      const fileSize =
+        asset.fileSize ??
+        (asset.base64 ? getBase64FileSize(asset.base64) : null);
+      if (fileSize !== null && fileSize > MAX_PROFILE_PHOTO_SIZE_BYTES) {
+        Alert.alert(
+          t("profile.photoTooLargeTitle"),
+          t("profile.photoTooLargeMessage", {
+            size: (fileSize / (1024 * 1024)).toFixed(1),
+          }),
+        );
+        return;
+      }
       const imageSource = asset.base64
         ? `data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`
         : asset.uri;
@@ -227,6 +284,16 @@ export default function ProfileScreen() {
     } catch {
       Alert.alert(t("profile.photoOpenFailedTitle"), t("common.tryAgainMessage"));
     }
+  };
+
+  const requestGalleryAccess = () => {
+    setPhotoSourceVisible(false);
+    setGalleryPermissionVisible(true);
+  };
+
+  const confirmGalleryAccess = () => {
+    setGalleryPermissionVisible(false);
+    void selectProfileImage("gallery");
   };
 
   const editProfileImage = () => {
@@ -311,7 +378,9 @@ export default function ProfileScreen() {
             style={({ pressed }) => [styles.avatar, pressed && styles.pressed]}
           >
             <View style={styles.avatarClip}>
-              {profileImage ? (
+              {!avatarLoaded ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : profileImage ? (
                 <Image
                   source={{ uri: profileImage }}
                   resizeMode="cover"
@@ -485,10 +554,25 @@ export default function ProfileScreen() {
           <View style={styles.photoMenu}>
             <Text style={styles.photoMenuTitle}>{t("profile.photoSourceTitle")}</Text>
             <PhotoAction icon="camera-outline" label={t("profile.photoSourceCamera")} onPress={() => void selectProfileImage("camera")} />
-            <PhotoAction icon="images-outline" label={t("profile.photoSourceGallery")} onPress={() => void selectProfileImage("gallery")} />
+            <PhotoAction icon="images-outline" label={t("profile.photoSourceGallery")} onPress={requestGalleryAccess} />
             <Pressable onPress={() => setPhotoSourceVisible(false)} style={styles.menuCancel}><Text style={styles.menuCancelText}>{t("common.cancel")}</Text></Pressable>
           </View>
         </Pressable>
+      </Modal>
+
+      <Modal transparent animationType="fade" visible={galleryPermissionVisible} onRequestClose={() => setGalleryPermissionVisible(false)}>
+        <View style={styles.confirmBackdrop}>
+          <View style={styles.confirmCard}>
+            <View style={styles.permissionIcon}><Ionicons name="images-outline" size={27} color={colors.primary} /></View>
+            <Text style={styles.confirmTitle}>{t("profile.galleryAccessTitle")}</Text>
+            <Text style={styles.confirmText}>{t("profile.galleryAccessMessage")}</Text>
+            <Text style={styles.photoRequirements}>{t("profile.photoRequirements")}</Text>
+            <View style={styles.confirmActions}>
+              <Pressable onPress={() => setGalleryPermissionVisible(false)} style={styles.confirmCancel}><Text style={styles.confirmCancelText}>{t("common.cancel")}</Text></Pressable>
+              <Pressable onPress={confirmGalleryAccess} style={styles.permissionAllow}><Text style={styles.permissionAllowText}>{t("profile.allowGalleryAccess")}</Text></Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       <Modal transparent animationType="fade" visible={removeConfirmVisible} onRequestClose={() => setRemoveConfirmVisible(false)}>
@@ -713,13 +797,17 @@ const createStyles = (colors: AppThemeColors) => StyleSheet.create({
   confirmBackdrop: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: colors.overlay },
   confirmCard: { width: "100%", maxWidth: 380, alignItems: "center", padding: 24, borderRadius: 22, backgroundColor: colors.surface },
   confirmIcon: { width: 54, height: 54, alignItems: "center", justifyContent: "center", borderRadius: 27, backgroundColor: colors.errorBackground },
+  permissionIcon: { width: 54, height: 54, alignItems: "center", justifyContent: "center", borderRadius: 27, backgroundColor: colors.primarySoft },
   confirmTitle: { marginTop: 14, color: colors.text, fontSize: 20, fontWeight: "900" },
   confirmText: { marginTop: 8, color: colors.textSecondary, fontSize: 14, lineHeight: 20, textAlign: "center" },
+  photoRequirements: { marginTop: 12, color: colors.primary, fontSize: 13, fontWeight: "800", textAlign: "center" },
   confirmActions: { width: "100%", flexDirection: "row", gap: 10, marginTop: 22 },
   confirmCancel: { flex: 1, height: 48, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 15 },
   confirmCancelText: { color: colors.text, fontSize: 15, fontWeight: "800" },
   confirmRemove: { flex: 1, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: colors.error },
   confirmRemoveText: { color: colors.inverseText, fontSize: 15, fontWeight: "900" },
+  permissionAllow: { flex: 1, height: 48, alignItems: "center", justifyContent: "center", borderRadius: 15, backgroundColor: colors.primary },
+  permissionAllowText: { color: colors.onPrimary, fontSize: 15, fontWeight: "900" },
   editorSafeArea: { flex: 1, backgroundColor: colors.background },
   editorHeader: { height: 62, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
   editorCancel: { color: colors.primary, fontSize: 16, fontWeight: "800" },

@@ -35,7 +35,12 @@ export async function saveAvatar(dataUri: string, transform: PhotoTransform): Pr
   const match = /^data:(.+);base64,(.+)$/.exec(dataUri);
   const contentType = match?.[1] ?? "image/jpeg";
   const base64 = match?.[2] ?? dataUri;
-  const extension = contentType === "image/png" ? "png" : "jpg";
+  const extension =
+    contentType === "image/png"
+      ? "png"
+      : contentType === "image/webp"
+        ? "webp"
+        : "jpg";
   const path = `${user.id}/avatar.${extension}`;
 
   const { error: uploadError } = await supabase.storage
@@ -63,7 +68,11 @@ export async function removeAvatar(): Promise<void> {
 
   await supabase.storage
     .from(AVATAR_BUCKET)
-    .remove([`${user.id}/avatar.jpg`, `${user.id}/avatar.png`]);
+    .remove([
+      `${user.id}/avatar.jpg`,
+      `${user.id}/avatar.png`,
+      `${user.id}/avatar.webp`,
+    ]);
 
   const { error } = await supabase
     .from("profiles")
